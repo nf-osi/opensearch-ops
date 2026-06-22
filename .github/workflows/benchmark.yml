@@ -1,0 +1,60 @@
+# Stub: run the nf-tools search benchmark and publish results to GitHub Pages.
+#
+# Queries hit the public Synapse repo-prod API anonymously (no secrets needed).
+# To enable: repo Settings → Pages → Build and deployment → Source = "GitHub Actions".
+name: benchmark
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'benchmark/**'
+      - 'query.py'
+      - '.github/workflows/benchmark.yml'
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 7 * * 1'  # weekly, Mondays 07:00 UTC
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment; don't cancel an in-progress publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install pyyaml
+
+      - name: Run benchmark
+        # Stub: single baseline run. Add more strategies/labels as needed.
+        # Non-fatal: if the run fails (or no benchmark exists yet), the build
+        # step below still publishes an "under construction" page.
+        continue-on-error: true
+        run: python3 benchmark/run.py --label baseline
+
+      - name: Build site
+        # Always runs, even if the benchmark step failed.
+        run: python3 benchmark/build_site.py --out site
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
