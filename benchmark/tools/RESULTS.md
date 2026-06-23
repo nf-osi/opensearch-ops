@@ -18,7 +18,7 @@ correct tool(s) landed. Two kinds of cases:
   where several tools are relevant. These are seeded with examples but **need subject
   matter expert (SME) curation** before their scores should be trusted.
 
-### Metrics (plain language)
+### Metrics
 
 | Metric | What it answers | Range |
 | --- | --- | --- |
@@ -121,24 +121,14 @@ hit (some runs have seen this).
 
 ### Lever comparison
 
-| Lever | Layer | Expected return | What's been measured | Notes |
+| Lever | Layer | Expected return | Measured | Notes |
 | --- | --- | --- | --- | --- |
-| **Fields searched** (which columns the query covers) | frontend query (hard-coded in SRC) | **High** | A curated 15-field set produces the best strategy (`multi_match_cross`: MRR 0.744, Recall@10 0.693). The all-fields default scores 0.659 / 0.642; a names+description-only set can't match manifestation/species/category at all (e.g. "melanoma" hits 3 docs over those few fields vs 240 over all). | The frontend hard-codes an all-fields query; realizing this needs a curated `fields` list added in SRC. |
+| **Fields searched** (which columns the query covers) | frontend query (hard-coded in SRC) | **High** | Curated 15-field set currently produces the best strategy (`multi_match_cross`). | The frontend hard-codes an all-fields query; realizing results curated `fields` is an update in frontend src. |
 | **Query type** (best_fields / cross_fields / phrase) | frontend query (hard-coded in SRC) | **Medium** | `cross_fields` is the strongest type (MRR 0.744); `best_fields` 0.645; `phrase_prefix` the weakest (0.541) — a ~0.2 MRR spread. | `cross_fields` pairs best with the curated boosted fields. |
-| **Field boosting** (`field^N`) | frontend query (hard-coded in SRC) | **Small–Medium** | Boosting modestly beats equal weighting (`multi_match_boosted` 0.654 vs `multi_match_best` 0.645) and combines with `cross_fields` for the top score; it moves topical/ambiguous queries, ~0 on known-item. | Over-boosting the name field can demote a correct synonym hit. |
-| **Fuzziness** (currently `AUTO`) | frontend query (hard-coded in SRC) | **Small** (from turning it off) | `boosted_fuzzy` is among the weakest (MRR 0.627, Recall@10 0.597); on identifier-heavy data (RRIDs, clone names) fuzziness adds noise with no recall payoff. | Cheapest, safest change — removing it is a small clean-up, not a major lift. |
-| **Analyzers / synonyms** | config (index) | **Unknown — potentially high for the recall gaps** | Not yet measured: the config is created but unbound. The six `recall_gap_current` queries (e.g. `pnf`, café-au-lait) are exactly what it would target. | Edit/bind the config then **touch the `SearchIndex` entity** (`PUT /entity/{id}`) for an automatic rebuild; self-serve for Sage employees/admins. Each iteration is a full delete-recreate-reindex (public OPEN_DATA rows only) — the highest cost-per-experiment. |
+| **Field boosted** (`field^N`) | frontend query (hard-coded in SRC) | **Small–Medium** | Boosting modestly beats equal weighting (`multi_match_boosted` 0.654 vs `multi_match_best` 0.645) and combines with `cross_fields` for the top score; it moves topical/ambiguous queries, ~0 on known-item. | Over-boosting the name field can demote a correct synonym hit. |
+| **Fuzziness** (currently `AUTO`) | frontend query (hard-coded in SRC) | **Small** (from turning it off) | `boosted_fuzzy` is among the weakest (MRR 0.627, Recall@10 0.597); on identifier-heavy data (RRIDs, clone names) fuzziness adds noise with no recall payoff. | Cheapest, safest change |
+| **Analyzers / synonyms** | config (index) | **Unknown — potentially high for the recall gaps** | Not yet measured: config is created but unbound. | Each iteration is a full delete-recreate-reindex, highest cost-per-experiment. |
 
-**Reading the table for investment:** the biggest measured query-side wins are **searching
-the right fields** and using **`cross_fields`** (with name/synonym boosts) — together they
-produce the top strategy. The catch is that the frontend hard-codes an all-fields, no-boost,
-`best_fields`-default `multi_match` (see [INTEGRATION.md](../../docs/INTEGRATION.md)), so
-capturing these wins requires a **SRC change** to the query shape, not just config. **Turning
-off fuzziness** is a cheap, safe clean-up but small in magnitude. **Analyzers/synonyms** is the
-only lever still unmeasured here and the only one that can close the six recall gaps (true
-synonyms/abbreviations and sparsely-annotated fields); it needs an index-side
-config-bind-and-rebuild, so spend it against those specific gaps (e.g. a `pnf`→plexiform
-synonym) rather than speculatively.
 
 ### References
 
