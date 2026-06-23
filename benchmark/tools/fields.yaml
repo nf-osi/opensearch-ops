@@ -1,0 +1,64 @@
+# Per-table field config for the nf-tools benchmark.
+#
+# The shared strategy functions (benchmark/strategies.py) are table-agnostic; the
+# table-specific part — which columns to match and how much each is boosted — lives here.
+# run.py loads benchmark/<table>/fields.yaml and passes the fields to the strategies. A
+# table without a fields.yaml falls back to searching all fields (all fields, no boosts).
+#
+# `fields` is the match list with per-field boosts: "field^N" means a match in `field`
+# counts N times an unboosted field (omit "^N" for weight 1). The unboosted ("flat")
+# variant used by the equal-weight strategies (simple_query_string, multi_match_best) is
+# derived automatically by stripping the boosts — no need to list the fields twice.
+# Tune these weights and re-run; this is one of the main levers the harness exists to test.
+#
+# NOTE: a multi_match/simple_query_string with an explicit `fields` list searches ONLY
+# these columns — the ~30 columns NOT listed below are invisible to every strategy except
+# `frontend_default` (which sends no field list and so searches all fields). Commented
+# entries below are candidates you can uncomment to widen coverage.
+
+fields:
+  # identity / names — strongest signal
+  - "resourceName^5"
+  - "synonyms^4"
+  - "rrid^4"
+  # antibody target
+  - "targetAntigen^3"
+  # disease / phenotype / manifestation — discovery
+  - "cellLineManifestation^3"
+  - "animalModelOfManifestation^3"
+  - "diseaseType^2"
+  - "tumorType^2"
+  - "cellLineGeneticDisorder^2"
+  - "animalModelGeneticDisorder^2"
+  # organism / kind / modality — discovery
+  - "species^2"
+  - "cellLineCategory^2"
+  - "resourceType^2"
+  - "vectorType^2"
+  # free text — weight 1
+  - "description"
+
+# Candidate fields NOT currently searched — uncomment (with a boost) to include.
+# Plausibly useful for discovery, left out of the default set pending SME review:
+#   - "specimenTissueType"          # tissue of origin
+#   - "specimenPreparationMethod"
+#   - "specimenType"
+#   - "specimenFormat"
+#   - "biobankName"
+#   - "insertName"                  # genetic-reagent insert
+#   - "insertSpecies"
+#   - "backgroundStrain"            # animal-model strain
+#   - "backgroundSubstrain"
+#   - "reactiveSpecies"             # antibody reactivity
+#   - "hostOrganism"                # antibody host
+#   - "investigatorName"            # people search (sparse: ~5% filled)
+#   - "institution"
+#   - "race"                        # demographic; relates to the nf1-cell-line-black gap
+#   - "sex"
+#
+# Deliberately excluded (not useful as free-text match targets):
+#   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL
+#   boilerplate / contact .. howToAcquire, usageRequirements, contact
+#   dates / age ............ dateAdded, dateModified, latestPublicationDate, age
+#   faceting-only flags .... completenessCategory, availabilityCategory,
+#                            criticalInfoCategory, otherInfoCategory, observationCategory
