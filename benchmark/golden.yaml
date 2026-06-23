@@ -1,0 +1,392 @@
+# Golden relevance set for the nf-tools SearchIndex.
+#
+# Each case maps a user query to the resourceId(s) that SHOULD be retrieved.
+# This file is meant to be reviewed and grown by subject matter experts (SMEs).
+#
+# How to add or curate a case:
+#   - query:    what the user types into search.
+#   - relevant: the resourceId(s) of the tool(s) that genuinely answer that query.
+#               Find a resourceId by searching, e.g.:
+#                 python3 query.py '{"query":{"match":{"resourceName":{"query":"ScienCell Schwann"}}},"size":5}'
+#               and copy the resourceId of each correct result.
+#   - type:     known-item = one defensible right answer (exact name / RRID / synonym).
+#               topical    = several tools are relevant; needs SME curation before its
+#                            recall numbers can be trusted.
+#   - notes:    free text — why these are the right answers, edge cases, caveats.
+#
+# Optional fields (used by some cases, ignored by the runner — for SME context and
+# future graded-relevance / nDCG scoring):
+#   - expected_pool: SME estimate of how many tools in the registry truly match the
+#                    query. For topical cases the `relevant` list is just the ranked
+#                    HEAD of this pool, so Recall@k is a floor, not the full picture.
+#   - entity_types:  the kinds of tool the expected results are (Cell Line, Antibody, …).
+#   - recall_gap_legacy_search: true = the LEGACY search (MySQL TEXT_MATCHES, per the
+#                    spreadsheet) surfaced none of these.
+#   - recall_gap_current: true = the CURRENT OpenSearch search still fails to surface
+#                    the expected items in the TOP 20 hits — a true recall gap, usually
+#                    needing a synonym. false = a relevant item does reach the top 20
+#                    now, so any remaining problem is ranking depth, not recall (verified
+#                    live, top 20). The `relevant` order encodes the ideal ranking.
+#                    (Top 20 is a deliberately strict bar: in prod the first page of
+#                    results shows the first 25 hits, so we use 20 to be a little stricter
+#                    than "would the user see it on page 1".)
+
+index: syn75081636
+index_name: nf-tools
+k: 10
+
+cases:
+  - id: name-exact-schwann
+    query: ScienCell Schwann cells
+    type: known-item
+    notes: Exact resource-name lookup; should rank #1.
+    relevant:
+      - b751b5d4-56e6-42a2-a2dc-289f90c6dd82   # ScienCell Schwann cells (Cell Line)
+
+  - id: rrid-lookup-cvcl8478
+    query: CVCL_8478
+    type: known-item
+    notes: RRID lookup; unique in the index.
+    relevant:
+      - 25c617df-ff54-4ba5-b293-d9fcc9be39ce   # 10/9CRC1 (Cell Line), rrid:CVCL_8478
+
+  - id: synonym-mpc-10-9crc1
+    query: MPC 10/9CRC1
+    type: known-item
+    notes: Lookup by a synonym rather than the canonical name.
+    relevant:
+      - 25c617df-ff54-4ba5-b293-d9fcc9be39ce   # 10/9CRC1 (Cell Line)
+
+  - id: cellline-ipnf95-11b
+    query: ipNF95.11b
+    type: known-item
+    notes: Partial cell-line identifier; both clones (C and C/T) are relevant.
+    relevant:
+      - be2333d6-6716-4d13-947d-41f4198497a4   # hTERT NF1 ipNF95.11b C (Cell Line)
+      - ab60aae5-7860-4d1d-bb02-208e6631c78b   # hTERT NF1 ipNF95.11b C/T (Cell Line)
+
+  - id: neurofibromin-antibody
+    query: neurofibromin antibody
+    type: topical
+    notes: Antibodies targeting neurofibromin. Seed set — curate before trusting recall.
+    relevant:
+      - 47c1b795-bdcc-4029-b3db-6500bdc23508   # Neurofibromin 1 Antibody
+      - 3e92d170-96f1-4be4-985c-d2ac15f5af6b   # Neurofibromin antibody
+      - 5034f43e-0c5b-4f94-864a-b62c8d361b7b   # NF1 antibody
+
+  - id: plexiform-neurofibroma
+    query: plexiform neurofibroma
+    type: topical
+    notes: Cell lines derived from plexiform neurofibromas. Seed set — curate before trusting recall.
+    relevant:
+      - 8fdc5f7a-ef8c-4193-a5c0-04577c3b134d   # hTERT NF1 ipNF04.4
+      - ab60aae5-7860-4d1d-bb02-208e6631c78b   # hTERT NF1 ipNF95.11b C/T
+      - a8f48ce7-438c-4564-a70b-020abc96d5fe   # hTERT NF1 ipNF00.6
+
+  # ---------------------------------------------------------------------------
+  # Added from the NF_tool_search_benchmarking_spreadsheet (SME draft, 20 phrases):
+  #   https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view
+  #   (exported to NF_tool_benchmarking_init.csv at the repo root).
+  # relevant = SME 'Expected' resourceIds in rank order. Where the SME's
+  # expected-pool count < rows listed, only the top-N (pool) are kept (the
+  # tail were near-name false friends). expected_pool = SME estimate of the
+  # true relevant count in the registry. recall_gap_legacy_search = the spreadsheet's
+  # legacy (MySQL) search found none; recall_gap_current = verified live against the
+  # current OpenSearch search. All SME-curated -- review before trusting.
+  # ---------------------------------------------------------------------------
+  - id: cnf
+    query: cnf
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    entity_types: [Cell Line]
+    recall_gap_legacy_search: true
+    recall_gap_current: true   # verified live (top 20): only 1/5, a fuzzy partial at rank 12; 2/5 not retrievable at all — needs 'cnf' synonym
+    notes: "SME-curated; expected_pool omitted (source listed 0). Legacy (MySQL) found none; current OpenSearch surfaces only 1/5 in the top 20 (a fuzzy partial) and 2/5 not at all — needs 'cnf' added as a synonym for the cNF cell lines."
+    relevant:
+      - 46da7a41-c654-426e-bfb7-361caf4d3c4c   # icNF98.4c (Cell Line)
+      - 5a466cdc-5eaa-45a5-87b1-ba9cac6d7d21   # 28cNF (Cell Line)
+      - 882101e0-1207-4323-a354-6d5a642e6ca3   # cNF98.4d (Cell Line)
+      - 75d4b88a-a906-4f08-a9f8-66490328b9f1   # icNF04.9a (Cell Line)
+      - 7ef2fd6f-9ba6-4e30-94fc-d4ffd61de6e6   # icNF00.10a (Cell Line)
+
+  - id: ctf-biobank
+    query: ctf biobank
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 4
+    entity_types: [Biobank]
+    recall_gap_current: false
+    notes: "SME-curated; ~4 expected in registry; these are the ideal head."
+    relevant:
+      - e4e60a43-9073-4dfa-a629-76b472451b7f   # CTF Biobank (Biobank)
+      - 60e2d28b-9bf1-40e4-a0a1-dc3ef71b0e6d   # Coriell Institute for Medical Research Biobank (Biobank)
+      - 17ad02e9-22c2-429e-8f1f-361adba1e0d7   # The Johns Hopkins NF1 Biospecimen Repository (Biobank)
+      - 2cd992ee-4232-4fad-9eca-26fd91dd20df   # Children's Hospital of Philadelphia Biobank (Biobank)
+
+  - id: dhh-cre
+    query: dhh-cre
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 33
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "SME-curated; ~33 expected in registry; these are the ideal head."
+    relevant:
+      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
+      - 5511a019-88aa-43c8-86c3-ad1677c8a3d0   # B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (Animal Model)
+      - bfa7ccaa-fee4-42bd-bc74-afe859d56fb6   # NF1fl/fl;Dhh-Cre (Animal Model)
+      - 667881c8-e235-4d82-84af-2d1be9c6ef9b   # Dhh-Cre; Nf1flox/+; Ptenflox/flox (Animal Model)
+      - dc6bf003-6330-4fc9-b851-8c6a3ada5d79   # Dhh-Cre; Ptenflox/+ (Animal Model)
+
+  - id: ipnf05-5
+    query: ipnf05.5
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 2
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends)."
+    relevant:
+      - 844b598c-0171-4972-91c3-27aa21b45d52   # hTERT NF1 ipNF05.5 (Mixed clones) (Cell Line)
+      - 5502caf5-4cf1-418f-bf50-164cfa316b0f   # hTERT NF1 ipNF05.5 (Cell Line)
+
+  - id: jh-2-002
+    query: jh-2-002
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 3
+    entity_types: [Animal Model, Cell Line]
+    recall_gap_legacy_search: false
+    recall_gap_current: true   # 0/3 listed IDs in top 20 -- but see notes: expected ID is stale, search surfaces JH-2-002 variants
+    notes: "SME-curated; ~3 expected in registry; these are the ideal head. VERIFY -- the expected resourceId looks stale: the current index lists JH-2-002 (PDX/MPNST/pNF) variants at ranks 2-4 under different IDs, so this is a golden-data mismatch, not a search recall gap; re-curate the relevant set."
+    relevant:
+      - 1bc84ef2-208f-4f0e-8045-6be47fd968de   # JH-2-002 (Cell Line)
+      - bcb3c61f-9f6d-4f04-8d5d-3ea1b63843a6   # MPNST-Nf1-002 (Animal Model)
+      - f2cc7762-5e1a-45d6-a4ce-029be9b42094   # MPSNT-SP-002 (Animal Model)
+
+  - id: johns-hopkins
+    query: johns hopkins
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 1
+    entity_types: [Biobank]
+    recall_gap_current: false
+    notes: "SME-curated; kept top 1 of 5 (tail were near-name false friends)."
+    relevant:
+      - 17ad02e9-22c2-429e-8f1f-361adba1e0d7   # The Johns Hopkins NF1 Biospecimen Repository (Biobank)
+
+  - id: krox20-cre
+    query: krox20-cre
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 34
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "SME-curated; ~34 expected in registry; these are the ideal head."
+    relevant:
+      - 46fb4411-d129-488c-83a5-c8e20176018e   # Nf1flox/-;Krox20-Cre (Animal Model)
+      - 441ea70d-e784-4fc0-a080-50e07acf5f05   # Nf1flox/flox;Krox20-Cre (Animal Model)
+      - 5511a019-88aa-43c8-86c3-ad1677c8a3d0   # B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (Animal Model)
+      - 6f865b65-5995-4243-8832-b8120fd2c36f   # Krox20;Nf1flox/- (Animal Model)
+      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
+
+  - id: mpnst
+    query: mpnst
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 43
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~43 expected in registry; these are the ideal head."
+    relevant:
+      - 7db6b49f-7eec-4b47-bbdc-675a8a464735   # MPNST 724 (Cell Line)
+      - 1b604846-d41c-4969-a79a-9660c04e585c   # NCC-MPNST3-X2-C1 (Cell Line)
+      - 7fe31236-bc93-449b-b559-9394999be926   # NCC-MPNST3-C1 (Cell Line)
+      - 827f08a1-3d0f-4fd8-98e4-fb5c40a9c742   # NCC-MPNST5-C1 (Cell Line)
+      - 8f646e44-5263-4f80-bb94-b297a875c52a   # NCC-MPNST2-C1 (Cell Line)
+
+  - id: neurofibromin
+    query: neurofibromin
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 100
+    entity_types: [Antibody]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live (top 20): 2/5 in top 20 (ranks 12,16), rest ranked lower — ranking/boost gap, not recall
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head. Legacy found none; current OpenSearch surfaces 2/5 in the top 20 (ranks 12,16) with the rest ranked lower — a boosting/ranking gap, not a recall gap."
+    relevant:
+      - 3e92d170-96f1-4be4-985c-d2ac15f5af6b   # Neurofibromin antibody (Antibody)
+      - 47c1b795-bdcc-4029-b3db-6500bdc23508   # Neurofibromin 1 Antibody (Antibody)
+      - a5a65c85-414f-4681-9769-16e17d482ce6   # Neurofibromin 1 antibody (Antibody)
+      - 9d0e7c1f-4044-47c8-ac57-bd5f23bc8c41   # Anti-Neurofibromin antibody (Antibody)
+      - cf8c128e-aecd-4ec9-b2d0-b2e72deaef55   # Neurofibromin Antibody (E-8) (Antibody)
+
+  - id: nf1-flox
+    query: nf1-flox
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 100
+    entity_types: [Animal Model]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live (top 20): 1/5 in top 20 but at rank #1; rest ranked 23-71 — recall present at top, ranking depth remains
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head. Legacy found none; current OpenSearch puts a relevant item at rank #1 (rest ranked 23-71) — recall present in the top 20; remaining issue is ranking depth."
+    relevant:
+      - d2dec4d7-24be-4218-b7b5-63349158aa15   # Nf1flox/flox (Animal Model)
+      - ddf3618d-dda5-4c03-a4b4-b9263dba0a31   # C57BL/6JSmoc-Nf1tm1(flox)Smoc (Animal Model)
+      - 27c1a639-9e98-4289-872d-f275d4e49be7   # B6/JGpt-Nf1<em1Cflox>/Gpt (Animal Model)
+      - b0e4be7c-1b0f-4564-aa18-05b36ac77055   # Prx1-Cre+/- Nf1flox/flox (Animal Model)
+      - e71b421a-5e1d-49d6-a045-aa03aff7e7fe   # Nf1flox/flox;Cx3cr1+/gfp (Animal Model)
+
+  - id: nf1-grd
+    query: nf1-grd
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 100
+    entity_types: [Genetic Reagent]
+    recall_gap_current: false
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head."
+    relevant:
+      - 728283a2-36cd-4b5a-9fd8-5a6c3661b43d   # pGBT9-NF1-GRD (Genetic Reagent)
+      - ccba42df-9123-4536-9af2-951150eeb548   # Nf1 (NM_012609) Rat Untagged Clone (Genetic Reagent)
+      - 1215c62b-3d47-4a41-8c02-68392015304d   # Neurofibromin (NF1) (NM_001042492) Human Untag (Genetic Reagent)
+      - 6b0cfb7c-26a1-4269-97a9-264c1cbe81da   # Neurofibromin (NF1) (NM_001128147) Human Tagge (Genetic Reagent)
+      - 8c69eb2e-b455-4ac7-a73c-a748bf9bbba6   # Neurofibromin (NF1) (NM_001042492) Human Tagge (Genetic Reagent)
+
+  - id: nf2
+    query: nf2
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 2
+    entity_types: [Biobank, Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~2 expected in registry; these are the ideal head."
+    relevant:
+      - cc2045df-5ebf-4491-b5b1-88d65e59b228   # SZ-NF2 (Cell Line)
+      - e4e60a43-9073-4dfa-a629-76b472451b7f   # CTF Biobank (Biobank)
+
+  - id: nonsense-mutation
+    query: nonsense mutation
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 100
+    entity_types: [Animal Model, Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head."
+    relevant:
+      - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model)
+      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
+      - 504d7dfe-acf9-476c-974d-e8665095afbb   # Nf1tm1.1Kest (Animal Model)
+      - 7e104ac3-b954-4afa-8d87-60c3b1d80b73   # Nf1(31) (Animal Model)
+      - 423cc0f3-8a43-4e10-a9a4-d529aa78f022   # 10CM (Cell Line)
+
+  - id: optic-glioma
+    query: optic glioma
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 6
+    entity_types: [Animal Model, Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~6 expected in registry; these are the ideal head."
+    relevant:
+      - aaa66c45-c7b1-4a85-bfe9-79bb0a1334a7   # SHG-140 (Cell Line)
+      - 118aa95e-27f4-48fa-94c7-5f786b8b4f2f   # B6.129(Cg)-Nf1tm1Par/J (Animal Model)
+      - 893695cf-daa7-42eb-998c-9b04af941964   # B6.129S1-Nf1tm1Cbr/J (Animal Model)
+      - d1c0c790-acff-486a-b794-b0429b09eeec   # Nf1flox/-; GFAP-Cre; CD11b-TK (Animal Model)
+      - e487fd33-48d3-4a02-b2e0-4d0525ee8e20   # Nf1flox/-; GFAP-Cre; Cx3cr1+/gfp (Animal Model)
+
+  - id: pnf
+    query: pnf
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 2
+    entity_types: [Cell Line]
+    recall_gap_legacy_search: true
+    recall_gap_current: true   # verified live (top 20): 0/2 in top 20 (only fuzzy at ranks 79/83) — needs 'pnf' synonym
+    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none; current OpenSearch surfaces 0/2 in the top 20 (only fuzzy matches at ranks 79/83) — needs 'pnf' added as a synonym for plexiform neurofibroma."
+    relevant:
+      - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line)
+      - 7deb7765-38aa-4d8a-a3cb-bd4aefeb3a86   # 3PNF_FiPSsv_PM_2 (Cell Line)
+
+  - id: schwann-cell
+    query: schwann cell
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 100
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head."
+    relevant:
+      - 234515dd-7c28-4172-83c7-59dddfa22acb   # Schwann cell NF1 -/- (iPN97.4 #24) (Cell Line)
+      - 3a3e5460-3d5b-45f9-995d-25bd49c06f34   # Schwann cell NF1 -/- with R816X mNf1 cDNA (Cell Line)
+      - 3beebac1-95b0-4834-9008-19f7d268fc5b   # Schwann cell NF1 -/- with WT tagged mNf1 cDNA (Cell Line)
+      - faf29a50-3168-4ccd-a484-f2a78a026af3   # Schwann cell NF1 -/- with R681X mNf1 cDNA (Cell Line)
+      - 1ae5651a-818f-4732-8045-17bea2555056   # Dhh-Cre; NF1Arg681*/flox Schwann Cells (Cell Line)
+
+  - id: snf96-2
+    query: snf96.2
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 1
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~1 expected in registry; these are the ideal head."
+    relevant:
+      - c9a87975-378b-4930-8fda-e5896c42c86c   # sNF96.2 (Cell Line)
+
+  - id: st88-14
+    query: st88-14
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 2
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~2 expected in registry; these are the ideal head."
+    relevant:
+      - 202c110b-a5f1-49ab-acdc-e6e33a1c29bb   # ST88-14 (Cell Line)
+      - b368f84e-f38b-4ff0-9458-fe5d8b91122d   # ST88-3 (Cell Line)
+
+  - id: t265
+    query: t265
+    type: known-item
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 1
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "SME-curated; ~1 expected in registry; these are the ideal head."
+    relevant:
+      - 6419dd0d-1937-4ecf-bf01-876632ae0f54   # T265 (Cell Line)
+
+  - id: zebrafish
+    query: zebrafish
+    type: topical
+    source: NF_tool_search_benchmarking_spreadsheet
+    source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    expected_pool: 11
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "SME-curated; ~11 expected in registry; these are the ideal head."
+    relevant:
+      - e7a8732a-73ba-4d05-88a9-8d796d0f1a6b   # Nf1adelta5 zebrafish (Animal Model)
+      - 7d5e90cc-e97a-4321-b0a5-82feed840c50   # Nf1b+10 zebrafish (Animal Model)
+      - b9cf037b-1743-4eef-88ff-8a80659323eb   # Nf1a+/-; Nf1b-/-; p53m/m zebrafish (Animal Model)
+      - d3a1e3de-577d-4b4b-9eed-91dc21c1bbde   # Nf1a+/-; Nf1b-/-; p53m/m; sox10:mCherry zebraf (Animal Model)
+      - 757bf9d9-cf3c-400e-b470-d65302d22897   # Nf1a+/-; Nf1b-/-; p53e7/e7 zebrafish (Animal Model)
