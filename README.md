@@ -248,10 +248,6 @@ that doc for new results.
 field boosts) is documented with code line references in
 [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
-**Cross-index / unified search** discussion for search across multiple object-type indices (tools, datasets, …) —
-the federated (B) and rank-fusion (C) options — in
-[docs/MULTI_INDEX.md](docs/MULTI_INDEX.md).
-
 ## Rechecking SearchIndex object inventory
 
 No auth token needed — these objects are public, so `entity/children` and
