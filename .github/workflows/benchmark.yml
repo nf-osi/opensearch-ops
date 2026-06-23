@@ -5,15 +5,7 @@
 name: benchmark
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'benchmark/**'
-      - 'query.py'
-      - '.github/workflows/benchmark.yml'
-  workflow_dispatch: {}
-  schedule:
-    - cron: '0 7 * * 1'  # weekly, Mondays 07:00 UTC
+  workflow_dispatch: {}  # manual trigger only
 
 permissions:
   contents: read
@@ -46,11 +38,12 @@ jobs:
         # Non-fatal: if the run fails (or no benchmark exists yet), the build
         # step below still publishes an "under construction" page.
         continue-on-error: true
-        run: python3 benchmark/run.py --label baseline
+        run: python3 benchmark/run.py tools --label baseline
 
       - name: Build site
-        # Always runs, even if the benchmark step failed.
-        run: python3 benchmark/build_site.py --out site
+        # Always runs, even if the benchmark step failed. Aggregates every
+        # benchmark/<table>/results/*.json into the site.
+        run: python3 build_site.py --out site
 
       - uses: actions/upload-pages-artifact@v3
         with:
