@@ -171,17 +171,15 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 5
-    entity_types: [Cell Line, Patient-Derived Model, Animal Model]
+    expected_pool: 3
+    entity_types: [Cell Line, Patient-Derived Model]
     recall_gap_legacy_search: false
     recall_gap_current: false   # re-curated: JH-2-002 (PDX/MPNST/pNF) surface at ranks 2-4 in top 20
-    notes: "SME-curated; re-curated 2026-06-22. The spreadsheet's JH-2-002 resourceId (1bc84ef2) was stale — the index now splits it into JH-2-002 (PDX/MPNST/pNF) variants, which the search surfaces at ranks 2-4. Kept the SME's two related models (MPNST-Nf1-002, MPSNT-SP-002), which still exist but rank below top 20 — confirm they truly belong to this query."
+    notes: "SME-curated; re-curated 2026-06-22. The spreadsheet's JH-2-002 resourceId (1bc84ef2) was stale — the index now splits it into JH-2-002 (PDX/MPNST/pNF) variants, which the search surfaces at ranks 2-4. Dropped the SME's MPNST-Nf1-002 and MPSNT-SP-002: verified against the source table, both are unrelated NF1 mouse models with no JH-2-002 reference in any field — they matched legacy search only on the shared '002' token (false friends)."
     relevant:
       - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX) (Patient-Derived Model)
       - d53f3a73-f8b3-5fe5-9467-3a2e1ef690d3   # JH-2-002 (MPNST) (Cell Line)
       - 23d83c87-acef-552c-8206-89753968fe3f   # JH-2-002 (pNF) (Cell Line)
-      - bcb3c61f-9f6d-4f04-8d5d-3ea1b63843a6   # MPNST-Nf1-002 (Animal Model)
-      - f2cc7762-5e1a-45d6-a4ce-029be9b42094   # MPSNT-SP-002 (Animal Model)
 
   - id: johns-hopkins
     query: johns hopkins
