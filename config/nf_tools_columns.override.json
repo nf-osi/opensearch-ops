@@ -1,0 +1,29 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_tools_columns",
+  "description": "Per-column analyzer assignments for the nf-tools SearchIndex (syn75081636, source syn51730943). Roles: IDENTIFIER for id-like fields (preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time); KEYWORD for clean single-value categorical/facet fields (exact match). Every other column (resourceName, names, species, free-text, multi-value JSON-array fields, dates) falls through to the config defaultAnalyzer (STANDARD), which tokenizes and lowercases without stemming. Columns absent from the index are silently skipped at build time.",
+  "overrides": [
+    { "columnName": "resourceId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "rrid", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "orcid", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "investigatorSynapseId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+
+    { "columnName": "description", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "synonyms", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "diseaseType", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "tumorType", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "targetAntigen", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "cellLineGeneticDisorder", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "cellLineManifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "animalModelGeneticDisorder", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "animalModelOfManifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+
+    { "columnName": "resourceType", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "cellLineCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "completenessCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "availabilityCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "sex", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "race", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "age", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+  ]
+}
