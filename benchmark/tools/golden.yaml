@@ -48,6 +48,11 @@
 index: syn75081636
 index_name: nf-tools
 k: 10
+# id_field: which column the `relevant` ids below come from, i.e. what the runner
+# matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
+# (an accession, a Synapse id, …). Use "rowId" to match on the index's own per-row id
+# when no column is a stable identifier.
+id_field: resourceId
 
 cases:
   - id: name-exact-schwann
@@ -404,3 +409,327 @@ cases:
       - b9cf037b-1743-4eef-88ff-8a80659323eb   # Nf1a+/-; Nf1b-/-; p53m/m zebrafish (Animal Model)
       - d3a1e3de-577d-4b4b-9eed-91dc21c1bbde   # Nf1a+/-; Nf1b-/-; p53m/m; sox10:mCherry zebraf (Animal Model)
       - 757bf9d9-cf3c-400e-b470-d65302d22897   # Nf1a+/-; Nf1b-/-; p53e7/e7 zebrafish (Animal Model)
+
+  # ---------------------------------------------------------------------------
+  # Agent-generated (generate-goldens skill), nf-tools syn75081636, 2026-06-22.
+  # SME-simulated DISCOVERY queries. RELEVANT SETS DERIVED FROM THE SOURCE TABLE
+  # (syn51730943) metadata columns / names via the Table Query API — NOT from the
+  # search index, which would be circular (search can't surface what it misses).
+  # Queries favor realistic shorthands (pdx, ipsc, gfap-cre) and specific multi-word
+  # phrasing (kras mutant, pten mouse model, melanoma cell line) over bare one-word terms.
+  # expected_pool = true count from the source query; `relevant` is the ideal ranked head.
+  # recall_gap_current verified live 2026-06-22 (frontend-style multi_match+fuzziness:AUTO,
+  # Hit@20). DRAFT — review heads/ordering before trusting.
+  # ---------------------------------------------------------------------------
+  - id: pdx
+    query: pdx
+    type: topical
+    source: agent-generated
+    expected_pool: 24
+    entity_types: [Patient-Derived Model]
+    recall_gap_current: false
+    notes: "Realistic shorthand for patient-derived xenograft. Ground truth = resourceType='Patient-Derived Model' (source table, 24 rows incl the JH-2 PDX series and patient-derived organoids). Head spans tumor types."
+    relevant:
+      - e080df79-e33c-56de-9299-07dd79ddee51   # human neurofibroma xenografts (PDX) (Patient-Derived Model)
+      - 571cb9d8-dee4-506e-988c-3c45a80ab776   # vestibular schwannoma xenografts (PDX) (Patient-Derived Model)
+      - a4a33fb7-5dc0-5632-a437-c8fe1e38d4f7   # NF1 MPNST PDX4 (PDX) (Patient-Derived Model)
+      - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX) (Patient-Derived Model)
+      - 75944a7c-dca5-5796-913c-2585330ab1cc   # MN-2 (PDX) (Patient-Derived Model)
+  - id: ipsc
+    query: ipsc
+    type: topical
+    source: agent-generated
+    expected_pool: 40
+    entity_types: [Cell Line]
+    recall_gap_current: false
+    notes: "Realistic shorthand for induced pluripotent stem cell. Ground truth = cellLineCategory='Induced pluripotent stem cell' (source table, 40 rows). Head favors clearly NF1-context iPSC lines."
+    relevant:
+      - ec8883f5-db93-4c66-9970-792b71b653ac   # c.1149C > A NF1-mutant hiPSCs (Cell Line)
+      - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line)
+      - 8a213a9d-392b-4746-8f59-c12f753d9217   # BJFF.6 (Cell Line)
+      - 3978a8ca-aad8-49f5-a513-70b5acd0f92e   # c.1185+1G > A NF1-mutant hiPSCs (Cell Line)
+      - 95997768-950e-4c8d-93bb-e6ed370e503f   # 7PNF_SiPSrv_PM_12 (Cell Line)
+  - id: minipig-model
+    query: minipig model
+    type: topical
+    source: agent-generated
+    expected_pool: 3
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "Species/model-system discovery. Ground truth = species HAS ('Sus scrofa') (source table, all 3 minipig models). Search misses Nf1+/ex42del pig (not in top 20) — a ranking-depth note, not a strict gap."
+    relevant:
+      - 02aba952-5860-4bd9-bfb2-ff796b22bf48   # Nf1 heterozygous mutant minipig (Animal Model)
+      - 57625a6e-c039-418e-8e22-db464f8aa827   # Nf1+/ex42del pig (Animal Model)
+      - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model)
+  - id: drosophila-model
+    query: drosophila model
+    type: topical
+    source: agent-generated
+    expected_pool: 5
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "Species/model-system discovery. Ground truth = species HAS ('Drosophila melanogaster') (source table, all 5 fly models). NB: the 'Drosophila NF1 antibody' is an Antibody (species not Drosophila), correctly excluded."
+    relevant:
+      - 500a5c2f-5104-405e-a243-3d85b59d6b08   # Nf1-/- Drosophila (Animal Model)
+      - b7b76ccd-e646-4d30-8868-ba39541dd573   # dNf1 Drosophila (Animal Model)
+      - bc95a39a-5f41-4d34-9c0c-f312028aa2f3   # Nf1P1 Drosophila (Animal Model)
+      - 52351388-ba1f-4cf8-a03a-23b941d4408e   # Nf1E1 Drosophila (Animal Model)
+      - 326557dc-c320-4f04-b64a-08edd703ee95   # Nf1P1/Nf1E1 Drosophila (Animal Model)
+  - id: melanoma-cell-line
+    query: melanoma cell line
+    type: topical
+    source: agent-generated
+    expected_pool: 238
+    entity_types: [Cell Line]
+    recall_gap_current: true
+    notes: "Disease/cancer discovery (NF1 is recurrently mutated in melanoma). Ground truth = cellLineManifestation HAS ('Melanoma','Cutaneous Melanoma') (source table, 238 rows). RECALL GAP: bare 'melanoma' ranks these #1, but the realistic 'melanoma cell line' query buries ALL of them past rank 20 — the generic 'cell line' tokens swamp the manifestation match. Head is a representative few."
+    relevant:
+      - 9ce4f191-b7ce-437d-8cef-f6de332040e0   # MUG-Mel1 (Cell Line)
+      - 9c8c2065-4781-4275-88bc-c300d6fce45a   # SK-MEL-109 (Cell Line)
+      - 14569691-bdb1-4cd7-ae1c-943f100e93ff   # NZM022 (Cell Line)
+      - bf7765fe-7681-40cb-8a72-6f6d5204985e   # SK-MEL-13 (Cell Line)
+      - d269f40c-b3e7-4dc7-9c40-28ba1f9711cf   # SK-MEL-15 (Cell Line)
+  - id: organoid
+    query: organoid
+    type: topical
+    source: agent-generated
+    expected_pool: 9
+    entity_types: [Organoid Protocol]
+    recall_gap_current: false
+    notes: "Modality discovery for a resource type not otherwise covered. Ground truth = resourceType='Organoid Protocol' (source table, 5 rows; ~9 if patient-derived organoids are counted). Head = the Organoid Protocol entries (3D spheroid/microtissue platforms)."
+    relevant:
+      - 088be4ee-e659-56ac-a76e-c0d134e72bea   # Organoid rings (Organoid Protocol)
+      - 6b702313-7b4a-5042-8e18-a7f65c352a57   # Ex vivo 3D MPNST microtissue platform (Organoid Protocol)
+      - 5bf48498-9edc-55f4-a211-fb0588609252   # 3D pNF1 spheroids (Organoid Protocol)
+      - c98f5e4f-3b7b-5645-acf0-17dfa91083ef   # Spheroids for drug sensitivity screening (Organoid Protocol)
+      - 9cd4800e-fddb-5f1e-9b3c-ed88c025264b   # TAME chips (Organoid Protocol)
+  - id: pten-mouse-model
+    query: pten mouse model
+    type: topical
+    source: agent-generated
+    expected_pool: 9
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "Multi-word co-mutation/pathway discovery. Ground truth = Animal Model with Pten in name (source table, 9 rows; mostly Dhh-Cre;Pten compound mutants used for MPNST studies)."
+    relevant:
+      - dc6bf003-6330-4fc9-b851-8c6a3ada5d79   # Dhh-Cre; Ptenflox/+ (Animal Model)
+      - 3e8941ec-d5c8-42ae-9c1b-bc4066177ec3   # Dhh-Cre; Ptenflox/flox (Animal Model)
+      - 507595f1-9243-48d9-bc56-e9a97904789b   # Dhh-Cre; Nf1flox/flox; Ptenflox/flox (Animal Model)
+      - caa4c07e-89d1-490d-a2a8-f63bf69bc5d3   # Dhh-Cre; Nf1flox/flox; Ptenflox/+ (Animal Model)
+      - 2934805f-67ef-41d9-af89-64a072c66642   # Cnp-EGFR (Pten-het/C-EGFR) (Animal Model)
+  - id: nf1-p53-mouse
+    query: nf1 p53 mouse
+    type: topical
+    source: agent-generated
+    expected_pool: 8
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "Multi-word co-mutation discovery: the classic Nf1;Trp53 cis MPNST GEMMs. Ground truth = Animal Model with p53/Trp53 in name, zebrafish excluded (source table, 8 mouse rows). 7d71c2b4 ranks just outside the top 20 — kept as a ranking-depth signal."
+    relevant:
+      - 426a3531-5785-4972-83ad-d88e54d2ef7f   # Nf1-/+;Trp53-/+cis (Animal Model)
+      - 27b4443a-06bb-454f-a253-ffb60b70a129   # CisNf1+/-; p53+/- (Animal Model)
+      - 8500990a-8848-413c-9c5b-7697d697fa2e   # Nf1:p53 (Animal Model)
+      - 9194d4de-84b2-438a-af6e-6cdfe79ff8cb   # Nf1+/- P53+/- (Animal Model)
+      - 7d71c2b4-a7c5-4ced-bb45-eb98bfe42025   # B6;129S2-Trp53tm1Tyj Nf1tm1Tyj/J (Animal Model)
+  - id: gfap-cre
+    query: gfap-cre
+    type: topical
+    source: agent-generated
+    expected_pool: 6
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: "Cre-driver shorthand (companion to the existing dhh-cre / krox20-cre cases). Ground truth = Animal Model with GFAP in name (source table, 6 rows; GFAP-Cre Nf1 models used for optic-pathway-glioma studies). Nf1+/-GFAPCKO ranks just outside top 20."
+    relevant:
+      - fbf11ec4-1d12-4feb-a6fc-9faf6bc9c9db   # Nf1flox/-;hGFAP-Cre (Animal Model)
+      - e487fd33-48d3-4a02-b2e0-4d0525ee8e20   # Nf1flox/-; GFAP-Cre; Cx3cr1+/gfp (Animal Model)
+      - 4e513b5b-dde9-424d-96ff-3dd7c90f429b   # Nf1flox/mut; GFAP-Cre (Animal Model)
+      - d1c0c790-acff-486a-b794-b0429b09eeec   # Nf1flox/-; GFAP-Cre; CD11b-TK (Animal Model)
+      - 9971e47e-976a-4631-8edd-5cae04304b01   # Nf1+/-GFAPCKO (Animal Model)
+  - id: crispr-plasmid
+    query: crispr plasmid
+    type: topical
+    source: agent-generated
+    expected_pool: 4
+    entity_types: [Genetic Reagent]
+    recall_gap_current: false
+    notes: "Multi-word genetic-reagent discovery. Ground truth = name contains CRISPR or vectorType HAS ('CRISPR') (source table, 4 rows: NF1 CRISPR plasmids and lentiCRISPR/pX330 vectors)."
+    relevant:
+      - 0af1bf36-fa11-4e30-ac58-7a3dbce6c227   # Neurofibromin CRISPR Plasmids (h) (Genetic Reagent)
+      - 0ffb7ddf-418f-4e35-b134-e9ab3df13f85   # Neurofibromin CRISPR Plasmids (m) (Genetic Reagent)
+      - c25da5cc-8694-4170-b58a-dbb56e451d60   # lentiCRISPRv2.sgNf1.4 (Genetic Reagent)
+      - eb0b9d5c-ff06-4e86-8191-dc5336c0a372   # pX330-NF1 E1 (Genetic Reagent)
+  - id: nf1-shrna
+    query: nf1 shrna
+    type: topical
+    source: agent-generated
+    expected_pool: 2
+    entity_types: [Genetic Reagent]
+    recall_gap_current: false
+    notes: "Multi-word knockdown-reagent discovery. Ground truth = name contains shRNA/siRNA (source table, 2 NF1 knockdown reagents)."
+    relevant:
+      - a7f9a0b4-7e4d-4db3-9695-38528fe6fff4   # Neurofibromin siRNA and shRNA Plasmids (Genetic Reagent)
+      - 7f96cf55-62f5-420d-9f58-672b24ffb3a5   # pAV-NF1v3-shRNA (Genetic Reagent)
+  - id: vestibular-schwannoma
+    query: vestibular schwannoma
+    type: known-item
+    source: agent-generated
+    expected_pool: 1
+    entity_types: [Patient-Derived Model]
+    recall_gap_current: false
+    notes: "NF2-associated hallmark tumor. Ground truth = the one resource explicitly named vestibular schwannoma (source table). Generic schwannoma cell lines (YST-1, MS03) are related but not vestibular-specific."
+    relevant:
+      - 571cb9d8-dee4-506e-988c-3c45a80ab776   # vestibular schwannoma xenografts (PDX) (Patient-Derived Model)
+
+  # ---------------------------------------------------------------------------
+  # Adapted from nf-osi/kg-pipeline eval (eval_tools_ground_auto.yaml), 2026-06-22.
+  # Full-sentence eval questions rephrased as short search-box queries; relevant sets
+  # RE-DERIVED from the source table (syn51730943), not taken from the eval `results`.
+  # source: kg-pipeline-eval.
+  # ---------------------------------------------------------------------------
+  - id: nf1-antibody-drosophila
+    query: drosophila nf1 antibody
+    type: known-item
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 1
+    entity_types: [Antibody]
+    recall_gap_current: false   # verified live 2026-06-22: rank #1
+    notes: "Eval AB-001. Ground truth = resourceType='Antibody' AND reactiveSpecies HAS ('Drosophila') (source table, 1 row). Single matching antibody."
+    relevant:
+      - cdde78f3-a1c3-43b4-a2d9-4f1a7cc88564   # Drosophila NF1 antibody (Antibody)
+
+  - id: nf1-antibody-cterm
+    query: c-terminal neurofibromin antibody
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 7
+    entity_types: [Antibody]
+    recall_gap_current: false   # verified live 2026-06-22: 1/5 head in top 20 (rank 20); epitope-region matches rank deeper
+    notes: "Eval AB-002. Ground truth = resourceType='Antibody' AND targetAntigen LIKE '%C-term%' (source table, 7 rows). Distinct from the broad neurofibromin-antibody case: epitope-region-specific intent."
+    relevant:
+      - 1910c1dc-3557-44f9-aedf-f3344cfd0097   # Neurofibromin (NF1) Rabbit Polyclonal Antibody (Antibody), NF1 (C-term)
+      - 01a755e0-90b9-44d4-ae81-3605fc5a7539   # Rabbit anti-NF1 Antibody, Affinity Purified (Antibody), NF1 (aa 2760 C-term)
+      - 76e5f3c5-195b-448e-a7fe-48fb3ecf1a91   # IHC-plus Polyclonal Rabbit anti-Human Neurofibromin / NF1 Antibody (Antibody), NF1 (aa 2760 C-term)
+      - db7bf81f-e9f8-4fad-9e6e-3cba8d6ca84a   # anti-NFI(CI) (Antibody), NF1 (C-term)
+      - c70c0de8-16c2-4aec-8af8-b50c47797345   # Neurofibromin specific antibody (Antibody), NF1 (last 281aa C-term)
+
+  - id: nf1-antibody-phospho
+    query: phospho nf1 antibody
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 6
+    entity_types: [Antibody]
+    recall_gap_current: false   # verified live 2026-06-22: 3/5 head in top 20 (ranks 7-9)
+    notes: "Eval AB-003 (NF1 phosphorylation / post-translational regulation). Ground truth = resourceType='Antibody' AND targetAntigen LIKE '%phospho%' (source table, 6 rows; phospho-Ser2741 and Ser2817 sites)."
+    relevant:
+      - 077df72b-88a2-41b9-aad0-8bb5ff52c046   # NF1 (phospho-Ser2741) antibody (Antibody), phospho-NF1 (Ser2741)
+      - 240c58e6-bf94-4a57-9af2-e5e2eb11e7d8   # Rabbit Anti-phospho-NF1 Antibody (Antibody), phospho-NF1
+      - eb5d7230-1787-4f68-b3d8-ccf87041976d   # NF1 (phospho S2741) polyclonal antibody (Antibody), phospho-NF1 (Ser2741)
+      - 3f5ceb79-864a-4f03-aa7f-8804f10b3a32   # Rabbit anti Neurofibromin (Phospho-specific) antibody (Antibody), phospho-NF1
+      - e860b011-a781-42b7-af23-c8b08bc25ebc   # Anti-phospho-NF1(Ser2817)/Gold (Antibody), phospho-NF1 (Ser2817)
+
+  - id: metabolic-mouse-model
+    query: nf1 metabolic model
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 2
+    entity_types: [Animal Model]
+    recall_gap_current: true   # verified live 2026-06-22: 0/2 in top 20 — 'metabolic' is not a strong text signal on these models
+    notes: "Eval AM-002 (energy expenditure / metabolic studies). Ground truth = animalModelOfManifestation HAS ('Metabolic Function') (source table, 2 rows). No column captures 'energy expenditure' specifically; Metabolic Function is the closest grounded manifestation."
+    relevant:
+      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
+      - 8e5c372e-dec8-4693-98a8-b07f3014257d   # Nf1tm2.1Kest (Animal Model)
+
+  - id: cafe-au-lait-spots
+    query: café-au-lait spots
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 5
+    entity_types: [Animal Model]
+    recall_gap_current: true   # verified live 2026-06-22: 0/5 in top 20 — search returns only the annotated Coriell cell lines; the models are missed
+    notes: "Eval AM-006 ('Which animal models develop café-au-lait spots?'). Café-au-lait macules are a clinical NF1 hallmark and these NF1 models (esp. the minipig) recapitulate it, so they ARE the intended answers — but NONE carry a 'Cafe-Au-Lait Spots' value in the source table (that manifestation is annotated only on the Coriell GM-series CELL lines). So this relevant set is the SME/eval-asserted animal models, NOT a source-column filter — and the gap is the point: searching 'café-au-lait spots' surfaces the annotated cell lines and misses every model. An annotation gap (models untagged) becoming a search recall gap. Ranked minipigs first (most associated with the café-au-lait phenotype)."
+    relevant:
+      - 02aba952-5860-4bd9-bfb2-ff796b22bf48   # Nf1 heterozygous mutant minipig (Animal Model)
+      - 57625a6e-c039-418e-8e22-db464f8aa827   # Nf1+/ex42del pig (Animal Model)
+      - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model)
+      - d27fd7b0-ed8f-4ee2-a8d9-26748c12518c   # Nf1+/- (Animal Model)
+      - 89b2f63c-1538-468e-9ca1-7ff948cb354e   # Nf1adelta8 zebrafish (Animal Model)
+
+  - id: hybridoma-cell-line
+    query: hybridoma cell line
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 3
+    entity_types: [Cell Line]
+    recall_gap_current: false   # verified live 2026-06-22: 3/3 head in top 20 (ranks 8-11)
+    notes: "Eval CL-002. Ground truth = cellLineCategory='Hybridoma' (source table, 3 rows; CPTC-NF1 hybridomas)."
+    relevant:
+      - 65d07476-2469-4679-85b2-e2ca67f3b01b   # CPTC-NF1-1 (Cell Line)
+      - f410431d-7571-4302-8870-eb115b71d0ce   # CPTC-NF1-2 (Cell Line)
+      - 42257ac4-1950-4541-9bee-b9a965e2fa86   # CPTC-NF1-3 (Cell Line)
+
+  - id: nf1-cell-line-black
+    query: nf1 cell line black patient
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 6
+    entity_types: [Cell Line]
+    recall_gap_current: true   # verified live 2026-06-22: 0/6 in top 20 — race is a weak/low-signal field for free-text search
+    notes: "Eval CL-004. Ground truth = race='Black' AND cellLineGeneticDisorder HAS ('Neurofibromatosis type 1') (source table, 6 rows)."
+    relevant:
+      - 7ef2fd6f-9ba6-4e30-94fc-d4ffd61de6e6   # icNF00.10a (Cell Line)
+      - ad2e271b-55ac-44ae-b39d-f1a6d76e1dc3   # cNF00.10a (Cell Line)
+      - f2677690-2137-408e-b250-784a0cd235f4   # GM01639 (Cell Line)
+      - 9db66052-f458-4400-ae1b-3f5c075dbd25   # GM01641 (Cell Line)
+      - 2549e536-b033-43e4-acf6-501499b6e498   # HeLa SilenciX NF1 (Cell Line)
+
+  - id: lung-adenocarcinoma-cell-line
+    query: lung adenocarcinoma cell line
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 12
+    entity_types: [Cell Line]
+    recall_gap_current: false   # verified live 2026-06-22: 4/5 head in top 20 (ranks 7-16)
+    notes: "Eval CL-006 (human lung lines for pulmonary toxicity). No column captures 'pulmonary toxicity'; reframed to the grounded manifestation. Ground truth = cellLineManifestation HAS ('Lung Adenocarcinoma') (source table, 12 rows; NCI-H series and engineered A549 NF1 KO)."
+    relevant:
+      - a14754e6-1c26-4224-9ef9-a1abfd1538eb   # NCI-H1373 (Cell Line)
+      - 177c35b5-d859-4bf2-870b-9311ef059159   # NCI-H2030 (Cell Line)
+      - 12d08160-d127-463a-9e6e-c62347f9e756   # NCI-H2122 (Cell Line)
+      - 95e9ea19-3d84-43a5-b003-347ecec6b1fa   # NCI-H23 (Cell Line)
+      - d605ae2e-969a-4956-bac5-5e36654d7b41   # Abcam A-549 NF1 KO (Cell Line)
+
+  - id: lentiviral-rnai-vector
+    query: lentiviral rnai vector
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 3
+    entity_types: [Genetic Reagent]
+    recall_gap_current: false   # verified live 2026-06-22: 1/3 head in top 20 (rank 18)
+    notes: "Eval GR-002 (lentiviral vectors for RNAi). Ground truth = vectorType HAS ('Lentiviral') AND/OR HAS ('RNAi') (source table). The single vector carrying BOTH Lentiviral and RNAi (pLV-H1-SGIPZ) is the exact answer and ranks first; the pure-RNAi pAV shRNA and pure-Lentiviral Lenti-CMV-NF1v3 are partial matches. The two KRAS ORF lentiviral clones are excluded (not RNAi)."
+    relevant:
+      - 58a67e29-1551-4828-97da-85d37b88f4f1   # pLV-H1-SGIPZ_NF1 sh1miR (Genetic Reagent), Lentiviral + RNAi
+      - 7f96cf55-62f5-420d-9f58-672b24ffb3a5   # pAV-NF1v3-shRNA (Genetic Reagent), RNAi
+      - be700072-5240-407a-be68-b0605664a055   # Lenti-CMV-NF1v3 (Genetic Reagent), Lentiviral
+
+  - id: nf1-bacterial-vector
+    query: nf1 bacterial expression vector
+    type: topical
+    source: kg-pipeline-eval
+    source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    expected_pool: 3
+    entity_types: [Genetic Reagent]
+    recall_gap_current: true   # verified live 2026-06-22: 0/3 in top 20 — 'bacterial expression' phrasing doesn't match the vector names
+    notes: "Eval GR-004 (NF1 expression vectors compatible with high-copy E. coli). No column captures 'high-copy'; reframed to the grounded bacterial-expression category. Ground truth = vectorType HAS ('Bacterial Expression') (source table, 3 rows; all NF1 inserts)."
+    relevant:
+      - 71c58bde-0973-422f-b330-8a593049f346   # ptrcNF1-333 (Genetic Reagent)
+      - abb887d1-7374-4e60-93d5-a0e32fcf635b   # pETNF1-333 (Genetic Reagent)
+      - c75ff77c-b408-4be5-af87-6734ab7544d0   # pTHN (Genetic Reagent)
+
