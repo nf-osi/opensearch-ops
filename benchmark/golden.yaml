@@ -104,7 +104,7 @@ cases:
   # tail were near-name false friends). expected_pool = SME estimate of the
   # true relevant count in the registry. recall_gap_legacy_search = the spreadsheet's
   # legacy (MySQL) search found none; recall_gap_current = verified live against the
-  # current OpenSearch search. All SME-curated -- review before trusting.
+  # current OpenSearch search.
   # ---------------------------------------------------------------------------
   - id: cnf
     query: cnf
