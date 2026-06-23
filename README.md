@@ -58,6 +58,69 @@ The index objects themselves are managed as entities:
 | Autocomplete | `POST /search/autocomplete` |
 | Bind/get/unbind a search config to an entity | `PUT` / `GET` / `DELETE /entity/{entityId}/searchconfig/binding` |
 
+### Where to bind a config (best practice: on the `SearchIndex` object)
+
+A `SearchConfiguration` is an **override** of the platform default analysis; it only
+takes effect once it is *bound* to an entity, and the binding lookup
+(`GET /entity/{id}/searchconfig/binding`) resolves **up the entity hierarchy** (it returns
+the nearest config found on the entity or any ancestor). Per the rest-docs:
+
+> Attach a `SearchConfiguration` to an entity (SearchIndex, Folder, or Project) by creating
+> a binding.
+
+So all three are legal targets — `SearchIndex` is explicitly allowed, and it's the one we want.
+
+**Bind a table-specific config directly to its `SearchIndex` object** (e.g. the NF-tools
+config → `syn75081636`), **not** to the folder/project. The reason is the entity layout:
+all portals' indexes are flat children of one shared collection project
+[`syn74909065`](https://www.synapse.org/Synapse:syn74909065), so a config bound at the
+project level would resolve down to **every portal's** index, not just ours. The
+`SearchIndex` object is the only entity with the right per-index scope. (Note the index
+object and its `definingSQL` source table live in *different* project trees — the source
+table's project, e.g. NF's `syn26338068`, is **not** an ancestor of the index object, so
+binding there would not reach the index.)
+
+The documented target list (SearchIndex → Folder → Project) is exactly the index object's
+own ancestor chain, which is consistent with binding resolution anchoring on the
+`SearchIndex` and walking up — so the index object is both an allowed and the
+most-specific target.
+
+> **Binding/config edits don't rebuild on their own — but updating the `SearchIndex`
+> entity does.** Rebuilds are automated off `SearchIndex` *entity lifecycle events*
+> (CREATE/UPDATE/DELETE), **not** off source-table changes. A `SEARCH_INDEX_LIFECYCLE`
+> worker consumes `ENTITY` change messages for `EntityType.searchindex`; on create/update
+> the lifecycle manager deletes the existing index, recreates it (applying the **currently
+> bound** config's analyzers/synonyms), and re-streams all rows. So the recipe is:
+> edit/bind the config, then **touch the `SearchIndex` entity** (`PUT /entity/{id}`) to
+> fire a full rebuild — the error string even reads *"update the SearchIndex to trigger a
+> rebuild."*
+>
+> Two constraints: (1) creating/updating a `SearchIndex` entity is **restricted to Sage
+> employees/admins** — so it's self-serve for the NF team (sagebase.org), not a separate
+> platform-team request, but not open to external portal owners; (2) indexing runs as the
+> **anonymous** realm user, so only publicly-readable **OPEN_DATA** rows are indexed.
+> Source-table data changes also don't auto-propagate — the same entity-update touch
+> refreshes content. (Query-time changes — DSL boosts, fuzziness, the *search*-analyzer
+> half of an override — need no rebuild at all.)
+>
+> *(Source: `SearchIndexLifecycleWorker`, `SearchIndexLifecycleManagerImpl.buildIndex`,
+> `SearchIndexMetadataProvider`, `SearchIndexQueryManagerImpl` in synapse backend. Note a
+> stale "build-once" comment in `SearchIndexMetadataProvider` no longer reflects behavior —
+> it rebuilds on every UPDATE.)*
+
+> **Current state (verified 2026-06-23):** the NF config objects now exist
+> (`nf_tools_search_config`, id `9`) but **nothing is bound yet**. Binding (and the
+> rebuild touch) requires `UPDATE` permission on the `SearchIndex` entity `syn75081636`,
+> and that entity has its **own ACL** granting `UPDATE` only to **Bryan Fauble**
+> (principalId `3481671`, the Sage platform engineer who created it); the read principals
+> `273948`/`273949` are the authenticated-users/public groups. The `nf-osi-service` account
+> (`3421893`) can create the org-scoped analyzer/override/config objects but gets
+> `403 "You do not have UPDATE permission for ENTITY : 75081636"` on the bind/rebuild — so
+> **binding + rebuild must be done by a principal with `UPDATE` on the entity** (have that
+> ACL extended to the NF team / service account, or have the entity owner run the last two
+> steps). The `b2ai_search_config` (id `2`, org `org.sage.dpe`) is still bound to nothing.
+> Check any entity with [`check_config.py`](check_config.py).
+
 The tuning objects (organization-scoped; list with optional `organizationName` filter):
 
 | Object type | List | Get / Update |
@@ -71,12 +134,22 @@ The tuning objects (organization-scoped; list with optional `organizationName` f
 
 | Type | id | name | notes |
 | --- | --- | --- | --- |
-| Synonym set | `16` | `standard_synonyms` | created `synonym_graph`, to be updated |
-| Synonym set | `17` | `synonym_rules` | created `synonym_graph` to be updated |
+| Synonym set | `16` | `standard_synonyms` | `synonym_graph`; `nf→neurofibromatosis`, `mpnst→…`, `pnf→plexiform neurofibroma`, etc. |
+| Synonym set | `17` | `synonym_rules` | `synonym_graph`, empty (placeholder) |
+| Text analyzer | `1017` | `nf_scientific_synonyms` | standard+lowercase+english stop/stemmer; `default_search` adds set 16 via `synonym_graph` (search-time only) |
+| Column analyzer override | `9` | `nf_tools_columns` | per-column map for nf-tools: IDENTIFIER for id fields, `nf_scientific_synonyms` for discovery free-text, KEYWORD for clean categoricals |
+| Search configuration | `9` | `nf_tools_search_config` | `defaultAnalyzer`=STANDARD + `columnAnalyzerOverrides`=[`nf_tools_columns`]; **created, not yet bound** (see below) |
 
-NF-owned search configuration, text analyzer, or column analyzer overrides are being created and refined. 
-In the meanwhile, we use platform's "off-the-shelf" shared built-in text analyzers (org `org.sagebionetworks`) available to any config: 
+These NF objects are versioned in [`config/`](config/) and (re)applied with
+[`config/apply_config.py`](config/apply_config.py). They reference the platform's shared
+built-in text analyzers (org `org.sagebionetworks`), available to any config:
 `SCIENTIFIC` (1), `STANDARD` (2), `IDENTIFIER` (3), `KEYWORD` (4), `AUTOCOMPLETE` (5).
+
+The custom `nf_scientific_synonyms` analyzer deliberately omits `word_delimiter_graph`:
+OpenSearch parses each synonym definition through the filters *preceding* the
+`synonym_graph` filter and rejects graph filters (like `word_delimiter_graph`) there, so
+only `lowercase` precedes the synonyms. Identifier-style token splitting is instead handled
+by the `IDENTIFIER` analyzer on the id columns.
 
 ## Querying an index (focus: `nf-tools`)
 
@@ -104,13 +177,17 @@ Request body:
 }
 ```
 `searchQuery` is raw OpenSearch DSL — `query`, `size`, `from`, `sort`, `highlight`, `aggs`, etc.
+See the OpenSearch [Query DSL](https://docs.opensearch.org/latest/query-dsl/) docs, and in
+particular [`multi_match` query types](https://docs.opensearch.org/latest/query-dsl/full-text/multi-match/)
+(`best_fields`, `cross_fields`, `phrase`, `phrase_prefix`, …) — the `type` the benchmark
+[strategies](benchmark/strategies.py) vary.
 
 > Syntax gotcha: Synapse's JSON adapter rejects OpenSearch shorthand. Use the verbose
 > object form for every clause — `{"match":{"description":{"query":"plexiform"}}}`,
 > **not** `{"match":{"description":"plexiform"}}` (the latter errors with
 > `JSONObject["description"] is not a JSONObject`).
 
-**No authentication is required; auth should not be used — these indexes are public and queries work anonymously.**
+**No authentication is required; these indexes are public and queries work anonymously.**
 
 Use [`query.py`](query.py) (handles polling and field flattening):
 ```bash
@@ -136,3 +213,73 @@ python3 query.py '{"query":{"multi_match":{"query":"schwann","fields":["resource
   Each hit returns `rowId`, `rowVersion`, `score`, and `fields` (column name/value
   pairs; multi-value columns are JSON-encoded strings).
 
+## Benchmark harness
+
+[`benchmark/`](benchmark/) compares query strategies against a golden (ground) relevance set so
+we can measure the effect of config and query changes.
+
+**Per-table layout.** Each table's benchmark lives in its own subfolder
+`benchmark/<table>/` (e.g. [`benchmark/tools/`](benchmark/tools/) for `nf-tools`; later
+`benchmark/studies/`, …), so goldens, docs, and results don't collide across tables. The
+shared harness scripts live at `benchmark/` root.
+
+Per-table (`benchmark/tools/`):
+- [`golden.yaml`](benchmark/tools/golden.yaml) — test cases mapping a query to the
+  `resourceId`s that should be retrieved (YAML, with inline comments, for easy SME review
+  and curation). `known-item` cases have defensible exact ground truth; `topical` cases
+  are seeded and flagged for human curation.
+- [`GOLDEN.md`](benchmark/tools/GOLDEN.md) — dataset documentation for `golden.yaml`:
+  case provenance (the `source:` field) and **coverage gaps** (queries deliberately not
+  turned into cases, and why — schema gaps, cross-record links, other indexes).
+- `results/<label>.json` — one file per run, diffable as config changes.
+
+Shared harness (`benchmark/` root):
+- [`benchmark/strategies.py`](benchmark/strategies.py) — query builders (`query_text → DSL`):
+  `frontend_default` (mirrors the live frontend exactly — bare `multi_match` + `fuzziness:
+  AUTO`, the production baseline), `simple_query_string`, `multi_match_best`,
+  `multi_match_boosted`, `multi_match_cross`, `boosted_fuzzy`, `phrase_prefix`. The functions
+  are table-agnostic; the field-boost lists
+  default to nf-tools. A table whose schema differs can override by adding its own
+  `benchmark/<table>/strategies.py` (run.py prefers it, else falls back here).
+- [`benchmark/run.py`](benchmark/run.py) — runs every (case × strategy) for a table, scores
+  **MRR**, **Recall@k**, **Hit@1**, **Hit@k**; prints a table and writes
+  `benchmark/<table>/results/<label>.json` (`--label` defaults to `latest`).
+
+Golden authoring (used to *create* cases, not run them) lives with its skill:
+[`.claude/skills/generate-goldens/`](.claude/skills/generate-goldens/) holds `SKILL.md`
+and `profile_table.py` (the schema-agnostic table profiler).
+
+```bash
+pip install pyyaml   # one-time; run.py reads the golden set from YAML
+python3 benchmark/run.py tools                                                   # -> results/latest.json
+python3 benchmark/run.py tools --label boost-v2 --strategy multi_match_boosted   # after editing benchmark/strategies.py
+```
+
+**Strategy explanations, metric definitions, and the latest results live in
+[benchmark/tools/RESULTS.md](benchmark/tools/RESULTS.md)** — stakeholder-facing summary. Update
+that doc for new results.
+
+**What the live frontend actually has** (a bare `multi_match` + `fuzziness: AUTO`, no
+field boosts) is documented with code line references in
+[docs/INTEGRATION.md](docs/INTEGRATION.md).
+
+**Cross-index / unified search** discussion for search across multiple object-type indices (tools, datasets, …) —
+the federated (B) and rank-fusion (C) options — in
+[docs/MULTI_INDEX.md](docs/MULTI_INDEX.md).
+
+## Rechecking SearchIndex object inventory
+
+No auth token needed — these objects are public, so `entity/children` and
+`entity/{id}` both work anonymously.
+
+```bash
+B="https://repo-prod.prod.sagebase.org/repo/v1"
+
+# List all SearchIndex objects in the project (filter for nf- in name)
+curl -s -X POST "$B/entity/children" \
+  -H "Content-Type: application/json" \
+  -d '{"parentId":"syn74909065","includeTypes":["searchindex"]}'
+
+# Inspect one index object's definingSQL
+curl -s "$B/entity/syn75081636"
+```
