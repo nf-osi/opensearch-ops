@@ -18,9 +18,10 @@ OpenSearch. The project holds SearchIndex objects for multiple DCC portals
 (adkp, ampals, ark, b2ai, cckp, challenges, classic, dh, elite, **nf**); the `nf-`
 prefixed ones below are ours.
 
-> Listing note: `SearchIndex` is a distinct value (`searchindex`) in the Synapse
-> `EntityType` enum. `POST /repo/v1/entity/children` returns these objects only when
-> `searchindex` is included in `includeTypes`.
+> [!NOTE]
+> `SearchIndex` is a distinct value (`searchindex`) in the Synapse `EntityType` enum.
+> `POST /repo/v1/entity/children` returns these objects only when `searchindex` is included
+> in `includeTypes`.
 
 ## NF index objects (`nf-` prefixed)
 
@@ -85,41 +86,24 @@ own ancestor chain, which is consistent with binding resolution anchoring on the
 `SearchIndex` and walking up — so the index object is both an allowed and the
 most-specific target.
 
-> **Binding/config edits don't rebuild on their own — but updating the `SearchIndex`
-> entity does.** Rebuilds are automated off `SearchIndex` *entity lifecycle events*
-> (CREATE/UPDATE/DELETE), **not** off source-table changes. A `SEARCH_INDEX_LIFECYCLE`
-> worker consumes `ENTITY` change messages for `EntityType.searchindex`; on create/update
-> the lifecycle manager deletes the existing index, recreates it (applying the **currently
-> bound** config's analyzers/synonyms), and re-streams all rows. So the recipe is:
-> edit/bind the config, then **touch the `SearchIndex` entity** (`PUT /entity/{id}`) to
-> fire a full rebuild — the error string even reads *"update the SearchIndex to trigger a
-> rebuild."*
+> [!IMPORTANT]
+> **Config/binding edits don't rebuild the index on their own — updating the `SearchIndex`
+> entity does.** A rebuild fires on `SearchIndex` entity lifecycle events
+> (create/update/delete), not on source-table changes: it deletes and recreates the index
+> with the currently-bound config and re-streams all rows. Recipe: edit/bind the config, then
+> **`PUT /entity/{id}`** on the `SearchIndex` to trigger a full rebuild.
 >
-> Two constraints: (1) creating/updating a `SearchIndex` entity is **restricted to Sage
-> employees/admins** — so it's self-serve for the NF team (sagebase.org), not a separate
-> platform-team request, but not open to external portal owners; (2) indexing runs as the
-> **anonymous** realm user, so only publicly-readable **OPEN_DATA** rows are indexed.
-> Source-table data changes also don't auto-propagate — the same entity-update touch
-> refreshes content. (Query-time changes — DSL boosts, fuzziness, the *search*-analyzer
-> half of an override — need no rebuild at all.)
->
-> *(Source: `SearchIndexLifecycleWorker`, `SearchIndexLifecycleManagerImpl.buildIndex`,
-> `SearchIndexMetadataProvider`, `SearchIndexQueryManagerImpl` in synapse backend. Note a
-> stale "build-once" comment in `SearchIndexMetadataProvider` no longer reflects behavior —
-> it rebuilds on every UPDATE.)*
+> Constraints: creating/updating a `SearchIndex` entity is restricted to Sage
+> employees/admins; indexing runs anonymously, so only public **OPEN_DATA** rows are indexed.
+> Query-time changes (DSL boosts, fuzziness, the search-analyzer half of an override) need no
+> rebuild.
 
-> **Current state (verified 2026-06-23):** the NF config objects now exist
-> (`nf_tools_search_config`, id `9`) but **nothing is bound yet**. Binding (and the
-> rebuild touch) requires `UPDATE` permission on the `SearchIndex` entity `syn75081636`,
-> and that entity has its **own ACL** granting `UPDATE` only to **Bryan Fauble**
-> (principalId `3481671`, the Sage platform engineer who created it); the read principals
-> `273948`/`273949` are the authenticated-users/public groups. The `nf-osi-service` account
-> (`3421893`) can create the org-scoped analyzer/override/config objects but gets
-> `403 "You do not have UPDATE permission for ENTITY : 75081636"` on the bind/rebuild — so
-> **binding + rebuild must be done by a principal with `UPDATE` on the entity** (have that
-> ACL extended to the NF team / service account, or have the entity owner run the last two
-> steps). The `b2ai_search_config` (id `2`, org `org.sage.dpe`) is still bound to nothing.
-> Check any entity with [`check_config.py`](check_config.py).
+> [!NOTE]
+> **Current state:** the NF config objects exist (`nf_tools_search_config`, id `9`) but aren't
+> bound yet. Binding and the rebuild touch require `UPDATE` on the `SearchIndex` entity
+> `syn75081636` (which has its own ACL); the service account that creates the org-scoped
+> objects lacks it, so this must be done by an authorized principal — via an ACL grant or an
+> owner running the final steps. Check any entity's binding with [`check_config.py`](check_config.py).
 
 The tuning objects (organization-scoped; list with optional `organizationName` filter):
 
@@ -153,13 +137,13 @@ by the `IDENTIFIER` analyzer on the id columns.
 
 ## Querying an index (focus: `nf-tools`)
 
-> **Potential doc vs. deployed mismatch (important).** The public rest-docs OpenAPI describes a
+> [!IMPORTANT]
+> **The deployed API differs from the public rest-docs.** The rest-docs OpenAPI describes a
 > *structured* `SearchQuery` (`queryType`, `queryFields`, `termsFilters`, `fuzziness`,
-> `limit`, …). That model is **not** what `repo-prod` currently runs; there has been recent API changes.
-> The deployed API now accepts a **raw OpenSearch query DSL** object in `searchQuery` and rejects the
-> structured fields (`"JSON Element ... Unsupported: queryType/limit/queryText"`).
-> **This lets the frontend client get the full power of OpenSearch.**
-> Benchmark against the raw DSL.
+> `limit`, …), but `repo-prod` no longer runs that model — it accepts a **raw OpenSearch
+> query DSL** object in `searchQuery` and rejects the structured fields (`"JSON Element ...
+> Unsupported: queryType/limit/queryText"`). This gives the client the full power of
+> OpenSearch; benchmark against the raw DSL.
 
 Query flow (async job pattern):
 1. `POST /search/query/async/start` with a `SearchIndexQuery` → returns `{token}`.
@@ -182,9 +166,10 @@ particular [`multi_match` query types](https://docs.opensearch.org/latest/query-
 (`best_fields`, `cross_fields`, `phrase`, `phrase_prefix`, …) — the `type` the benchmark
 [strategies](benchmark/strategies.py) vary.
 
-> Syntax gotcha: Synapse's JSON adapter rejects OpenSearch shorthand. Use the verbose
-> object form for every clause — `{"match":{"description":{"query":"plexiform"}}}`,
-> **not** `{"match":{"description":"plexiform"}}` (the latter errors with
+> [!WARNING]
+> Synapse's JSON adapter rejects OpenSearch shorthand. Use the verbose object form for every
+> clause — `{"match":{"description":{"query":"plexiform"}}}`, **not**
+> `{"match":{"description":"plexiform"}}` (the latter errors with
 > `JSONObject["description"] is not a JSONObject`).
 
 **No authentication is required; these indexes are public and queries work anonymously.**

@@ -64,6 +64,7 @@ lines).
 | PI-001 | tools developed by Piotr Topilko | `investigatorName` is ~5% filled and this PI isn't present; not groundable (and a sparse known-item lookup, low benchmark value). |
 | PI-002 | how many tools funded by GFF? | A count, not a result set; no funder column. |
 
+> [!NOTE]
 > Several of these (group A especially) are **metadata gaps, not search bugs** — they'd be
 > answerable if the source registry annotated the attribute. Compare `cafe-au-lait-spots`
 > in `golden.yaml`, which *was* kept: the manifestation is missing on the animal models, so
