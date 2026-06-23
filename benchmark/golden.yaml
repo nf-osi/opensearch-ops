@@ -34,14 +34,16 @@
 #                    HEAD of this pool, so Recall@k is a floor, not the full picture.
 #   - entity_types:  the kinds of tool the expected results are (Cell Line, Antibody, …).
 #   - recall_gap_legacy_search: true = the LEGACY search (MySQL TEXT_MATCHES) failed on these queries
-#   - recall_gap_current: true = the CURRENT OpenSearch search still fails to surface
-#                    the expected items in the TOP 20 hits — a true recall gap, usually
-#                    needing a synonym. false = a relevant item does reach the top 20
-#                    now, so any remaining problem is ranking depth, not recall (verified
-#                    live, top 20). The `relevant` order encodes the ideal ranking.
-#                    (Top 20 is a deliberately strict bar: in prod the first page of
-#                    results shows the first 25 hits, so we use 20 to be a little stricter
-#                    than "would the user see it on page 1".)
+#   - recall_gap_current: a Hit@20 flag — does AT LEAST ONE relevant item appear in the
+#                    top 20 hits? true = NONE do (the search surfaces nothing relevant
+#                    where the user would look — a real recall gap). 
+#                    false = at least one relevant item reaches the top 20, so
+#                    the expected results ARE discoverable; surfacing MORE of them or
+#                    ranking them higher is a separate ranking-depth concern (better
+#                    measured by Recall@20 / nDCG), not this flag. Verified live. (Top 20
+#                    is a deliberately strict bar: in prod the first results page shows
+#                    25 hits, so 20 is slightly stricter than "on page 1".) The `relevant`
+#                    order encodes the ideal ranking.
 
 index: syn75081636
 index_name: nf-tools
@@ -113,8 +115,8 @@ cases:
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
-    recall_gap_current: true   # verified live (top 20): only 1/5, a fuzzy partial at rank 12; 2/5 not retrievable at all — needs 'cnf' synonym
-    notes: "SME-curated; expected_pool omitted (source listed 0). Legacy (MySQL) found none; current OpenSearch surfaces only 1/5 in the top 20 (a fuzzy partial) and 2/5 not at all — needs 'cnf' added as a synonym for the cNF cell lines."
+    recall_gap_current: false   # Hit@20 rule: 1/5 in top 20 (icNF98.4c, fuzzy at rank 12) counts as a hit — but recall is weak
+    notes: "SME-curated; expected_pool omitted (source listed 0). Legacy (MySQL) found none. Current OpenSearch surfaces only 1/5 in the top 20 (icNF98.4c, a fuzzy match at rank 12) and 2/5 not at all — by the Hit@20 rule this isn't a strict current gap, but recall is weak; a 'cnf' synonym for the cNF cell lines would still materially help."
     relevant:
       - 46da7a41-c654-426e-bfb7-361caf4d3c4c   # icNF98.4c (Cell Line)
       - 5a466cdc-5eaa-45a5-87b1-ba9cac6d7d21   # 28cNF (Cell Line)
