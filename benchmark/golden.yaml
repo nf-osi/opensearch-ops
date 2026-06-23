@@ -12,6 +12,19 @@
 #   - type:     known-item = one defensible right answer (exact name / RRID / synonym).
 #               topical    = several tools are relevant; needs SME curation before its
 #                            recall numbers can be trusted.
+#               These map onto the standard search (information-retrieval) taxonomy — for
+#               SMEs who aren't search specialists:
+#                 known-item ≈ "navigational" / lookup search — the user has ONE specific
+#                              tool in mind and wants to re-find it.
+#                 topical    ≈ "informational" / exploratory (discovery) search — the user
+#                              explores what tools exist on a topic; many can be relevant.
+#               Refs: Broder, "A taxonomy of web search," ACM SIGIR Forum 2002 (the
+#               navigational/informational/transactional split); Marchionini, "Exploratory
+#               search: from finding to understanding," CACM 2006 (lookup vs exploratory)
+#               NOTE: a couple of the known-item cases (e.g. `name-exact-schwann`,
+#               `rrid-lookup-cvcl8478`) are essentially SANITY CHECKS — exact full-name /
+#               RRID lookups that should rank #1 on any sane config. They confirm the
+#               harness and index are working; they don't discriminate between strategies.
 #   - notes:    free text — why these are the right answers, edge cases, caveats.
 #
 # Optional fields (used by some cases, ignored by the runner — for SME context and
@@ -20,8 +33,7 @@
 #                    query. For topical cases the `relevant` list is just the ranked
 #                    HEAD of this pool, so Recall@k is a floor, not the full picture.
 #   - entity_types:  the kinds of tool the expected results are (Cell Line, Antibody, …).
-#   - recall_gap_legacy_search: true = the LEGACY search (MySQL TEXT_MATCHES, per the
-#                    spreadsheet) surfaced none of these.
+#   - recall_gap_legacy_search: true = the LEGACY search (MySQL TEXT_MATCHES) failed on these queries
 #   - recall_gap_current: true = the CURRENT OpenSearch search still fails to surface
 #                    the expected items in the TOP 20 hits — a true recall gap, usually
 #                    needing a synonym. false = a relevant item does reach the top 20
@@ -39,14 +51,14 @@ cases:
   - id: name-exact-schwann
     query: ScienCell Schwann cells
     type: known-item
-    notes: Exact resource-name lookup; should rank #1.
+    notes: "Exact resource-name lookup; should rank #1. Sanity check — not discriminating between strategies."
     relevant:
       - b751b5d4-56e6-42a2-a2dc-289f90c6dd82   # ScienCell Schwann cells (Cell Line)
 
   - id: rrid-lookup-cvcl8478
     query: CVCL_8478
     type: known-item
-    notes: RRID lookup; unique in the index.
+    notes: RRID lookup; unique in the index. Sanity check — not discriminating between strategies.
     relevant:
       - 25c617df-ff54-4ba5-b293-d9fcc9be39ce   # 10/9CRC1 (Cell Line), rrid:CVCL_8478
 
@@ -68,7 +80,7 @@ cases:
   - id: neurofibromin-antibody
     query: neurofibromin antibody
     type: topical
-    notes: Antibodies targeting neurofibromin. Seed set — curate before trusting recall.
+    notes: "Antibodies targeting neurofibromin. Seed set — curate before trusting recall. Paired with the bare-term `neurofibromin` (SME) case: this qualified query ranks antibodies #1–2, while bare `neurofibromin` buries them — evidence the gap there is ranking/boost, not recall."
     relevant:
       - 47c1b795-bdcc-4029-b3db-6500bdc23508   # Neurofibromin 1 Antibody
       - 3e92d170-96f1-4be4-985c-d2ac15f5af6b   # Neurofibromin antibody
@@ -224,7 +236,7 @@ cases:
     entity_types: [Antibody]
     recall_gap_legacy_search: true
     recall_gap_current: false   # verified live (top 20): 2/5 in top 20 (ranks 12,16), rest ranked lower — ranking/boost gap, not recall
-    notes: "SME-curated; ~100 expected in registry; these are the ideal head. Legacy found none; current OpenSearch surfaces 2/5 in the top 20 (ranks 12,16) with the rest ranked lower — a boosting/ranking gap, not a recall gap."
+    notes: "SME-curated; ~100 expected in registry; these are the ideal head. Legacy found none; current OpenSearch surfaces 2/5 in the top 20 (ranks 12,16) with the rest ranked lower — a boosting/ranking gap, not a recall gap. Contrast with `neurofibromin-antibody` (the qualified query), which ranks antibodies #1–2."
     relevant:
       - 3e92d170-96f1-4be4-985c-d2ac15f5af6b   # Neurofibromin antibody (Antibody)
       - 47c1b795-bdcc-4029-b3db-6500bdc23508   # Neurofibromin 1 Antibody (Antibody)
