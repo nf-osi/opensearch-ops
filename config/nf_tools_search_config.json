@@ -1,0 +1,9 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_tools_search_config",
+  "description": "Search configuration for the NF Research Tools Central (nf-tools) SearchIndex, syn75081636. Default analyzer is the built-in STANDARD (tokenize + lowercase, no stemming) so names/free-text stay searchable; per-column overrides (org.synapse.nf-nf_tools_columns) route id fields to IDENTIFIER, discovery free-text to the nf_scientific_synonyms analyzer (stemming + NF synonym expansion), and clean single-value categoricals to KEYWORD. Bind only to syn75081636.",
+  "defaultAnalyzer": { "$ref": "org.sagebionetworks-STANDARD" },
+  "columnAnalyzerOverrides": [
+    { "$ref": "org.synapse.nf-nf_tools_columns" }
+  ]
+}
