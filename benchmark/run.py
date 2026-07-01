@@ -20,6 +20,7 @@ Usage:
   python3 benchmark/run.py [table] [--label baseline] [--k 10] [--poll 0.15]
                            [--strategy multi_match_boosted ...]
   python3 benchmark/run.py tools --label kg-eval
+  python3 benchmark/run.py tools --case pnf   # run one golden case to spot-check the live index
 """
 import argparse, importlib.util, json, os, sys, time
 import yaml
@@ -90,28 +91,45 @@ def hit_id(hit, id_field):
     return hit_dict(hit).get(id_field)
 
 
-def run(golden, strategies, fields, k, poll_s):
+def run(golden, strategies, fields, k, poll_s, workers=1):
     index = golden["index"]
     id_field = golden.get("id_field", "resourceId")
     out = {"index": index, "index_name": golden.get("index_name"), "k": k,
-           "id_field": id_field, "strategies": {}, "per_case": {}}
-    for sname, sfn in strategies.items():
-        case_scores = []
-        rts = []
+           "id_field": id_field, "workers": workers, "strategies": {}, "per_case": {}}
+
+    def run_one(sname, sfn, case):
+        dsl = sfn(case["query"], max(k, 10), fields)
+        t0 = time.time()
+        res = search(index, dsl, response_parts=["HITS", "TOTAL_HITS"], poll_s=poll_s)
+        rt = (time.time() - t0) * 1000.0
+        ranked = [hit_id(h, id_field) for h in res.get("hits", [])]
+        sc = score_case(ranked, case["relevant"], k)
+        sc["rt_ms"] = rt
+        sc["query"] = case["query"]
+        sc["type"] = case.get("type")
+        return sname, case["id"], sc
+
+    tasks = [(sname, sfn, case) for sname, sfn in strategies.items()
+             for case in golden["cases"]]
+    for sname in strategies:
         out["per_case"][sname] = {}
-        for case in golden["cases"]:
-            dsl = sfn(case["query"], max(k, 10), fields)
-            t0 = time.time()
-            res = search(index, dsl, response_parts=["HITS", "TOTAL_HITS"], poll_s=poll_s)
-            rt = (time.time() - t0) * 1000.0
-            ranked = [hit_id(h, id_field) for h in res.get("hits", [])]
-            sc = score_case(ranked, case["relevant"], k)
-            sc["rt_ms"] = rt
-            sc["query"] = case["query"]
-            sc["type"] = case.get("type")
-            case_scores.append(sc)
-            rts.append(rt)
-            out["per_case"][sname][case["id"]] = sc
+
+    # Queries are independent and I/O-bound (async start + poll), so a thread pool
+    # gives a near-linear speedup until the server-side job queue saturates. workers=1
+    # keeps the sequential path so rt_ms stays a clean per-query latency; >1 trades
+    # latency fidelity (queries then contend) for wall-clock on scoring runs.
+    if workers <= 1:
+        results = [run_one(*t) for t in tasks]
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            results = list(ex.map(lambda t: run_one(*t), tasks))
+
+    for sname, cid, sc in results:
+        out["per_case"][sname][cid] = sc
+
+    for sname in strategies:
+        case_scores = list(out["per_case"][sname].values())
         n = len(case_scores)
         agg = {
             "mrr": sum(c["rr"] for c in case_scores) / n,
@@ -120,7 +138,7 @@ def run(golden, strategies, fields, k, poll_s):
             "hit_at_k": sum(c["hit_at_k"] for c in case_scores) / n,
             "n_cases": n,
         }
-        agg.update(rt_stats(rts))
+        agg.update(rt_stats([c["rt_ms"] for c in case_scores]))
         out["strategies"][sname] = agg
     return out
 
@@ -158,17 +176,40 @@ def fmt_table(out):
     return "\n".join(lines)
 
 
+def fmt_per_case(out):
+    """Per-(case x strategy) ranks. Used for targeted spot checks (--case): shows
+    where the relevant docs landed, so you can confirm a config change took effect."""
+    k = out["k"]
+    lines = [f"| case | strategy | first_rel_rank | found@{k}/rel | Hit@1 |",
+             "| --- | --- | --- | --- | --- |"]
+    for sname, cases in out["per_case"].items():
+        for cid, sc in cases.items():
+            rank = sc["first_rel_rank"] if sc["first_rel_rank"] is not None else "—"
+            lines.append(f"| {cid} ({sc['query']!r}) | {sname} | {rank} | "
+                         f"{sc['n_found_in_k']}/{sc['n_relevant']} | "
+                         f"{'yes' if sc['hit_at_1'] else 'no'} |")
+    return "\n".join(lines)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("table", nargs="?", default="tools",
                     help="benchmark/<table>/ subfolder to run (default: tools)")
     ap.add_argument("--golden", default=None,
                     help="explicit golden path (overrides benchmark/<table>/golden.yaml)")
-    ap.add_argument("--label", default="latest",
-                    help="result filename stem -> results/<label>.json (default: latest)")
+    ap.add_argument("--label", default=None,
+                    help="result filename stem -> results/<label>.json (default: latest; "
+                         "a --case spot-check skips the file write unless you pass --label)")
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--poll", type=float, default=0.15)
+    ap.add_argument("--workers", type=int, default=1,
+                    help="concurrent queries (default 1 = sequential, clean rt_ms). "
+                         ">1 fans out via a thread pool for a big wall-clock win on scoring "
+                         "runs, but rt_ms then reflects contended throughput, not latency.")
     ap.add_argument("--strategy", action="append", help="limit to named strategy/strategies")
+    ap.add_argument("--case", action="append",
+                    help="limit to golden case id(s); prints per-case ranks. Handy for "
+                         "spot-checking the live index after a config change (e.g. --case pnf).")
     args = ap.parse_args()
 
     golden_path = args.golden or os.path.join(HERE, args.table, "golden.yaml")
@@ -177,6 +218,12 @@ def main():
     table_dir = os.path.dirname(os.path.abspath(golden_path))
 
     golden = yaml.safe_load(open(golden_path))
+    if args.case:
+        want = set(args.case)
+        golden["cases"] = [c for c in golden["cases"] if c["id"] in want]
+        missing = want - {c["id"] for c in golden["cases"]}
+        if missing:
+            sys.exit(f"no such case id(s) in golden: {sorted(missing)}")
     k = args.k or golden.get("k", 10)
     all_strategies = load_strategies(table_dir)
     strategies = all_strategies
@@ -184,16 +231,25 @@ def main():
         strategies = {n: all_strategies[n] for n in args.strategy}
     fields = load_fields(table_dir)
 
-    out = run(golden, strategies, fields, k, args.poll)
-    out["label"] = args.label
+    out = run(golden, strategies, fields, k, args.poll, args.workers)
+    # A --case spot-check skips the file write (so it can't clobber results/latest.json)
+    # unless the user names an explicit --label.
+    label = args.label or ("latest" if not args.case else None)
+    out["label"] = label
     out["run_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     print(f"\nnf index: {out['index_name']} ({out['index']})  |  k={k}  |  "
-          f"{len(golden['cases'])} cases  |  label={args.label}\n")
+          f"{len(golden['cases'])} cases  |  label={label}\n")
     print(fmt_table(out))
+    if args.case:
+        print()
+        print(fmt_per_case(out))
 
+    if label is None:
+        print("\n(spot-check: no results file written; pass --label to persist)")
+        return
     resdir = os.path.join(table_dir, "results")
     os.makedirs(resdir, exist_ok=True)
-    path = os.path.join(resdir, f"{args.label}.json")
+    path = os.path.join(resdir, f"{label}.json")
     json.dump(out, open(path, "w"), indent=2)
     print(f"\nwrote {path}")
 

@@ -332,14 +332,29 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 2
+    expected_pool: 5   # floor: the spelled-out pool is larger; these mirror the `plexiform-neurofibroma` seed case
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
-    recall_gap_current: true   # verified live (top 20): 0/2 in top 20 (only fuzzy at ranks 79/83) — needs 'pnf' synonym
-    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none; current OpenSearch surfaces 0/2 in the top 20 (only fuzzy matches at ranks 79/83) — needs 'pnf' added as a synonym for plexiform neurofibroma."
+    recall_gap_current: false   # verified live: every strategy surfaces >=1 relevant in the top 10 (but none get all 5)
+    notes: "'pnf' is the abbreviation for plexiform neurofibroma; all 5 relevant docs are
+      plexiform-neurofibroma cell lines. The set unions two groups reached by DISJOINT
+      mechanisms (verified live 2026-06-24, no single current strategy gets all 5):
+      (a) two literal-name 3PNF_* iPS lines — found by PRECISE lexical strategies
+      (multi_match_cross ranks them 5-6) but MISSED by the fuzzy strategies; and
+      (b) three plexiform-neurofibroma-derived ipNF Schwann lines (from the
+      `plexiform-neurofibroma` case) — found by FUZZY strategies because 'pnf'~'ipnf' is a
+      1-edit match (frontend_default/boosted_fuzzy rank them 1/3/7-9) but MISSED by precise
+      strategies. A working pnf=>plexiform neurofibroma synonym is what would let a PRECISE
+      strategy also reach the ipNF lines (via their description), recovering the spelled-out
+      meaning without relying on fuzzy's noise. The synonym graph is NOT firing in prod as of
+      2026-06-24, so precise strategies still cap at 2/5 here. Spelled-out pool is larger than 5
+      (see the seed `plexiform-neurofibroma` case; curate before trusting full recall)."
     relevant:
-      - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line)
-      - 7deb7765-38aa-4d8a-a3cb-bd4aefeb3a86   # 3PNF_FiPSsv_PM_2 (Cell Line)
+      - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line; literal 'PNF' name match)
+      - 7deb7765-38aa-4d8a-a3cb-bd4aefeb3a86   # 3PNF_FiPSsv_PM_2 (Cell Line; literal 'PNF' name match)
+      - 8fdc5f7a-ef8c-4193-a5c0-04577c3b134d   # hTERT NF1 ipNF04.4 (plexiform neurofibroma-derived; fuzzy-reachable pnf~ipnf, needs synonym for precise match)
+      - ab60aae5-7860-4d1d-bb02-208e6631c78b   # hTERT NF1 ipNF95.11b C/T (plexiform neurofibroma-derived; fuzzy-reachable pnf~ipnf, needs synonym for precise match)
+      - a8f48ce7-438c-4564-a70b-020abc96d5fe   # hTERT NF1 ipNF00.6 (plexiform neurofibroma-derived; fuzzy-reachable pnf~ipnf, needs synonym for precise match)
 
   - id: schwann-cell
     query: schwann cell
