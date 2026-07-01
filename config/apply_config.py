@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Create/update the nf-tools SearchConfiguration and bind it to the index.
 
+The SynonymSet the analyzer references (org.synapse.nf-standard_synonyms) is NOT managed
+here — it is maintained in the nf-metadata-dictionary repo; this pipeline assumes it
+already exists in org.synapse.nf.
+
 Pipeline (all org.synapse.nf objects are upserted by name — POST to create,
 PUT /{id} with the current etag to update):
 
@@ -33,6 +37,9 @@ HERE = Path(__file__).resolve().parent
 
 OBJECTS = [
     # (artifact file, create endpoint, list endpoint, item-path prefix)
+    # NOTE: the SynonymSet that the analyzer $refs (org.synapse.nf-standard_synonyms) is
+    # deliberately NOT managed here — it is maintained in the nf-metadata-dictionary repo.
+    # This pipeline assumes it already exists in org.synapse.nf.
     ("nf_scientific_synonyms.analyzer.json", "search/text/analyzer",
      "search/text/analyzer/list", "search/text/analyzer"),
     ("nf_tools_columns.override.json", "search/column/analyzer/override",

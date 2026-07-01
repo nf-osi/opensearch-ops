@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 922" width="1320" height="922" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#0E8C7F"/>
+    </marker>
+    <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#64748B"/>
+    </marker>
+    <marker id="arrowAmber" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#D97706"/>
+    </marker>
+    <marker id="arrowDark" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1320" height="922" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="42" font-size="25" font-weight="700" fill="#0f172a">nf-tools search config &#8212; dependencies &amp; composition</text>
+  <text x="40" y="67" font-size="14" fill="#475569">How the SearchConfiguration composes column overrides, analyzers, and an external synonym set, and who owns each piece.</text>
+
+  <!-- Legend -->
+  <g font-size="11.5" fill="#334155">
+    <rect x="40" y="84" width="16" height="12" rx="2" fill="#D5EEEA" stroke="#0E8C7F" stroke-width="2"/>
+    <text x="62" y="94">managed here (config/)</text>
+    <rect x="232" y="84" width="16" height="12" rx="2" fill="#F1F5F9" stroke="#64748B" stroke-width="2"/>
+    <text x="254" y="94">platform built-in (org.sagebionetworks)</text>
+    <rect x="520" y="84" width="16" height="12" rx="2" fill="#FEF3E2" stroke="#D97706" stroke-width="2"/>
+    <text x="542" y="94">external &#183; nf-metadata-dictionary</text>
+    <rect x="788" y="84" width="16" height="12" rx="2" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+    <text x="810" y="94">target entity</text>
+    <line x1="930" y1="90" x2="968" y2="90" stroke="#334155" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="974" y="94">binding / runtime ref &#183; solid = composition ($ref)</text>
+  </g>
+
+  <!-- A. SearchIndex entity (target) -->
+  <rect x="535" y="126" width="270" height="64" rx="10" fill="#ffffff" stroke="#334155" stroke-width="2"/>
+  <text x="670" y="151" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">SearchIndex entity</text>
+  <text x="670" y="172" text-anchor="middle" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#475569">syn75081636 &#183; nf-tools</text>
+
+  <!-- B. SearchConfiguration -->
+  <rect x="520" y="238" width="300" height="82" rx="10" fill="#D5EEEA" stroke="#0E8C7F" stroke-width="2"/>
+  <text x="670" y="264" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">SearchConfiguration</text>
+  <text x="670" y="284" text-anchor="middle" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0E5C54">nf_tools_search_config &#183; id 9</text>
+  <text x="670" y="304" text-anchor="middle" font-size="10.5" fill="#475569">org.synapse.nf</text>
+
+  <!-- Binding arrow B -> A (dashed) -->
+  <path d="M670,238 L670,192" fill="none" stroke="#334155" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowDark)"/>
+  <text x="680" y="216" font-size="10.5" font-style="italic" fill="#334155">bound to the index</text>
+
+  <!-- C. STANDARD built-in (defaultAnalyzer) -->
+  <rect x="110" y="362" width="270" height="86" rx="10" fill="#F1F5F9" stroke="#64748B" stroke-width="2"/>
+  <text x="245" y="386" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a">Built-in TextAnalyzer</text>
+  <text x="245" y="405" text-anchor="middle" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#475569">org.sagebionetworks-STANDARD</text>
+  <text x="245" y="421" text-anchor="middle" font-size="10.5" fill="#475569">tokenize + lowercase (no stemming)</text>
+  <text x="245" y="438" text-anchor="middle" font-size="10" font-style="italic" fill="#64748B">defaultAnalyzer &#8594; every non-overridden column</text>
+
+  <!-- D. ColumnAnalyzerOverride -->
+  <rect x="560" y="362" width="320" height="82" rx="10" fill="#D5EEEA" stroke="#0E8C7F" stroke-width="2"/>
+  <text x="720" y="388" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">ColumnAnalyzerOverride</text>
+  <text x="720" y="408" text-anchor="middle" font-size="11.5" font-family="ui-monospace, Menlo, monospace" fill="#0E5C54">nf_tools_columns &#183; id 9</text>
+  <text x="720" y="428" text-anchor="middle" font-size="10.5" fill="#475569">per-column analyzer map (20 columns)</text>
+
+  <!-- B -> C  defaultAnalyzer -->
+  <path d="M600,320 C 450,356 320,346 248,360" fill="none" stroke="#64748B" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <text x="382" y="338" text-anchor="end" font-size="10.5" font-style="italic" fill="#64748B">defaultAnalyzer $ref</text>
+  <!-- B -> D  columnAnalyzerOverrides -->
+  <path d="M720,320 L720,360" fill="none" stroke="#0E8C7F" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <text x="730" y="344" font-size="10.5" font-style="italic" fill="#0E8C7F">columnAnalyzerOverrides $ref</text>
+
+  <!-- E. IDENTIFIER built-in -->
+  <rect x="70" y="502" width="262" height="104" rx="10" fill="#F1F5F9" stroke="#64748B" stroke-width="2"/>
+  <text x="201" y="525" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a">Built-in TextAnalyzer</text>
+  <text x="201" y="543" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#475569">org.sagebionetworks-IDENTIFIER</text>
+  <text x="201" y="559" text-anchor="middle" font-size="10" fill="#475569">id fields &#183; keep punctuation, no stemming</text>
+  <text x="201" y="580" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">resourceId, rrid, orcid,</text>
+  <text x="201" y="594" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">investigatorSynapseId</text>
+
+  <!-- F. nf_scientific_synonyms (custom) -->
+  <rect x="455" y="502" width="345" height="120" rx="10" fill="#D5EEEA" stroke="#0E8C7F" stroke-width="2"/>
+  <text x="627" y="525" text-anchor="middle" font-size="14" font-weight="700" fill="#0f172a">TextAnalyzer (custom)</text>
+  <text x="627" y="544" text-anchor="middle" font-size="11" font-family="ui-monospace, Menlo, monospace" fill="#0E5C54">nf_scientific_synonyms &#183; id 1017</text>
+  <text x="627" y="561" text-anchor="middle" font-size="10.5" fill="#475569">discovery free-text &#183; stemming (+ search-time synonyms)</text>
+  <text x="627" y="582" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">description, synonyms, diseaseType, tumorType,</text>
+  <text x="627" y="596" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">targetAntigen, cellLine*/animalModel*</text>
+  <text x="627" y="610" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">geneticDisorder + manifestation</text>
+
+  <!-- G. KEYWORD built-in -->
+  <rect x="950" y="502" width="300" height="104" rx="10" fill="#F1F5F9" stroke="#64748B" stroke-width="2"/>
+  <text x="1100" y="525" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a">Built-in TextAnalyzer</text>
+  <text x="1100" y="543" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#475569">org.sagebionetworks-KEYWORD</text>
+  <text x="1100" y="559" text-anchor="middle" font-size="10" fill="#475569">clean categoricals &#183; exact match</text>
+  <text x="1100" y="580" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">resourceType, *Category,</text>
+  <text x="1100" y="594" text-anchor="middle" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#334155">sex, race, age</text>
+
+  <!-- D -> E / F / G  (column groups) -->
+  <path d="M600,444 C 420,500 300,486 220,500" fill="none" stroke="#64748B" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <path d="M700,444 L645,500" fill="none" stroke="#0E8C7F" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <path d="M850,444 C 1020,498 1030,486 1100,500" fill="none" stroke="#64748B" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <text x="712" y="478" font-size="10.5" font-style="italic" fill="#0E8C7F">maps each column &#8594; an analyzer</text>
+
+  <!-- H. analyzer.default (index-time) -->
+  <rect x="400" y="668" width="300" height="86" rx="10" fill="#EFF8F6" stroke="#0E8C7F" stroke-width="1.5"/>
+  <text x="550" y="691" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f172a">analyzer.default &#183; index-time</text>
+  <text x="550" y="713" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#334155">standard &#8594; lowercase &#8594;</text>
+  <text x="550" y="729" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#334155">english_stop &#8594; english_stemmer</text>
+  <text x="550" y="746" text-anchor="middle" font-size="10" font-style="italic" fill="#0E8C7F">applied at index build &#183; verified active</text>
+
+  <!-- I. analyzer.default_search (search-time) -->
+  <rect x="735" y="668" width="360" height="86" rx="10" fill="#EFF8F6" stroke="#0E8C7F" stroke-width="1.5"/>
+  <text x="915" y="691" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f172a">analyzer.default_search &#183; search-time</text>
+  <text x="915" y="713" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#334155">standard &#8594; lowercase &#8594; <tspan fill="#B45309" font-weight="700">nf_synonyms</tspan> &#8594;</text>
+  <text x="915" y="729" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#334155">english_stop &#8594; english_stemmer</text>
+  <text x="915" y="746" text-anchor="middle" font-size="10" font-style="italic" fill="#B45309">synonym_graph can be preceded only by lowercase</text>
+
+  <!-- F -> H / I -->
+  <path d="M590,622 C 565,646 558,650 552,666" fill="none" stroke="#0E8C7F" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <path d="M690,622 C 800,648 870,650 908,666" fill="none" stroke="#0E8C7F" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <text x="455" y="650" font-size="10" font-style="italic" fill="#0E8C7F">index half</text>
+  <text x="930" y="648" font-size="10" font-style="italic" fill="#0E8C7F">search half</text>
+
+  <!-- J. SynonymSet (external) -->
+  <rect x="815" y="808" width="360" height="78" rx="10" fill="#FEF3E2" stroke="#D97706" stroke-width="2"/>
+  <text x="995" y="832" text-anchor="middle" font-size="13.5" font-weight="700" fill="#0f172a">SynonymSet &#183; standard_synonyms &#183; id 16</text>
+  <text x="995" y="850" text-anchor="middle" font-size="10.5" fill="#92400E">maintained in nf-metadata-dictionary (not this repo)</text>
+  <text x="995" y="868" text-anchor="middle" font-size="9.5" font-family="ui-monospace, Menlo, monospace" fill="#334155">pnf&#8658;plexiform neurofibroma, mpnst&#8658;&#8230;, nf,neurofibromatosis</text>
+
+  <!-- I -> J  nf_synonyms $ref (dashed amber) -->
+  <path d="M915,754 C 940,778 965,786 992,806" fill="none" stroke="#D97706" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arrowAmber)"/>
+  <text x="905" y="784" text-anchor="end" font-size="10.5" font-style="italic" fill="#B45309">nf_synonyms filter $ref</text>
+</svg>

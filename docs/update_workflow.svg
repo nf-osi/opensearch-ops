@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 632" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif">
+  <defs>
+    <marker id="arrowDark" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#0E8C7F"/>
+    </marker>
+    <marker id="arrowMuted" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#94A3B8"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1340" height="632" fill="#ffffff"/>
+
+  <!-- Title -->
+  <text x="40" y="42" font-size="25" font-weight="700" fill="#0f172a">Search tuning &#8594; live: two paths from evaluation to production</text>
+  <text x="40" y="68" font-size="14" fill="#475569">Evaluation findings split by lever type: synonyms/analyzers go through a config rebuild; boosts &amp; query type are frontend code changes.</text>
+
+  <!-- Lane bands -->
+  <rect x="312" y="110" width="676" height="158" rx="12" fill="#E6F4F2"/>
+  <rect x="312" y="372" width="676" height="158" rx="12" fill="#F1F5F9"/>
+  <text x="650" y="132" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0E8C7F" letter-spacing="0.5">INDEX-TIME PATH &#183; Search Management REST API + rebuild</text>
+  <text x="650" y="394" text-anchor="middle" font-size="12.5" font-weight="700" fill="#64748B" letter-spacing="0.5">QUERY-TIME PATH &#183; shared synapse-react-client (SRC) code change &#183; later focus</text>
+
+  <!-- ===== Shared start: Evaluate ===== -->
+  <rect x="40" y="271" width="180" height="108" rx="10" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+  <text x="130" y="299" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">Evaluate</text>
+  <text x="130" y="322" text-anchor="middle" font-size="11.5" fill="#334155">Benchmark finds</text>
+  <text x="130" y="339" text-anchor="middle" font-size="11.5" fill="#334155">better params</text>
+  <text x="130" y="362" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#475569">benchmark/run.py</text>
+
+  <!-- Branch arrows + labels -->
+  <path d="M220,305 C 280,305 285,199 328,199" fill="none" stroke="#0E8C7F" stroke-width="2" marker-end="url(#arrowTeal)"/>
+  <path d="M220,345 C 280,345 285,451 328,451" fill="none" stroke="#94A3B8" stroke-width="2" marker-end="url(#arrowMuted)"/>
+  <text x="230" y="190" font-size="10.5" font-style="italic" fill="#0E8C7F">candidate synonyms</text>
+  <text x="230" y="203" font-size="10.5" font-style="italic" fill="#0E8C7F">/ analyzers</text>
+  <text x="230" y="470" font-size="10.5" font-style="italic" fill="#64748B">boosts, query type,</text>
+  <text x="230" y="483" font-size="10.5" font-style="italic" fill="#64748B">fuzziness</text>
+
+  <!-- ===== Top lane (index-time) ===== -->
+  <!-- T1: Update config -->
+  <rect x="330" y="145" width="180" height="108" rx="10" fill="#ffffff" stroke="#0E8C7F" stroke-width="2"/>
+  <circle cx="352" cy="167" r="12" fill="#0E8C7F"/>
+  <text x="352" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+  <text x="370" y="172" font-size="13.5" font-weight="700" fill="#0f172a">Update config</text>
+  <text x="346" y="197" font-size="11" fill="#334155">Edit SynonymSet &amp;</text>
+  <text x="346" y="213" font-size="11" fill="#334155">SearchConfiguration</text>
+  <text x="346" y="229" font-size="11" fill="#334155">(synonyms, analyzers)</text>
+  <text x="346" y="247" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#0E8C7F">PUT /search/&#8230;</text>
+
+  <!-- T2: Bind -->
+  <rect x="560" y="145" width="180" height="108" rx="10" fill="#ffffff" stroke="#0E8C7F" stroke-width="2"/>
+  <circle cx="582" cy="167" r="12" fill="#0E8C7F"/>
+  <text x="582" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+  <text x="600" y="172" font-size="13.5" font-weight="700" fill="#0f172a">Bind</text>
+  <text x="576" y="197" font-size="11" fill="#334155">Attach config to the</text>
+  <text x="576" y="213" font-size="11" fill="#334155">SearchIndex object</text>
+  <text x="576" y="229" font-size="11" fill="#334155">(if not already bound)</text>
+  <text x="576" y="247" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#0E8C7F">PUT /entity/{id}/&#8230;/binding</text>
+
+  <!-- T3: Trigger rebuild -->
+  <rect x="790" y="145" width="180" height="108" rx="10" fill="#ffffff" stroke="#0E8C7F" stroke-width="2"/>
+  <circle cx="812" cy="167" r="12" fill="#0E8C7F"/>
+  <text x="812" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">3</text>
+  <text x="830" y="172" font-size="13.5" font-weight="700" fill="#0f172a">Trigger rebuild</text>
+  <text x="806" y="197" font-size="11" fill="#334155">UPDATE the SearchIndex</text>
+  <text x="806" y="213" font-size="11" fill="#334155">entity &#8594; full automatic</text>
+  <text x="806" y="229" font-size="11" fill="#334155">rebuild w/ bound config</text>
+  <text x="806" y="247" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#0E8C7F">PUT /entity/{id}</text>
+
+  <line x1="510" y1="199" x2="558" y2="199" stroke="#334155" stroke-width="2.2" marker-end="url(#arrowDark)"/>
+  <line x1="740" y1="199" x2="788" y2="199" stroke="#334155" stroke-width="2.2" marker-end="url(#arrowDark)"/>
+
+  <!-- ===== Bottom lane (query-time, dimmed: later focus) ===== -->
+  <!-- B1: Change SRC query -->
+  <rect x="330" y="397" width="180" height="108" rx="10" fill="#ffffff" stroke="#94A3B8" stroke-width="2"/>
+  <circle cx="352" cy="419" r="12" fill="#94A3B8"/>
+  <text x="352" y="424" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">1</text>
+  <text x="370" y="424" font-size="13.5" font-weight="700" fill="#64748B">Change SRC query</text>
+  <text x="346" y="449" font-size="11" fill="#64748B">Edit the multi_match the</text>
+  <text x="346" y="465" font-size="11" fill="#64748B">client sends &#8212; boosts,</text>
+  <text x="346" y="481" font-size="11" fill="#64748B">query type, fuzziness</text>
+  <text x="346" y="499" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#94A3B8">toSearchIndexQuery (SRC)</text>
+
+  <!-- B2: Frontend staging -->
+  <rect x="560" y="397" width="180" height="108" rx="10" fill="#ffffff" stroke="#94A3B8" stroke-width="2"/>
+  <circle cx="582" cy="419" r="12" fill="#94A3B8"/>
+  <text x="582" y="424" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff">2</text>
+  <text x="600" y="424" font-size="13.5" font-weight="700" fill="#64748B">Frontend staging</text>
+  <text x="576" y="449" font-size="11" fill="#64748B">PR &#8594; review &#8594; build,</text>
+  <text x="576" y="465" font-size="11" fill="#64748B">deploy to staging,</text>
+  <text x="576" y="481" font-size="11" fill="#64748B">then promote to prod</text>
+  <text x="576" y="499" font-size="10" font-family="ui-monospace, Menlo, monospace" fill="#94A3B8">synapse-web-monorepo</text>
+
+  <line x1="510" y1="451" x2="558" y2="451" stroke="#94A3B8" stroke-width="2.2" marker-end="url(#arrowMuted)"/>
+
+  <!-- ===== Merge: Live ===== -->
+  <rect x="1110" y="271" width="180" height="108" rx="10" fill="#ffffff" stroke="#7C3AED" stroke-width="2"/>
+  <text x="1200" y="299" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0f172a">Live</text>
+  <text x="1200" y="322" text-anchor="middle" font-size="11.5" fill="#334155">Rebuilt index +</text>
+  <text x="1200" y="338" text-anchor="middle" font-size="11.5" fill="#334155">updated client queries</text>
+  <text x="1200" y="354" text-anchor="middle" font-size="11.5" fill="#334155">serve portal search</text>
+  <text x="1200" y="373" text-anchor="middle" font-size="10.5" font-family="ui-monospace, Menlo, monospace" fill="#7C3AED">frontend &#8594; SearchIndex</text>
+
+  <!-- Convergence arrows to Live -->
+  <path d="M970,199 C 1045,199 1045,298 1108,298" fill="none" stroke="#334155" stroke-width="2.2" marker-end="url(#arrowDark)"/>
+  <path d="M740,451 C 930,451 965,330 1108,330" fill="none" stroke="#94A3B8" stroke-width="2.2" marker-end="url(#arrowMuted)"/>
+
+  <!-- Constraint note (index-time), in the inter-lane gap -->
+  <text x="650" y="291" text-anchor="middle" font-size="10" font-style="italic" fill="#0E8C7F">Config edited only via the Search Management REST API (org/entity permissions, no UI); only Sage employees/admins can trigger the rebuild.</text>
+  <text x="650" y="305" text-anchor="middle" font-size="10" font-style="italic" fill="#0E8C7F">Indexing runs as anonymous &#8594; only public OPEN_DATA rows; source-table edits also need a SearchIndex update. (Per-field weights are NOT in the config schema.)</text>
+
+  <!-- Feedback / iterate loop (routed below everything; verticals clear of the boxes) -->
+  <path d="M1200,379 C 1200,562 1200,588 1172,588 L 158,588 C 130,588 130,562 130,381" fill="none" stroke="#94A3B8" stroke-width="1.8" stroke-dasharray="6 5" marker-end="url(#arrowMuted)"/>
+  <text x="665" y="582" text-anchor="middle" font-size="12" fill="#64748b" font-style="italic">Re-run the benchmark after each change &#8212; iterate</text>
+
+  <!-- ===== Legend ===== -->
+  <g font-size="11.5" fill="#334155">
+    <rect x="40" y="606" width="14" height="14" rx="3" fill="#E6F4F2" stroke="#0E8C7F" stroke-width="1.5"/>
+    <text x="60" y="617">Index-time path: config (REST API) + rebuild</text>
+    <rect x="370" y="606" width="14" height="14" rx="3" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5"/>
+    <text x="390" y="617">Query-time path: shared SRC change + deploy (later focus)</text>
+    <rect x="800" y="606" width="14" height="14" rx="3" fill="#F1ECFB" stroke="#7C3AED" stroke-width="1.5"/>
+    <text x="820" y="617">Live portal</text>
+    <line x1="910" y1="613" x2="946" y2="613" stroke="#94A3B8" stroke-width="1.8" stroke-dasharray="6 5"/>
+    <text x="952" y="617">Iterate</text>
+  </g>
+</svg>

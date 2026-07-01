@@ -98,12 +98,33 @@ most-specific target.
 > Query-time changes (DSL boosts, fuzziness, the search-analyzer half of an override) need no
 > rebuild.
 
-> [!NOTE]
-> **Current state:** the NF config objects exist (`nf_tools_search_config`, id `9`) but aren't
-> bound yet. Binding and the rebuild touch require `UPDATE` on the `SearchIndex` entity
-> `syn75081636` (which has its own ACL); the service account that creates the org-scoped
-> objects lacks it, so this must be done by an authorized principal — via an ACL grant or an
-> owner running the final steps. Check any entity's binding with [`check_config.py`](check_config.py).
+#### Rebuild timing & availability (observed)
+
+There is **no rebuild status or notification endpoint** — neither the bind call nor the
+`PUT /entity/{id}` returns a job token. The only completion signal is polling the live index.
+
+Measured on the `nf-tools` index (~1,216 docs) by tight-polling `match_all` every 2 s right
+after the entity `PUT`:
+
+| t after PUT | `totalHits` |
+| --- | --- |
+| ~0–15 s | 1216 (worker hasn't picked up the change yet) |
+| ~17 s | 144 (re-stream in progress) |
+| ~21 s | 732 |
+| ~24 s | 1216 (recovered) |
+
+So a rebuild completes in **under ~30 s** for this index: ~15 s of worker-pickup latency, then
+a ~7–10 s re-stream. **Search stays up the whole time** — queries never error and never return
+zero — **but during the re-stream window the index is only partially populated**, so a query run
+mid-rebuild silently misses docs.
+
+Practical guidance:
+- After triggering a rebuild, wait for `match_all` `totalHits` to return to the pre-trigger
+  baseline and hold before trusting results (e.g. before running the benchmark).
+- A slow poller (≥30 s interval) started a few minutes later will see a flat baseline with no
+  dip — that means the rebuild *already finished*, not that it never ran (the dip is only ~10 s wide).
+- Quick liveness check after a config change: `python3 benchmark/run.py tools --case pnf`
+  (the `pnf` golden case only resolves once the synonym config is live).
 
 The tuning objects (organization-scoped; list with optional `organizationName` filter):
 
@@ -118,14 +139,17 @@ The tuning objects (organization-scoped; list with optional `organizationName` f
 
 | Type | id | name | notes |
 | --- | --- | --- | --- |
-| Synonym set | `16` | `standard_synonyms` | `synonym_graph`; `nf→neurofibromatosis`, `mpnst→…`, `pnf→plexiform neurofibroma`, etc. |
-| Synonym set | `17` | `synonym_rules` | `synonym_graph`, empty (placeholder) |
+| Synonym set | `16` | `standard_synonyms` | `synonym_graph`; `nf→neurofibromatosis`, `mpnst→…`, `pnf→plexiform neurofibroma`, etc. — **maintained in nf-metadata-dictionary, not here** |
+| Synonym set | `17` | `synonym_rules` | `synonym_graph`, empty (placeholder) — **maintained in nf-metadata-dictionary, not here** |
 | Text analyzer | `1017` | `nf_scientific_synonyms` | standard+lowercase+english stop/stemmer; `default_search` adds set 16 via `synonym_graph` (search-time only) |
 | Column analyzer override | `9` | `nf_tools_columns` | per-column map for nf-tools: IDENTIFIER for id fields, `nf_scientific_synonyms` for discovery free-text, KEYWORD for clean categoricals |
-| Search configuration | `9` | `nf_tools_search_config` | `defaultAnalyzer`=STANDARD + `columnAnalyzerOverrides`=[`nf_tools_columns`]; **created, not yet bound** (see below) |
+| Search configuration | `9` | `nf_tools_search_config` | `defaultAnalyzer`=STANDARD + `columnAnalyzerOverrides`=[`nf_tools_columns`]; bound to `syn75081636` |
 
-These NF objects are versioned in [`config/`](config/) and (re)applied with
-[`config/apply_config.py`](config/apply_config.py). They reference the platform's shared
+The text analyzer, column override, and search configuration are versioned in
+[`config/`](config/) and (re)applied with [`config/apply_config.py`](config/apply_config.py);
+verify them against prod with [`config/verify_config.py`](config/verify_config.py). The
+**synonym sets are NOT managed in this repo** — they are maintained in the
+nf-metadata-dictionary repo; `apply_config.py` assumes the referenced set already exists. They reference the platform's shared
 built-in text analyzers (org `org.sagebionetworks`), available to any config:
 `SCIENTIFIC` (1), `STANDARD` (2), `IDENTIFIER` (3), `KEYWORD` (4), `AUTOCOMPLETE` (5).
 
