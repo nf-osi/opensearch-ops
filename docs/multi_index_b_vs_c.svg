@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 720" width="1240" height="720" font-family="system-ui, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrowDark" markerWidth="8" markerHeight="8" refX="6.5" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect x="0" y="0" width="1240" height="720" fill="#FBFCFE"/>
+
+  <!-- ============ shared styles via inline attrs ============ -->
+  <!-- colors: Tools #0E8C7F  Datasets #2563EB  Publications #7C3AED  fusion accent #EA580C -->
+
+  <!-- ===================== PANEL B (left) ===================== -->
+  <g>
+    <!-- panel title -->
+    <text x="60" y="56" font-size="22" font-weight="700" fill="#0F172A">Option B · Federated / grouped (≈ today)</text>
+
+    <!-- search query box -->
+    <rect x="170" y="84" width="280" height="42" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+    <circle cx="195" cy="105" r="7" fill="none" stroke="#64748B" stroke-width="2"/>
+    <line x1="200" y1="110" x2="206" y2="116" stroke="#64748B" stroke-width="2" stroke-linecap="round"/>
+    <text x="218" y="110" font-size="15" fill="#334155">Search query</text>
+
+    <!-- fan-out arrows -->
+    <path d="M260,126 L150,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M310,126 L310,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M360,126 L470,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <!-- index cylinders -->
+    <!-- Tools -->
+    <g>
+      <ellipse cx="110" cy="178" rx="48" ry="9" fill="#0E8C7F"/>
+      <path d="M62,178 L62,206 A48,9 0 0 0 158,206 L158,178" fill="#0E8C7F"/>
+      <ellipse cx="110" cy="178" rx="48" ry="9" fill="#12A091"/>
+      <text x="110" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Tools</text>
+    </g>
+    <!-- Datasets -->
+    <g>
+      <ellipse cx="310" cy="178" rx="48" ry="9" fill="#2563EB"/>
+      <path d="M262,178 L262,206 A48,9 0 0 0 358,206 L358,178" fill="#2563EB"/>
+      <ellipse cx="310" cy="178" rx="48" ry="9" fill="#3B82F6"/>
+      <text x="310" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Datasets</text>
+    </g>
+    <!-- Publications -->
+    <g>
+      <ellipse cx="510" cy="178" rx="48" ry="9" fill="#7C3AED"/>
+      <path d="M462,178 L462,206 A48,9 0 0 0 558,206 L558,178" fill="#7C3AED"/>
+      <ellipse cx="510" cy="178" rx="48" ry="9" fill="#8B5CF6"/>
+      <text x="510" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Publications</text>
+    </g>
+
+    <!-- arrows into tab bar -->
+    <path d="M110,215 L260,300" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M310,215 L310,300" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M510,215 L360,300" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <!-- results frame -->
+    <rect x="80" y="312" width="460" height="356" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+
+    <!-- tab bar -->
+    <!-- active tab: Tools -->
+    <rect x="96" y="328" width="130" height="38" rx="9" fill="#0E8C7F"/>
+    <text x="161" y="352" font-size="14" font-weight="600" fill="#FFFFFF" text-anchor="middle">Tools (12)</text>
+    <!-- inactive tab: Datasets -->
+    <rect x="234" y="328" width="142" height="38" rx="9" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="305" y="352" font-size="14" font-weight="600" fill="#2563EB" text-anchor="middle">Datasets (8)</text>
+    <!-- inactive tab: Publications -->
+    <rect x="384" y="328" width="140" height="38" rx="9" fill="#F1F5F9" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="454" y="352" font-size="13" font-weight="600" fill="#7C3AED" text-anchor="middle">Publications (30)</text>
+
+    <!-- active-type list: 4 cards all Tools color -->
+    <g>
+      <rect x="96" y="386" width="428" height="56" rx="9" fill="#F0FAF8" stroke="#0E8C7F" stroke-width="1.4"/>
+      <rect x="96" y="386" width="6" height="56" rx="3" fill="#0E8C7F"/>
+      <rect x="118" y="402" width="240" height="10" rx="5" fill="#0E8C7F" opacity="0.85"/>
+      <rect x="118" y="420" width="330" height="8" rx="4" fill="#0E8C7F" opacity="0.30"/>
+
+      <rect x="96" y="450" width="428" height="56" rx="9" fill="#F0FAF8" stroke="#0E8C7F" stroke-width="1.4"/>
+      <rect x="96" y="450" width="6" height="56" rx="3" fill="#0E8C7F"/>
+      <rect x="118" y="466" width="200" height="10" rx="5" fill="#0E8C7F" opacity="0.85"/>
+      <rect x="118" y="484" width="300" height="8" rx="4" fill="#0E8C7F" opacity="0.30"/>
+
+      <rect x="96" y="514" width="428" height="56" rx="9" fill="#F0FAF8" stroke="#0E8C7F" stroke-width="1.4"/>
+      <rect x="96" y="514" width="6" height="56" rx="3" fill="#0E8C7F"/>
+      <rect x="118" y="530" width="270" height="10" rx="5" fill="#0E8C7F" opacity="0.85"/>
+      <rect x="118" y="548" width="310" height="8" rx="4" fill="#0E8C7F" opacity="0.30"/>
+
+      <rect x="96" y="578" width="428" height="56" rx="9" fill="#F0FAF8" stroke="#0E8C7F" stroke-width="1.4"/>
+      <rect x="96" y="578" width="6" height="56" rx="3" fill="#0E8C7F"/>
+      <rect x="118" y="594" width="220" height="10" rx="5" fill="#0E8C7F" opacity="0.85"/>
+      <rect x="118" y="612" width="290" height="8" rx="4" fill="#0E8C7F" opacity="0.30"/>
+    </g>
+
+    <!-- sublabel -->
+    <text x="96" y="656" font-size="12.5" fill="#64748B">ranked within each type · relevance layer = section order + counts</text>
+  </g>
+
+  <!-- ===================== DIVIDER ===================== -->
+  <line x1="620" y1="40" x2="620" y2="664" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- ===================== PANEL C (right) ===================== -->
+  <g>
+    <!-- panel title -->
+    <text x="680" y="56" font-size="22" font-weight="700" fill="#0F172A">Option C · Fan-out + weighted rank fusion</text>
+
+    <!-- search query box -->
+    <rect x="790" y="84" width="280" height="42" rx="10" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+    <circle cx="815" cy="105" r="7" fill="none" stroke="#64748B" stroke-width="2"/>
+    <line x1="820" y1="110" x2="826" y2="116" stroke="#64748B" stroke-width="2" stroke-linecap="round"/>
+    <text x="838" y="110" font-size="15" fill="#334155">Search query</text>
+
+    <!-- fan-out arrows -->
+    <path d="M880,126 L770,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M930,126 L930,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+    <path d="M980,126 L1090,168" fill="none" stroke="#94A3B8" stroke-width="1.6" marker-end="url(#arrow)"/>
+
+    <!-- index cylinders -->
+    <!-- Tools -->
+    <g>
+      <ellipse cx="730" cy="178" rx="48" ry="9" fill="#0E8C7F"/>
+      <path d="M682,178 L682,206 A48,9 0 0 0 778,206 L778,178" fill="#0E8C7F"/>
+      <ellipse cx="730" cy="178" rx="48" ry="9" fill="#12A091"/>
+      <text x="730" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Tools</text>
+    </g>
+    <!-- Datasets -->
+    <g>
+      <ellipse cx="930" cy="178" rx="48" ry="9" fill="#2563EB"/>
+      <path d="M882,178 L882,206 A48,9 0 0 0 978,206 L978,178" fill="#2563EB"/>
+      <ellipse cx="930" cy="178" rx="48" ry="9" fill="#3B82F6"/>
+      <text x="930" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Datasets</text>
+    </g>
+    <!-- Publications -->
+    <g>
+      <ellipse cx="1130" cy="178" rx="48" ry="9" fill="#7C3AED"/>
+      <path d="M1082,178 L1082,206 A48,9 0 0 0 1178,206 L1178,178" fill="#7C3AED"/>
+      <ellipse cx="1130" cy="178" rx="48" ry="9" fill="#8B5CF6"/>
+      <text x="1130" y="200" font-size="13" font-weight="600" fill="#FFFFFF" text-anchor="middle">Publications</text>
+    </g>
+
+    <!-- arrows into fusion node -->
+    <path d="M730,215 L905,272" fill="none" stroke="#0E8C7F" stroke-width="1.8" marker-end="url(#arrowDark)"/>
+    <path d="M930,215 L930,272" fill="none" stroke="#2563EB" stroke-width="1.8" marker-end="url(#arrowDark)"/>
+    <path d="M1130,215 L955,272" fill="none" stroke="#7C3AED" stroke-width="1.8" marker-end="url(#arrowDark)"/>
+
+    <!-- fusion node -->
+    <rect x="752" y="284" width="356" height="56" rx="12" fill="#FFF3EC" stroke="#EA580C" stroke-width="2"/>
+    <text x="930" y="308" font-size="15" font-weight="700" fill="#C2410C" text-anchor="middle">weighted rank fusion</text>
+    <text x="930" y="328" font-size="13" fill="#9A3412" text-anchor="middle">score = &#931; w&#7522; / (k + rank)</text>
+
+    <!-- arrow fusion -> blended list -->
+    <path d="M930,340 L930,372" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrowDark)"/>
+
+    <!-- blended results frame -->
+    <rect x="700" y="380" width="460" height="288" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.5"/>
+    <text x="716" y="404" font-size="14" font-weight="700" fill="#0F172A">Results</text>
+    <text x="1144" y="404" font-size="12" font-weight="600" fill="#64748B" text-anchor="end">one blended list</text>
+
+    <!-- 5 mixed cards with type tags -->
+    <!-- card 1 - Dataset -->
+    <g>
+      <rect x="716" y="416" width="428" height="44" rx="9" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.3"/>
+      <rect x="730" y="430" width="74" height="16" rx="8" fill="#2563EB"/>
+      <text x="767" y="442" font-size="10.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Dataset</text>
+      <rect x="818" y="431" width="250" height="9" rx="4.5" fill="#334155" opacity="0.55"/>
+      <rect x="818" y="445" width="180" height="6" rx="3" fill="#94A3B8" opacity="0.5"/>
+    </g>
+    <!-- card 2 - Tools -->
+    <g>
+      <rect x="716" y="466" width="428" height="44" rx="9" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.3"/>
+      <rect x="730" y="480" width="56" height="16" rx="8" fill="#0E8C7F"/>
+      <text x="758" y="492" font-size="10.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Tools</text>
+      <rect x="800" y="481" width="270" height="9" rx="4.5" fill="#334155" opacity="0.55"/>
+      <rect x="800" y="495" width="150" height="6" rx="3" fill="#94A3B8" opacity="0.5"/>
+    </g>
+    <!-- card 3 - Publication -->
+    <g>
+      <rect x="716" y="516" width="428" height="44" rx="9" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.3"/>
+      <rect x="730" y="530" width="86" height="16" rx="8" fill="#7C3AED"/>
+      <text x="773" y="542" font-size="10.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Publication</text>
+      <rect x="830" y="531" width="238" height="9" rx="4.5" fill="#334155" opacity="0.55"/>
+      <rect x="830" y="545" width="170" height="6" rx="3" fill="#94A3B8" opacity="0.5"/>
+    </g>
+    <!-- card 4 - Tools -->
+    <g>
+      <rect x="716" y="566" width="428" height="44" rx="9" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.3"/>
+      <rect x="730" y="580" width="56" height="16" rx="8" fill="#0E8C7F"/>
+      <text x="758" y="592" font-size="10.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Tools</text>
+      <rect x="800" y="581" width="210" height="9" rx="4.5" fill="#334155" opacity="0.55"/>
+      <rect x="800" y="595" width="140" height="6" rx="3" fill="#94A3B8" opacity="0.5"/>
+    </g>
+    <!-- card 5 - Dataset -->
+    <g>
+      <rect x="716" y="616" width="428" height="44" rx="9" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="1.3"/>
+      <rect x="730" y="630" width="74" height="16" rx="8" fill="#2563EB"/>
+      <text x="767" y="642" font-size="10.5" font-weight="600" fill="#FFFFFF" text-anchor="middle">Dataset</text>
+      <rect x="818" y="631" width="255" height="9" rx="4.5" fill="#334155" opacity="0.55"/>
+      <rect x="818" y="645" width="160" height="6" rx="3" fill="#94A3B8" opacity="0.5"/>
+    </g>
+  </g>
+
+  <!-- sublabel for C (placed below frame area, aligned) -->
+  <text x="700" y="690" font-size="12.5" fill="#64748B">single blended list · relevance layer = per-type weights w&#7522;</text>
+
+  <!-- footer caption -->
+  <text x="620" y="712" font-size="13" font-style="italic" fill="#475569" text-anchor="middle">B keeps results grouped by type; C merges them into one relevance-ranked list.</text>
+</svg>
