@@ -1,101 +1,119 @@
 #!/usr/bin/env python3
-"""Render benchmark results/*.json into a static HTML page for GitHub Pages.
+"""Build the NF Search Lab static site into site/ for GitHub Pages.
 
-Stub: reads every <table>/results/<label>.json and emits site/index.html with
-one sortable-ish table per run. Intentionally dependency-free (stdlib only) so
-the CI job doesn't need anything beyond what run.py already installs.
+The site itself is an interactive browser app (web/) — it runs live searches and the
+benchmark against the public Synapse API client-side. This script just assembles it:
 
-Lives at the repo root (not under benchmark/) since it aggregates results across
-all per-table benchmarks.
+  1. copy the web/ app shell (html/css/js) into the output dir, and
+  2. for every benchmark/<table>/golden.yaml, emit site/data/<table>.json — the golden
+     cases + field-boost config the app needs, plus an optional precomputed baseline
+     scoreboard (from results/<label>.json) so the scoreboard has a fast default.
+
+The golden set and field boosts thus stay single-sourced in YAML (run.py reads the same
+files); the app never hand-copies them. Dependency: pyyaml (already required by run.py).
+
+Lives at the repo root since it aggregates across all per-table benchmarks.
 
 Usage:
-  python3 build_site.py [--results benchmark] [--out site]
+  python3 build_site.py [--benchmark benchmark] [--web web] [--out site]
 """
-import argparse, glob, html, json, os, time
+import argparse, glob, json, os, shutil, time
+import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))  # repo root
 
-COLS = [("mrr", "MRR"), ("recall_at_k", "Recall@k"), ("hit_at_1", "Hit@1"),
-        ("hit_at_k", "Hit@k"), ("rt_ms_median", "rt_ms_med"), ("rt_ms_p95", "rt_ms_p95")]
+# Which precomputed result file to embed as the scoreboard's fast default, in order.
+PRECOMPUTED_PREFERENCE = ("baseline", "latest")
 
 
-def run_table(out):
-    k = out.get("k")
-    rows = sorted(out["strategies"].items(), key=lambda kv: kv[1]["mrr"], reverse=True)
-    head = "".join(f"<th>{html.escape(lbl.replace('@k', f'@{k}'))}</th>" for _, lbl in COLS)
-    body = []
-    for name, a in rows:
-        cells = [f"<td class=name>{html.escape(name)}</td>"]
-        for key, _ in COLS:
-            v = a.get(key, 0.0)
-            cells.append(f"<td>{v:.0f}</td>" if key.startswith("rt_ms") else f"<td>{v:.3f}</td>")
-        body.append(f"<tr>{''.join(cells)}</tr>")
-    label = html.escape(str(out.get("label", "run")))
-    ran = f" · {out['run_at']}" if out.get("run_at") else ""
-    meta = html.escape(f"{out.get('index_name')} ({out.get('index')}) · k={k} · "
-                       f"{out['strategies'][rows[0][0]]['n_cases']} cases{ran}")
-    return (f"<section><h2>{label}</h2><p class=meta>{meta}</p>"
-            f"<table><thead><tr><th>strategy</th>{head}</tr></thead>"
-            f"<tbody>{''.join(body)}</tbody></table></section>")
+def parse_boost(field):
+    """'resourceName^5' -> ('resourceName', 5); 'description' -> ('description', 1)."""
+    name, _, w = field.partition("^")
+    return name, (int(w) if w else 1)
 
 
-def build(results_dir, out_dir, generated_at):
-    # per-table layout: benchmark/<table>/results/*.json; also accept a direct
-    # results dir (…/results/*.json) for back-compat.
-    paths = sorted(glob.glob(os.path.join(results_dir, "*", "results", "*.json"))
-                   or glob.glob(os.path.join(results_dir, "*.json")))
-    sections = []
-    for p in paths:
+def load_fields(table_dir):
+    """The table's match list with per-field boosts (benchmark/<table>/fields.yaml),
+    falling back to ['*'] (all fields, no boosts) — same contract as run.py."""
+    path = os.path.join(table_dir, "fields.yaml")
+    if os.path.exists(path):
+        cfg = yaml.safe_load(open(path)) or {}
+        return cfg.get("fields") or ["*"]
+    return ["*"]
+
+
+def find_precomputed(table_dir):
+    """Pick a results/<label>.json to embed as the default scoreboard. Returns a slim
+    {label, run_at, k, strategies} dict (no per_case — keeps the data file small; the app
+    only offers per-case drill-in for live runs) or None."""
+    resdir = os.path.join(table_dir, "results")
+    paths = {os.path.splitext(os.path.basename(p))[0]: p
+             for p in glob.glob(os.path.join(resdir, "*.json"))}
+    if not paths:
+        return None
+    label = next((l for l in PRECOMPUTED_PREFERENCE if l in paths), sorted(paths)[0])
+    try:
+        out = json.load(open(paths[label]))
+    except (ValueError, OSError):
+        return None
+    return {"label": out.get("label", label), "run_at": out.get("run_at"),
+            "k": out.get("k"), "strategies": out.get("strategies", {})}
+
+
+def build_table_data(golden_path):
+    """Assemble one table's data/<table>.json payload from its golden + fields + results."""
+    table_dir = os.path.dirname(os.path.abspath(golden_path))
+    golden = yaml.safe_load(open(golden_path))
+    cases = [{"id": c["id"], "query": c["query"], "type": c.get("type"),
+              "relevant": c.get("relevant", []), "notes": c.get("notes")}
+             for c in golden.get("cases", [])]
+    return {
+        "index": golden["index"],
+        "index_name": golden.get("index_name"),
+        "k": golden.get("k", 10),
+        "id_field": golden.get("id_field", "resourceId"),
+        "fields": load_fields(table_dir),
+        "cases": cases,
+        "precomputed": find_precomputed(table_dir),
+        "generated_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+    }
+
+
+def build(benchmark_dir, web_dir, out_dir):
+    # 1. copy the app shell
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    shutil.copytree(web_dir, out_dir)
+
+    # 2. generate per-table data files + a manifest the app's index picker reads
+    data_dir = os.path.join(out_dir, "data")
+    os.makedirs(data_dir, exist_ok=True)
+    generated_at = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime())
+    manifest = {"generated_at": generated_at, "tables": []}
+    for golden_path in sorted(glob.glob(os.path.join(benchmark_dir, "*", "golden.yaml"))):
+        table = os.path.basename(os.path.dirname(golden_path))
         try:
-            sections.append(run_table(json.load(open(p))))
-        except (KeyError, ValueError, IndexError):
+            data = build_table_data(golden_path)
+        except (KeyError, ValueError) as e:
+            print(f"  skip {table}: {e}")
             continue
-    if not sections:
-        sections.append(
-            "<section class=wip><h2>🚧 Under construction</h2>"
-            "<p>No benchmark results yet. Once <code>benchmark/run.py</code> produces a "
-            "<code>results/*.json</code> file, this page will show query-strategy scores "
-            "(MRR / Recall / Hit) for each run.</p></section>")
-
-    page = f"""<!doctype html>
-<html lang=en><head><meta charset=utf-8>
-<meta name=viewport content="width=device-width,initial-scale=1">
-<title>nf-tools search benchmark</title>
-<style>
-  body {{ font: 15px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 880px;
-         padding: 0 1rem; color: #1a1a1a; }}
-  h1 {{ margin-bottom: .2rem; }}
-  .sub {{ color: #666; margin-top: 0; }}
-  .meta {{ color: #666; font-size: .9em; margin: .2rem 0 .6rem; }}
-  table {{ border-collapse: collapse; width: 100%; margin-bottom: 2rem; }}
-  th, td {{ border: 1px solid #ddd; padding: .4rem .6rem; text-align: right; }}
-  th:first-child, td.name {{ text-align: left; }}
-  thead th {{ background: #0E8C7F; color: #fff; }}
-  tbody tr:nth-child(even) {{ background: #f6f8f8; }}
-  .wip {{ background: #fff8e6; border: 1px solid #f0d98a; border-radius: 8px;
-          padding: .2rem 1.2rem; }}
-  footer {{ color: #888; font-size: .85em; margin-top: 3rem; }}
-</style></head><body>
-<h1>nf-tools search benchmark</h1>
-<p class=sub>Query-strategy quality (MRR / Recall / Hit) against the golden relevance set.
-See the repo for methodology &amp; strategy definitions.</p>
-{''.join(sections)}
-<footer>Generated {html.escape(generated_at)} · higher MRR/Recall/Hit is better, lower rt_ms is better.</footer>
-</body></html>"""
-
-    os.makedirs(out_dir, exist_ok=True)
-    with open(os.path.join(out_dir, "index.html"), "w") as f:
-        f.write(page)
-    return os.path.join(out_dir, "index.html")
+        json.dump(data, open(os.path.join(data_dir, f"{table}.json"), "w"), indent=2)
+        manifest["tables"].append({"table": table, "index": data["index"],
+                                   "index_name": data["index_name"], "n_cases": len(data["cases"])})
+        print(f"  data/{table}.json  ({len(data['cases'])} cases, "
+              f"{'precomputed' if data['precomputed'] else 'no precomputed'})")
+    json.dump(manifest, open(os.path.join(data_dir, "manifest.json"), "w"), indent=2)
+    return out_dir, [t["table"] for t in manifest["tables"]]
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results", default=os.path.join(HERE, "benchmark"))
+    ap.add_argument("--benchmark", default=os.path.join(HERE, "benchmark"))
+    ap.add_argument("--web", default=os.path.join(HERE, "web"))
     ap.add_argument("--out", default=os.path.join(HERE, "site"))
     args = ap.parse_args()
-    path = build(args.results, args.out, time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()))
-    print(f"wrote {path}")
+    out, tables = build(args.benchmark, args.web, args.out)
+    print(f"wrote {out}/ — tables: {', '.join(tables) or '(none)'}")
 
 
 if __name__ == "__main__":
