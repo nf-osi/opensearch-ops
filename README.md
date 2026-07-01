@@ -248,6 +248,20 @@ that doc for new results.
 field boosts) is documented with code line references in
 [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
+## Automated tuning ([`tuning/`](tuning/))
+
+Where `benchmark/run.py` *scores* hand-authored strategies, [`tuning/tune.py`](tuning/tune.py)
+*searches* for a better query-time config automatically: an agent (Claude) proposes query
+types and field sets from per-case relevance diagnostics, a numeric optimizer tunes the
+boosts, and every candidate is scored against the same golden set — then it writes a
+leaderboard, a report, and a drop-in `fields.yaml`. Query-time only (no index/analyzer
+changes). See [`tuning/README.md`](tuning/README.md).
+
+```bash
+python3 tuning/tune.py tools --rounds 3 --objective ndcg   # agentic loop (needs an API key)
+python3 tuning/tune.py tools --no-agent                    # offline boost optimization only
+```
+
 ## Rechecking SearchIndex object inventory
 
 No auth token needed — these objects are public, so `entity/children` and
