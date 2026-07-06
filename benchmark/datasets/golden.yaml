@@ -1,0 +1,377 @@
+# Golden relevance set for the nf-datasets SearchIndex.
+#
+# Each row of the source table is a curated Synapse dataset (title, assay/
+# measurementTechnique, dataType, disease manifestation, species, keywords, description).
+# `relevant` ids are values of `id` (the Synapse entity id) — the runner matches hits on it.
+#
+# type:
+#   topical    = several datasets are legitimately relevant (discovery / exploratory). MOST cases.
+#   known-item = one specific dataset the user wants to re-find (exact title). Sanity checks.
+#
+index:      syn75081630
+index_name: nf-datasets
+version:    2026.07.03
+k:          10
+id_field:   id
+
+cases:
+  # ---------------------------------------------------------------------------
+  # Agent-generated (generate-goldens skill), nf-datasets syn75081630, 2026-07-03.
+  # Relevant sets derived from the SOURCE table (syn50913342, 173 rows) data:
+  #   measurementTechnique / dataType / assay / manifestation / diseaseFocus / species /
+  #   keywords / title predicates. SME-simulated discovery queries + ideal ranked heads.
+  # DRAFT — review before trusting, especially topical relevant sets and judgment calls.
+  # ---------------------------------------------------------------------------
+
+  - id: rna-seq
+    query: rna-seq gene expression
+    type: topical
+    source: agent-generated
+    notes: "Bulk RNA-seq / gene-expression datasets (measurementTechnique HAS 'RNA-seq'; 33 rows, scRNA-seq excluded). Head favors clearly-labeled bulk expression sets across cell lines, MPNST, biospecimen cohorts, and organoids."
+    expected_pool: 33
+    relevant:
+      - syn66339969   # MPNST Cell Line RNA-seq
+      - syn53133024   # Bulk RNA-sequencing of Johns Hopkins NF1 Biospecimen Repository cohort
+      - syn40908928   # Gene Expression Quantification from the JHU NF1 Biospecimen Repository RNA-seq Data
+      - syn29654184   # Patient-derived cNF Cell Line RNA-seq (Counts)
+      - syn45172099   # NF Organoid RNA-seq
+
+  - id: scrna-seq
+    query: single cell rna-seq
+    type: topical
+    source: agent-generated
+    notes: "scRNA-seq datasets (measurementTechnique HAS 'single-cell RNA-seq'; 5 rows). ADVL1521 is an omic repository that includes scRNA-seq, ranked lower as it is a bundle rather than a dedicated scRNA-seq set."
+    expected_pool: 5
+    relevant:
+      - syn42174758   # Filtered Single-Cell RNA Sequencing Data for NF1-MPNST PDX Models
+      - syn64954846   # Single-cell RNA-seq of zebrafish retina
+      - syn72001380   # Single-cell multi-omic analysis of vestibular schwannoma (Seurat objects)
+      - syn51199007   # Raw RNA-Seq and scRNA-Seq Data for MPNST Novel Therapeutics Study
+      - syn54700333   # ADVL1521 Omic Data Repository
+
+  - id: whole-exome-sequencing
+    query: whole exome sequencing wes
+    type: topical
+    source: agent-generated
+    notes: "WES datasets (measurementTechnique HAS 'whole exome sequencing'; 17 rows). Head favors datasets explicitly labeled WES (raw reads + variant caller outputs run on WES) over CNV/germline sets that only partly derive from WES."
+    expected_pool: 17
+    relevant:
+      - syn51200209   # Whole Exome Sequencing of Plexiform Neurofibromas (pNFs)
+      - syn51585807   # MPNST Cell Line Whole Exome Sequencing
+      - syn53132831   # Whole exome sequencing of Johns Hopkins NF1 Biospecimen Repository cohort
+      - syn63093965   # Raw Whole Exome Sequencing Data for NF1-MPNST PDX and Human Samples
+      - syn31546989   # DeepVariant Output (WES)
+
+  - id: whole-genome-sequencing
+    query: whole genome sequencing bam
+    type: topical
+    source: agent-generated
+    notes: "WGS datasets (measurementTechnique HAS 'whole genome sequencing'; 25 rows). Many rows in the pool are germline-variant pipeline outputs; head favors datasets whose primary framing is WGS reads/alignments."
+    expected_pool: 25
+    relevant:
+      - syn51585677   # MPNST Cell Line Whole Genome Sequencing
+      - syn29783617   # Aligned Whole Genome Sequencing Data for NF1-MPNST PDX Models
+      - syn30865247   # Synodos LGG Whole Genome Sequencing (bam)
+      - syn64954906   # ULP Whole Genome Sequencing Data for NF1 MPNST/PN cfDNA Study
+
+  - id: atac-seq
+    query: atac-seq chromatin accessibility
+    type: topical
+    source: agent-generated
+    notes: "ATAC-seq datasets (measurementTechnique HAS 'ATAC-seq'; 3 rows, all from the zebrafish retina-regeneration study). Exhaustive."
+    expected_pool: 3
+    relevant:
+      - syn64954829   # ATAC-seq of Ascl1a lin28a OE v control Muller glia
+      - syn64954830   # ATAC-seq of DAPT v DMSO
+      - syn64954831   # ATAC-seq injured v uninjured
+
+  - id: methylation-array
+    query: dna methylation array
+    type: topical
+    source: agent-generated
+    notes: "Methylation-array datasets (measurementTechnique HAS 'methylation array'; 5 rows). Curated to 'chromatin activity' dataType. Head orders by explicit methylation-array titles."
+    expected_pool: 5
+    relevant:
+      - syn51586253   # MPNST Cell Line Methylation Arrays
+      - syn30865300   # Synodos LGG Methylation Arrays
+      - syn64954726   # Schwannomatosis Methylation Array Data
+      - syn64954688   # Methylation Array Data from PNF-derived iPSCs
+      - syn64954699   # Methylation - Columbia University NF1 Glioma Project
+
+  - id: drug-screen
+    query: drug screen compound screening
+    type: topical
+    source: agent-generated
+    notes: "Drug / compound screening datasets (dataType HAS 'drug screen'/'drug combination screen' or measurementTechnique compound/combination/high-content screen; 10 rows)."
+    expected_pool: 10
+    relevant:
+      - syn51914478   # Synodos NF2 Drug Screen - 2017 Release
+      - syn51916091   # CTF-UCF-Cenix Complete Compound Drug Screen
+      - syn51914953   # Single Agent Screens of pNF Cell Lines
+      - syn51917001   # 10x10 Combination Screens of pNF Cell Lines
+      - syn52163155   # Drug screens with 3D Plexiform Neurofibroma Model System
+
+  - id: combination-drug-screen
+    query: combination drug screen synergy
+    type: topical
+    source: agent-generated
+    notes: "Combination (as opposed to single-agent) drug screens. Grounded on titles/measurementTechnique naming combination or matrix screens. 6x6/10x10 are the canonical dose-matrix combination screens."
+    expected_pool: 4
+    relevant:
+      - syn51917001   # 10x10 Combination Screens of pNF Cell Lines
+      - syn51917244   # 6x6 Combination Screens of pNF Cell Lines
+      - syn64954677   # Combination Index Validation Studies: In Vitro Drug Screen
+
+  - id: proteomics
+    query: proteomics mass spectrometry
+    type: topical
+    source: agent-generated
+    notes: "Proteomics / mass-spec datasets (dataType 'proteomics' or measurementTechnique 'mass spectrometry'/'TMT quantitation'; 4 rows). Head orders by explicit proteomics framing."
+    expected_pool: 4
+    relevant:
+      - syn64954706   # Proteomics and Phosphoproteomics Data from NF1-deficient Schwann Cells
+      - syn64954875   # Proteomics characterization of LZTR1 function
+      - syn31802704   # Trial Run HscWT and Hsc45 Proteomics
+
+  - id: spatial-transcriptomics
+    query: spatial transcriptomics
+    type: topical
+    source: agent-generated
+    notes: "Spatial transcriptomics datasets (measurementTechnique HAS 'spatial transcriptomics'; 3 rows). Exhaustive."
+    expected_pool: 3
+    relevant:
+      - syn66339968   # ANNUBP and MPNST Spatial Transcriptomics
+      - syn68376356   # cNF Spatial Transcriptomics
+      - syn72001382   # Spatially resolved transcriptomics of benign and malignant peripheral nerve sheath tumors
+
+  - id: copy-number-variation
+    query: copy number variation cnv
+    type: topical
+    source: agent-generated
+    notes: "CNV datasets (dataType HAS 'copy number variants'; 6 rows). Head favors datasets whose title centers on copy number; the Columbia glioma CNV set ranks lower as one of a multi-omic family."
+    expected_pool: 6
+    relevant:
+      - syn52298742   # Copy Number Variation of malignant peripheral nerve sheath tumors
+      - syn52299972   # Copy Number Variation from cutaneous neurofibroma study
+      - syn52299273   # Copy number variation from patients with plexiform neurofibroma and MPNSTs
+      - syn61851460   # Copy number variants in patients with cutaneous neurofibroma
+      - syn51915976   # Copy Number Variation from the Columbia University NF1 Glioma Project
+
+  - id: germline-variants
+    query: germline variants
+    type: topical
+    source: agent-generated
+    notes: "Germline variant call datasets (dataType HAS 'germline variants'; 15 rows, dominated by per-caller pipeline outputs — DeepVariant/Mutect2/Strelka/FreeBayes). Head picks the canonical DeepVariant outputs plus the formatted rollup."
+    expected_pool: 15
+    relevant:
+      - syn35562839   # Germline Genomic Variants - DeepVariant Pipeline
+      - syn35562705   # Germline Genomic Variants - DeepVariant Pipeline (from syn31668189)
+      - syn39840966   # Formatted Files - Germline Variants
+
+  - id: somatic-variants
+    query: somatic variants tumor calls
+    type: topical
+    source: agent-generated
+    notes: "Somatic variant datasets (dataType HAS 'somatic variants'; 5 rows). Two rows are file-supplement rows from a publication; head favors the pipeline/tumor-call datasets."
+    expected_pool: 5
+    relevant:
+      - syn53149144   # Processed Somatic Genomic Variants - Mutect2 Pipeline
+      - syn53149128   # Processed Somatic Variants - Strelka Pipeline
+      - syn64720237   # Somatic Variants - Strelka - WES
+      - syn53604698   # Deep Variant Tumor Calls
+
+  - id: imaging-histology
+    query: immunohistochemistry ihc imaging
+    type: topical
+    source: agent-generated
+    notes: "Histology / immuno-imaging datasets (IHC/ICC/immunofluorescence; grounded on titles + measurementTechnique immunohistochemistry/immunofluorescence). Excludes zebrafish EdU-proliferation images (functional assay, not histology) and radiology MRI (separate case)."
+    expected_pool: 6
+    relevant:
+      - syn64954916   # Immunohistochemistry Data for MPNST Immune Microenvironment Study
+      - syn64954925   # IHC Quantification Data for NF1 MPNST Mouse Models
+      - syn64954909   # IHC Data
+      - syn64954871   # Immunocytochemistry Imaging of MPNST Cells
+
+  - id: mri-imaging
+    query: mri imaging vestibular schwannoma
+    type: topical
+    source: agent-generated
+    notes: "Radiology MRI datasets, all from the NF2 / vestibular-schwannoma crossMoDA & TCIA collections (grounded on title). Radiotherapy-planning set included as an adjacent imaging modality, ranked last."
+    expected_pool: 3
+    relevant:
+      - syn74457818   # MRI -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
+      - syn74287640   # MRI - Vestibular Schwannoma crossMoDA challenge (TCIA Vestibular-Schwannoma-MC-RC)
+      - syn74457821   # Radiotherapy Planning -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
+
+  - id: chip-seq
+    query: chip-seq
+    type: topical
+    source: agent-generated
+    notes: "ChIP-seq datasets (grounded on title 'ChIP-seq'; 2 rows). Exhaustive."
+    expected_pool: 2
+    relevant:
+      - syn74315344   # ChIP-seq BRD4 - NF2-null schwannoma cell lines (ENA PRJNA704960)
+      - syn74309551   # GEO_GSE120686 ChIP-seq HuR-ELAVL1 MPNST tumor samples
+
+  - id: elisa-antibody
+    query: elisa antibody assay
+    type: topical
+    source: agent-generated
+    notes: "Antibody-development / ELISA datasets from the monoclonal-antibody study (Affinity ELISA, Sandwich ELISA, epitope mapping, titers). FALSE FRIEND: dataType 'immunoassay' over-matches zebrafish EdU proliferation + imaging rows, so the head is grounded on the actual ELISA/antibody-assay titles rather than the immunoassay facet."
+    expected_pool: 4
+    relevant:
+      - syn64954910   # Sandwich ELISA
+      - syn64954907   # Affinity Purified ELISA Screen
+      - syn64954908   # Epitope Mapping
+      - syn64954912   # Titer Report
+
+  - id: mpnst
+    query: mpnst malignant peripheral nerve sheath tumor
+    type: topical
+    source: agent-generated
+    notes: "Datasets whose manifestation includes MPNST (40 rows). Head favors datasets explicitly about MPNST across omics types; broad pool so the listed head is the strongest MPNST-centric titles."
+    expected_pool: 40
+    relevant:
+      - syn66339969   # MPNST Cell Line RNA-seq
+      - syn51585807   # MPNST Cell Line Whole Exome Sequencing
+      - syn52298742   # Copy Number Variation of malignant peripheral nerve sheath tumors
+      - syn42174758   # Filtered Single-Cell RNA Sequencing Data for NF1-MPNST PDX Models
+      - syn66339968   # ANNUBP and MPNST Spatial Transcriptomics
+
+  - id: plexiform-neurofibroma
+    query: plexiform neurofibroma pnf
+    type: topical
+    source: agent-generated
+    notes: "Datasets whose manifestation includes Plexiform Neurofibroma (39 rows). Head favors datasets explicitly framed around pNF across sequencing, screens, and models."
+    expected_pool: 39
+    relevant:
+      - syn51200209   # Whole Exome Sequencing of Plexiform Neurofibromas (pNFs)
+      - syn52163155   # Drug screens with 3D Plexiform Neurofibroma Model System
+      - syn51914953   # Single Agent Screens of pNF Cell Lines
+      - syn52299273   # Copy number variation from patients with plexiform neurofibroma and MPNSTs
+      - syn74278251   # RNA-seq, Plexiform Neurofibroma, Trigeminal Nerve, Mus musculus (GEO GSE213786)
+
+  - id: cutaneous-neurofibroma
+    query: cutaneous neurofibroma cnf
+    type: topical
+    source: agent-generated
+    notes: "Datasets whose manifestation includes Cutaneous Neurofibroma (30 rows). Head favors datasets explicitly about cNF (organoid model, CNV/germline cNF studies, patient-derived cNF cell line, cNF spatial)."
+    expected_pool: 30
+    relevant:
+      - syn29654184   # Patient-derived cNF Cell Line RNA-seq (Counts)
+      - syn68376356   # cNF Spatial Transcriptomics
+      - syn52299972   # Copy Number Variation from cutaneous neurofibroma study
+      - syn61851460   # Copy number variants in patients with cutaneous neurofibroma
+      - syn61847288   # Aligned reads from RNA-seq of cutaneous neurofibroma organoid model
+
+  - id: schwannomatosis
+    query: schwannomatosis
+    type: topical
+    source: agent-generated
+    notes: "Schwannomatosis datasets — grounded on the Synodos Schwannomatosis / Schwannomatosis series titles (diseaseFocus Schwannomatosis-NOS + Synodos schwannomatosis study). Head favors the RNA-seq + methylation Schwannomatosis series."
+    expected_pool: 6
+    relevant:
+      - syn64954727   # Schwannomatosis RNA-seq Raw Data (fastq)
+      - syn63540453   # Schwannomatosis RNA-seq Quantification Data (Salmon sf)
+      - syn64954726   # Schwannomatosis Methylation Array Data
+      - syn41825491   # Schwannomatosis RNA-seq Unmerged Raw Data (fastq)
+      - syn30423895   # Synodos Schwannomatosis Intermediate Processing Data (2020-05-13)
+
+  - id: vestibular-schwannoma
+    query: vestibular schwannoma nf2
+    type: topical
+    source: agent-generated
+    notes: "NF2 / vestibular-schwannoma datasets (grounded on title 'Vestibular Schwannoma' + diseaseFocus NF2-related). Spans raw sequencing, single-cell, and TCIA/crossMoDA MRI collections."
+    expected_pool: 6
+    relevant:
+      - syn72001379   # Raw Sequencing Data for Vestibular Schwannoma
+      - syn72001380   # Single-cell multi-omic analysis of vestibular schwannoma (Seurat objects)
+      - syn74457818   # MRI -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
+      - syn74287640   # MRI - Vestibular Schwannoma crossMoDA challenge
+      - syn72001377   # Automated Whole Cochlear T2 Signal and Hearing Loss in Observed Vestibular Schwannoma
+
+  - id: low-grade-glioma
+    query: nf1 glioma low grade glioma
+    type: topical
+    source: agent-generated
+    notes: "Glioma datasets (manifestation Low-Grade/High-Grade Glioma; 8 rows). Two families: Synodos LGG and the Columbia University NF1 Glioma Project multi-omics. Head samples both."
+    expected_pool: 8
+    relevant:
+      - syn30865196   # Synodos LGG RNAseq
+      - syn51915976   # Copy Number Variation from the Columbia University NF1 Glioma Project
+      - syn30865247   # Synodos LGG Whole Genome Sequencing (bam)
+      - syn30865300   # Synodos LGG Methylation Arrays
+      - syn64954699   # Methylation - Columbia University NF1 Glioma Project
+
+  - id: zebrafish-retina
+    query: zebrafish retina regeneration
+    type: topical
+    source: agent-generated
+    notes: "Zebrafish (Danio rerio) retina-regeneration datasets (species HAS 'Danio rerio'; 14 rows, all from the Muller-glia retina regeneration study). Head samples across assay types in that study."
+    expected_pool: 14
+    relevant:
+      - syn64954846   # Single-cell RNA-seq of zebrafish retina
+      - syn64954834   # Zebrafish Retina Regeneration Drug Screen
+      - syn64954829   # ATAC-seq of Ascl1a lin28a OE v control Muller glia
+      - syn64954841   # RNA-seq DAPT vs DMSO treatment in zebrafish Muller glia
+      - syn64954836   # Images of NF1 knockdown effect in zebrafish retina
+
+  - id: mouse-model
+    query: nf1 mouse model
+    type: topical
+    source: agent-generated
+    notes: "Mouse (Mus musculus) datasets (species HAS 'Mus musculus'; ~21 rows). Head favors datasets clearly framed on mouse/PDX models."
+    expected_pool: 21
+    relevant:
+      - syn29783617   # Aligned Whole Genome Sequencing Data for NF1-MPNST PDX Models
+      - syn74278251   # RNA-seq, Plexiform Neurofibroma, Trigeminal Nerve, Mus musculus (GEO GSE213786)
+      - syn64954925   # IHC Quantification Data for NF1 MPNST Mouse Models
+      - syn63093965   # Raw Whole Exome Sequencing Data for NF1-MPNST PDX and Human Samples
+      - syn74320535   # Spatial transcriptomics - Nf1+- mouse brain raw FASTQ reads (ENA PRJNA1096676)
+
+  - id: cfdna-liquid-biopsy
+    query: cfdna liquid biopsy plasma
+    type: topical
+    source: agent-generated
+    notes: "cfDNA / liquid-biopsy datasets (grounded on 'cfDNA'/'ULP-WGS'/'plasma' in title & description). Only one dataset is squarely a cfDNA study."
+    expected_pool: 1
+    relevant:
+      - syn64954906   # ULP Whole Genome Sequencing Data for NF1 MPNST/PN cfDNA Study
+
+  - id: ipsc-derived
+    query: ipsc induced pluripotent stem cell
+    type: topical
+    source: agent-generated
+    notes: "iPSC-derived datasets (grounded on 'iPSC'/'induced pluripotent' in title/description; PNF-derived iPSC series + NF1 iPSC co-culture). Excludes generic NF-OSI-processing rows that merely mention iPSC-derived inputs."
+    expected_pool: 3
+    relevant:
+      - syn64954688   # Methylation Array Data from PNF-derived iPSCs
+      - syn64954690   # SNP Array Data from PNF-derived iPSCs
+      - syn64954745   # NF1 iPSC Sensory Neuron-Schwann Cell Co-culture
+
+  - id: organoid
+    query: neurofibroma organoid
+    type: topical
+    source: agent-generated
+    notes: "Organoid datasets (grounded on 'organoid' in title; 3 rows). Exhaustive."
+    expected_pool: 3
+    relevant:
+      - syn45172099   # NF Organoid RNA-seq
+      - syn61847288   # Aligned reads from RNA-seq of cutaneous neurofibroma organoid model
+      - syn61847298   # Gene expression quantification of cutaneous neurofibroma organoid model
+
+  - id: synodos-nf2-drug-screen
+    query: Synodos NF2 Drug Screen - 2017 Release
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact dataset title. One defensible answer; confirms the harness matches an exact title, does not discriminate strategies."
+    relevant:
+      - syn51914478   # Synodos NF2 Drug Screen - 2017 Release
+
+  - id: cnf-spatial-transcriptomics
+    query: cNF Spatial Transcriptomics
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact dataset title. One defensible answer; confirms exact-title retrieval."
+    relevant:
+      - syn68376356   # cNF Spatial Transcriptomics
