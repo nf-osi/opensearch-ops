@@ -204,19 +204,9 @@ python3 query.py '{"query":{"multi_match":{"query":"schwann","fields":["resource
 we can measure the effect of config and query changes.
 
 **Per-table layout.** Each table's benchmark lives in its own subfolder
-`benchmark/<table>/` (e.g. [`benchmark/tools/`](benchmark/tools/) for `nf-tools`; later
-`benchmark/studies/`, …), so goldens, docs, and results don't collide across tables. The
+`benchmark/<table>/`, e.g. [`benchmark/tools/`](benchmark/tools/) and
+[`benchmark/studies/`](benchmark/studies/), …, each with its own goldens, docs, and results. The
 shared harness scripts live at `benchmark/` root.
-
-Per-table (`benchmark/tools/`):
-- [`golden.yaml`](benchmark/tools/golden.yaml) — test cases mapping a query to the
-  `resourceId`s that should be retrieved (YAML, with inline comments, for easy SME review
-  and curation). `known-item` cases have defensible exact ground truth; `topical` cases
-  are seeded and flagged for human curation.
-- [`GOLDEN.md`](benchmark/tools/GOLDEN.md) — dataset documentation for `golden.yaml`:
-  case provenance (the `source:` field) and **coverage gaps** (queries deliberately not
-  turned into cases, and why — schema gaps, cross-record links, other indexes).
-- `results/<label>.json` — one file per run, diffable as config changes.
 
 Shared harness (`benchmark/` root):
 - [`benchmark/strategies.py`](benchmark/strategies.py) — query builders (`query_text → DSL`):
@@ -230,19 +220,11 @@ Shared harness (`benchmark/` root):
   **MRR**, **Recall@k**, **Hit@1**, **Hit@k**; prints a table and writes
   `benchmark/<table>/results/<label>.json` (`--label` defaults to `latest`).
 
-Golden authoring (used to *create* cases, not run them) lives with its skill:
-[`.claude/skills/generate-goldens/`](.claude/skills/generate-goldens/) holds `SKILL.md`
-and `profile_table.py` (the schema-agnostic table profiler).
-
 ```bash
 pip install pyyaml   # one-time; run.py reads the golden set from YAML
 python3 benchmark/run.py tools                                                   # -> results/latest.json
 python3 benchmark/run.py tools --label boost-v2 --strategy multi_match_boosted   # after editing benchmark/strategies.py
 ```
-
-**Strategy explanations, metric definitions, and the latest results live in
-[benchmark/tools/RESULTS.md](benchmark/tools/RESULTS.md)** — stakeholder-facing summary. Update
-that doc for new results.
 
 **What the live frontend actually has** (a bare `multi_match` + `fuzziness: AUTO`, no
 field boosts) is documented with code line references in
@@ -250,7 +232,7 @@ field boosts) is documented with code line references in
 
 ## Rechecking SearchIndex object inventory
 
-No auth token needed — these objects are public, so `entity/children` and
+No auth token needed — these objects are PUBLIC, so `entity/children` and
 `entity/{id}` both work anonymously.
 
 ```bash
