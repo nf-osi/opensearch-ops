@@ -22,9 +22,6 @@ import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))  # repo root
 
-# Which precomputed result file to embed as the scoreboard's fast default, in order.
-PRECOMPUTED_PREFERENCE = ("baseline", "latest")
-
 
 def parse_boost(field):
     """'resourceName^5' -> ('resourceName', 5); 'description' -> ('description', 1)."""
@@ -43,20 +40,21 @@ def load_fields(table_dir):
 
 
 def find_precomputed(table_dir):
-    """Pick a results/<label>.json to embed as the default scoreboard. Returns a slim
+    """Load results/latest.json to embed as the default scoreboard. Returns a slim
     {label, run_at, k, strategies} dict (no per_case — keeps the data file small; the app
-    only offers per-case drill-in for live runs) or None."""
-    resdir = os.path.join(table_dir, "results")
-    paths = {os.path.splitext(os.path.basename(p))[0]: p
-             for p in glob.glob(os.path.join(resdir, "*.json"))}
-    if not paths:
+    only offers per-case drill-in for live runs) or None if no latest.json exists yet.
+
+    Only latest.json is used (not baseline.json or any other results/*.json) — the
+    embedded scoreboard should always reflect the most recent run.py invocation, not a
+    frozen historical snapshot."""
+    path = os.path.join(table_dir, "results", "latest.json")
+    if not os.path.exists(path):
         return None
-    label = next((l for l in PRECOMPUTED_PREFERENCE if l in paths), sorted(paths)[0])
     try:
-        out = json.load(open(paths[label]))
+        out = json.load(open(path))
     except (ValueError, OSError):
         return None
-    return {"label": out.get("label", label), "run_at": out.get("run_at"),
+    return {"label": out.get("label", "latest"), "run_at": out.get("run_at"),
             "k": out.get("k"), "strategies": out.get("strategies", {})}
 
 
