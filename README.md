@@ -248,30 +248,29 @@ that doc for new results.
 field boosts) is documented with code line references in
 [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
-## Interactive site (Synapse Portal Search Lab)
+## Interactive app (Synapse Portal Search Lab)
 
-[`web/`](web/) is a **self-serve** version of the harness for business owners / SMEs — a
+[`web/`](web/) is a friendly **self-serve** version of the harness for business owners / SMEs that's a
 static, dependency-free browser app (no build tooling, no backend). It calls the public
-Synapse search API directly (CORS is open; queries are anonymous) and has two modes:
+Synapse search API directly and has two modes:
 
-- **Search playground** — type a query and compare two ranking *recipes* (strategies)
-  side by side, with per-field boost sliders. Shows how a tuning change reorders real
+- **Search playground** (entry-level) — type a query and compare two ranking *recipes* (strategies)
+  side by side, with per-field boost sliders. Intuitive way to show how a tuning change reorders real
   results.
-- **Benchmark scoreboard** — runs the golden set × selected recipes live in the browser
-  and shows the same MRR / Recall / Hit table as `run.py`, with per-case drill-in.
+- **Benchmark scoreboard** (advanced) — reference a golden set × selected recipes live in the browser, 
+  get same MRR / Recall / Hit table as `run.py`, with per-case drill-in.
 
-**Works against any SearchIndex, any portal.** nf-tools is the default, but the index
+**Works against any SearchIndex, any portal.** while nf-tools is the default, the index
 picker is **populated by listing every SearchIndex in the collection project**
-(`syn74909065`) via `entity/children` — so any portal's index is one click away (no ID to
-paste; a paste-by-ID fallback remains for indexes outside the project). When a
+(`syn74909065`) via `entity/children` — any portal's index is one click away. When a
 non-curated index is chosen, the app discovers its columns live (`SELECT_COLUMNS`) and
 **auto-generates a field-boost config** from column type + name heuristics
-([`web/boostgen.js`](web/boostgen.js)) — no per-table config to check in.
+([`web/boostgen.js`](web/boostgen.js)).
 Curated tables (those with a `golden.yaml`) ship hand-tuned boosts and enable the
 scoreboard; any other index runs in playground-only mode (no golden set → no benchmark).
 The query recipes are identical for every index.
 
-It is a **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
+This is a visual **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
 engineer/CI path, the site is the non-engineer path. The recipes and scoring are JS ports
 of [`strategies.py`](benchmark/strategies.py) and [`run.py`](benchmark/run.py); the golden
 cases and field boosts are **generated** from the same YAML at build time (so they never
@@ -280,10 +279,12 @@ scoreboard's per-strategy MRR/Recall/Hit must match `python3 benchmark/run.py to
 rounding.
 
 > [!NOTE]
-> The site exercises **query-time** levers only (recipe, field boosts, fuzziness) and
+> Workbench optimizes **query-time** levers only (recipe, field boosts, fuzziness) and
 > reflects the index's *current* production config. Index-time config (analyzers,
 > synonyms in [`config/`](config/)) needs a Sage-admin index rebuild and isn't adjustable
 > client-side.
+
+### Usage
 
 [`build_site.py`](build_site.py) assembles the site into `site/` (gitignored) — it copies
 `web/` and emits `site/data/<table>.json` (golden cases + boosts + an optional precomputed
