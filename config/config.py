@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
-"""Manage org.synapse.nf search config objects: apply, list, and check bindings.
+"""Manage org.synapse.nf search config objects: register, apply, list, and check.
 
 Subcommands:
-  apply   Create/update the nf-tools config objects (all org.synapse.nf objects
-          are upserted by name — POST to create, PUT /{id} with the current
-          etag to update) and bind the resulting SearchConfiguration to a
-          SearchIndex:
+  register  Create/update the org.synapse.nf config objects declared in the
+          OBJECTS list, each from its local JSON artifact in config/ (every
+          object is upserted by name — POST to create, PUT /{id} with the
+          current etag to update). OBJECTS currently holds the nf-tools set:
             1. TextAnalyzer        nf_scientific_synonyms   (nf_scientific_synonyms.analyzer.json)
             2. ColumnAnalyzerOverride nf_tools_columns       (nf_tools_columns.override.json)
             3. SearchConfiguration nf_tools_search_config    (nf_tools_search_config.json)
-            4. Bind the config to the target SearchIndex    (PUT /entity/{id}/searchconfig/binding)
-            5. (--rebuild) Touch the SearchIndex entity      (PUT /entity/{id}) to fire a full rebuild
-          Bind target defaults to the nf-tools index (syn75081636) but can be
-          overridden with --index, passing either a SearchIndex synId or its
-          name (resolved by looking it up among the SearchIndex children of
-          the shared collection project syn74909065). Binding higher (e.g.
-          the shared collection project itself) would resolve down to every
-          portal's index, so --index must always name a SearchIndex object,
-          not a project/folder.
+          but is meant to grow to cover other portals' config objects too —
+          add an artifact file plus its OBJECTS entry and `register` picks it
+          up. Prints the resulting SearchConfiguration id — pass it to
+          `apply` to bind it.
+  apply   Bind an existing SearchConfiguration (by id — see `list`) to a
+          SearchIndex, and optionally rebuild:
+            1. Bind the config to the target SearchIndex    (PUT /entity/{id}/searchconfig/binding)
+            2. (--rebuild) Touch the SearchIndex entity      (PUT /entity/{id}) to fire a full rebuild
+          apply does NOT create/update config objects — run `register` first
+          if the config doesn't exist yet. Bind target defaults to the nf-tools
+          index (syn75081636) but can be overridden with --index, passing
+          either a SearchIndex synId or its name (resolved by looking it up
+          among the SearchIndex children of the shared collection project
+          syn74909065). Binding higher (e.g. the shared collection project
+          itself) would resolve down to every portal's index, so --index
+          must always name a SearchIndex object, not a project/folder.
   list    List registered org.synapse.nf config objects (TextAnalyzer,
           ColumnAnalyzerOverride, SearchConfiguration), optionally filtered
           by --type. Anonymous — no token needed.
@@ -25,16 +32,18 @@ Subcommands:
           up the entity hierarchy — and list configs available to bind for
           the org. Anonymous — no token needed.
 
-Auth (apply only): needs a Sage employee / org-admin token with modify scope.
-Reads it from $NF_SERVICE_TOKEN, else the `NF_SERVICE_TOKEN=` line in
+Auth (register/apply only): needs a Sage employee / org-admin token with modify
+scope. Reads it from $NF_SERVICE_TOKEN, else the `NF_SERVICE_TOKEN=` line in
 ~/.bashrc, else --token.
 
 Usage:
-  python3 config/config.py apply --dry-run          # print what would happen, no writes
-  python3 config/config.py apply                     # create/update + bind (no rebuild)
-  python3 config/config.py apply --rebuild           # ... and trigger the index rebuild
-  python3 config/config.py apply --staging           # same, but against the staging repo API
-  python3 config/config.py apply --index nf-datasets # bind/rebuild a different index, by name
+  python3 config/config.py register --dry-run   # print what would happen, no writes
+  python3 config/config.py register             # create/update the config objects
+  python3 config/config.py register --staging   # same, but against the staging repo API
+
+  python3 config/config.py apply 9                     # bind SearchConfiguration id 9 to nf-tools
+  python3 config/config.py apply 9 --rebuild            # ... and trigger the index rebuild
+  python3 config/config.py apply 9 --index nf-datasets  # ... to a different index, by name
 
   python3 config/config.py list                            # list all org.synapse.nf configs
   python3 config/config.py list --type SearchConfiguration # ... filtered to one type
@@ -205,19 +214,30 @@ def describe_config(cfg):
             print(f"    {k}: {v}")
 
 
+def cmd_register(args):
+    base = STAGING_BASE if args.staging else BASE
+    token = get_token(args.token)
+
+    print(f"Target: {base}")
+    print("Registering org.synapse.nf search objects:")
+    config_id = None
+    for _type, artifact, create_ep, list_ep, item_ep in OBJECTS:
+        config_id = upsert(artifact, create_ep, list_ep, item_ep, token, args.dry_run, base)
+
+    print(f"\nDone. SearchConfiguration id={config_id}"
+          + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
+    if not args.dry_run:
+        print(f"Bind it with: config.py apply {config_id}")
+
+
 def cmd_apply(args):
     base = STAGING_BASE if args.staging else BASE
     token = get_token(args.token)
     index_id = resolve_index_id(args.index, token, base)
 
     print(f"Target: {base}  index={index_id}")
-    print("Upserting org.synapse.nf search objects:")
-    config_id = None
-    for _type, artifact, create_ep, list_ep, item_ep in OBJECTS:
-        config_id = upsert(artifact, create_ep, list_ep, item_ep, token, args.dry_run, base)
-
     print("\nBinding:")
-    bind(config_id, index_id, token, args.dry_run, base)
+    bind(args.config_id, index_id, token, args.dry_run, base)
 
     if args.rebuild:
         print("\nRebuild:")
@@ -280,7 +300,15 @@ def main():
                                   formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
 
-    ap_apply = sub.add_parser("apply", help="create/update config objects and bind to a SearchIndex")
+    ap_register = sub.add_parser("register", help="create/update the org.synapse.nf config objects declared in OBJECTS")
+    ap_register.add_argument("--token")
+    ap_register.add_argument("--dry-run", action="store_true")
+    ap_register.add_argument("--staging", action="store_true",
+                              help=f"hit the staging repo API ({STAGING_BASE}) instead of prod, for testing")
+    ap_register.set_defaults(func=cmd_register)
+
+    ap_apply = sub.add_parser("apply", help="bind an existing SearchConfiguration to a SearchIndex")
+    ap_apply.add_argument("config_id", help="id of an existing SearchConfiguration (see `config.py list`)")
     ap_apply.add_argument("--token")
     ap_apply.add_argument("--dry-run", action="store_true")
     ap_apply.add_argument("--rebuild", action="store_true",
