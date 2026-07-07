@@ -16,23 +16,29 @@ Subcommands:
           default '*.json') to restrict which artifacts get registered, e.g.
           'nf_studies*' to touch only one portal's config objects.
   apply   Bind an existing SearchConfiguration (by id — see `list`) to a
-          SearchIndex, and optionally rebuild:
-            1. Bind the config to the target SearchIndex    (PUT /entity/{id}/searchconfig/binding)
-            2. (--rebuild) Touch the SearchIndex entity      (PUT /entity/{id}) to fire a full rebuild
+          SearchIndex by setting the index entity's own searchConfigurationId
+          field (PUT /entity/{id}), which also fires a full index rebuild as
+          a side effect of the entity update. (The generic PUT
+          /entity/{id}/searchconfig/binding endpoint only accepts Project/
+          Folder targets now — "A search configuration can only be bound to
+          a Project or Folder" — so SearchIndex entities use their own
+          searchConfigurationId property instead; see the SearchIndex model
+          docs.) --rebuild does an extra explicit touch, useful only when you
+          want to re-trigger a rebuild without changing the bound config id
+          (e.g. after editing a referenced analyzer/override in place).
           apply does NOT create/update config objects — run `register` first
           if the config doesn't exist yet. Bind target defaults to the nf-tools
           index (syn75081636) but can be overridden with --index, passing
           either a SearchIndex synId or its name (resolved by looking it up
           among the SearchIndex children of the shared collection project
-          syn74909065). Binding higher (e.g. the shared collection project
-          itself) would resolve down to every portal's index, so --index
-          must always name a SearchIndex object, not a project/folder.
+          syn74909065).
   list    List registered org.synapse.nf config objects (TextAnalyzer,
           ColumnAnalyzerOverride, SearchConfiguration), optionally filtered
           by --type. Anonymous — no token needed.
-  check   Check what config (if any) is bound to given entities — resolves
-          up the entity hierarchy — and list configs available to bind for
-          the org. Anonymous — no token needed.
+  check   Check what config (if any) is in effect for given entities — the
+          entity's own searchConfigurationId if it has one, else the nearest
+          ancestor Project/Folder binding — and list configs available to
+          bind for the org. Anonymous — no token needed.
 
 Auth (register/apply only): needs a Sage employee / org-admin token with modify
 scope. Reads it from $NF_SERVICE_TOKEN, else the `NF_SERVICE_TOKEN=` line in
@@ -199,14 +205,29 @@ def resolve_index_id(target, token, base):
 
 
 def bind(config_id, index_id, token, dry, base):
-    print(f"  BIND config {config_id} -> {index_id}")
+    """Set the SearchIndex entity's own searchConfigurationId field.
+
+    The generic PUT /entity/{id}/searchconfig/binding endpoint only accepts
+    Project/Folder targets ("A search configuration can only be bound to a
+    Project or Folder") — SearchIndex entities carry their own
+    searchConfigurationId property instead (see the SearchIndex model docs),
+    which takes precedence over any ancestor Project/Folder binding. Setting
+    it is a normal entity update, so it also fires a full index rebuild.
+    """
+    print(f"  BIND: set {index_id}.searchConfigurationId = {config_id}")
+    code, ent = _call(f"entity/{index_id}", token=token, base=base)
+    if code >= 400:
+        sys.exit(f"  could not GET entity ({code}): {ent}")
     if dry:
+        print(f"    would PUT entity back with searchConfigurationId={config_id} "
+              f"(etag={ent.get('etag')}); this also triggers a rebuild")
         return
-    payload = {"entityId": index_id, "searchConfigurationId": str(config_id)}
-    code, body = _call(f"entity/{index_id}/searchconfig/binding", "PUT", payload, token, base=base)
+    ent["searchConfigurationId"] = str(config_id)
+    code, body = _call(f"entity/{index_id}", "PUT", ent, token, base=base)
     if code >= 400:
         sys.exit(f"  BIND FAILED ({code}): {json.dumps(body)[:500]}")
-    print(f"    ok: {json.dumps(body)[:300]}")
+    print(f"    ok: entity updated, etag={body.get('etag')} "
+          f"searchConfigurationId={body.get('searchConfigurationId')} (rebuild runs async)")
 
 
 def rebuild(index_id, token, dry, base):
@@ -223,17 +244,22 @@ def rebuild(index_id, token, dry, base):
     print(f"    ok: entity updated, etag={body.get('etag')} (rebuild runs async)")
 
 
-def get_binding(entity_id, base):
-    """Return (binding_dict_or_None, message). binding is None when unbound.
+def get_effective_config_id(entity_id, base):
+    """Return (config_id, source) for the config in effect on `entity_id`, or
+    (None, message) if none applies.
 
-    The binding endpoint returns a binding record (bindId, searchConfigurationId,
-    objectId, objectType), not the SearchConfiguration itself — fetch that
-    separately with get_config().
+    Checks the entity's own searchConfigurationId first (only SearchIndex
+    entities carry this — it takes precedence when set), then falls back to
+    the ancestor-resolving /searchconfig/binding endpoint (Project/Folder
+    bindings, walked up the hierarchy).
     """
+    code, ent = _call(f"entity/{entity_id}", base=base)
+    if code < 400 and ent.get("searchConfigurationId"):
+        return ent["searchConfigurationId"], f"direct ({entity_id}.searchConfigurationId)"
     code, body = _call(f"entity/{entity_id}/searchconfig/binding", base=base)
     if code >= 400:
         return None, body.get("reason", str(body))
-    return body, "bound"
+    return body.get("searchConfigurationId"), "inherited (ancestor Project/Folder binding)"
 
 
 def get_config(config_id, base):
@@ -286,12 +312,14 @@ def cmd_apply(args):
     print(f"Target: {base}  index={index_id}")
     print("\nBinding:")
     bind(args.config_id, index_id, token, args.dry_run, base)
+    print("(bind already triggers a rebuild, since it's a normal entity update)")
 
     if args.rebuild:
         print("\nRebuild:")
+        print("(extra explicit touch — only needed to re-trigger a rebuild without "
+              "changing the bound config id, e.g. after editing a referenced "
+              "analyzer/override in place)")
         rebuild(index_id, token, args.dry_run, base)
-    else:
-        print("\n(skip rebuild; re-run with --rebuild to apply the config to the live index)")
 
     print("\nDone." + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
 
@@ -312,21 +340,18 @@ def cmd_check(args):
     base = STAGING_BASE if args.staging else BASE
     entities = args.entities or [DEFAULT_INDEX, NF_TOOLS_SOURCE]
 
-    print("Binding check (resolves up the entity hierarchy):")
+    print("Binding check (entity's own searchConfigurationId, else ancestor Project/Folder binding):")
     any_bound = False
     for ent in entities:
-        binding, msg = get_binding(ent, base)
-        if binding is None:
-            print(f"  {ent}: UNBOUND — {msg}")
+        config_id, info = get_effective_config_id(ent, base)
+        if config_id is None:
+            print(f"  {ent}: UNBOUND — {info}")
             continue
         any_bound = True
-        print(f"  {ent}: BOUND →")
-        config_id = binding.get("searchConfigurationId")
-        cfg = get_config(config_id, base) if config_id else None
+        print(f"  {ent}: BOUND ({info}) →")
+        cfg = get_config(config_id, base)
         if cfg is None:
-            print(f"    could not fetch SearchConfiguration {config_id}; raw binding:")
-            for k, v in binding.items():
-                print(f"    {k}: {v}")
+            print(f"    could not fetch SearchConfiguration {config_id}")
         else:
             describe_config(cfg)
 
