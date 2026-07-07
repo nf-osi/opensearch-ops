@@ -47,6 +47,7 @@
 
 index: syn75081636
 index_name: nf-tools
+version: 2026.06.22
 k: 10
 # id_field: which column the `relevant` ids below come from, i.e. what the runner
 # matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
