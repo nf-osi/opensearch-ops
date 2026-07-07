@@ -6,9 +6,9 @@
 // `tag` is the short chip shown in compact UI.
 export const STRATEGY_LABELS = {
   frontend_default: {
-    name: "Current site search",
+    name: "Default site search",
     tag: "live",
-    blurb: "Exactly what the live Synapse site sends today: searches every field, equal weight, with typo tolerance. No boosts.",
+    blurb: "The front-end's built-in default query: searches every field, equal weight, with typo tolerance. No boosts.",
     bestFor: "The baseline — what users get right now.",
   },
   simple_query_string: {
@@ -18,7 +18,7 @@ export const STRATEGY_LABELS = {
     bestFor: "A safe general-purpose default.",
   },
   multi_match_best: {
-    name: "Best field (no boosts)",
+    name: "Best field",
     tag: "best",
     blurb: "Searches the curated fields equally and scores each result by its single best-matching field.",
     bestFor: "General search where the strongest single signal should win.",

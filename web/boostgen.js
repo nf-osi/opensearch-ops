@@ -4,16 +4,13 @@
 // point at any portal's index without a config checked in.
 //
 // Heuristic: only free-text columns are searchable match targets; identifiers, dates,
-// numbers, entity refs, and boilerplate are excluded. Boost tiers follow the same logic
-// as the nf-tools fields.yaml (names strongest, then synonyms/ids, then discovery
-// categoricals, then free text).
+// numbers, and entity refs are excluded by type. Boost tiers follow the same logic as the
+// nf-tools fields.yaml (names strongest, then synonyms/ids, then discovery categoricals,
+// then free text).
 
 // Synapse columnTypes worth matching as text. Everything else (ENTITYID, DATE, INTEGER,
 // DOUBLE, BOOLEAN, FILEHANDLEID, USERID, *_LIST of those, …) is dropped automatically.
 const TEXTUAL = new Set(["STRING", "STRING_LIST", "LARGETEXT", "MEDIUMTEXT"]);
-
-// Drop even-textual columns that are identifiers / links / boilerplate, not discovery text.
-const SKIP_NAME = /(^id$|_id$|url|uri|email|orcid|synapseid|contact|acknowledg|requirement|disclaimer|howtoacquire|usage|biobankurl)/i;
 
 const RE_NAME = /(^|_)(name|title|label)($|_)|name$|^name$|title$/i;     // identity → 5
 const RE_ALIAS = /(synonym|alias|abbrev|acronym|rrid|symbol)/i;          // alt names / ids → 4
@@ -36,7 +33,6 @@ export function generateFieldBoosts(columns) {
   const kept = [];
   for (const c of columns || []) {
     if (!TEXTUAL.has(c.columnType)) continue;
-    if (SKIP_NAME.test(c.name)) continue;
     kept.push({ field: c.name, boost: boostFor(c.name) });
   }
   if (!kept.length) {

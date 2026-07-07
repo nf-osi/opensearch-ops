@@ -5,7 +5,7 @@
 // Logic/data mirror the Python harness (synapse.js / strategies.js / score.js).
 
 import { search, hitDict, hitId, indexName, indexColumns, listSearchIndexes } from "./synapse.js";
-import { STRATEGIES, STRATEGY_ORDER } from "./strategies.js";
+import { STRATEGIES, STRATEGY_ORDER, BOOSTED_KEYS } from "./strategies.js";
 import { scoreCase, aggregate } from "./score.js";
 import { generateFieldBoosts } from "./boostgen.js";
 import { strategyLabel, METRIC_LABELS, toolTypeIcon } from "./labels.js";
@@ -124,14 +124,29 @@ async function loadCustomIndex(synId, knownName = null) {
   } finally { $("#loadCustom").disabled = false; }
 }
 
+// Real example queries from the index's own golden set beat generic placeholder text —
+// but not every index has one (auto-boosted indexes ship with cases: []).
+function updateSearchPlaceholder(data) {
+  const examples = (data.cases || []).slice(0, 3).map((c) => c.query).filter(Boolean);
+  $("#q").placeholder = examples.length
+    ? `Search ${data.index_name} — e.g. ${examples.map((e) => `“${e}”`).join(", ")}…`
+    : `Search ${data.index_name}…`;
+}
+
 // (re)render everything that depends on the loaded index
 function applyData(data) {
   DATA = data;
   BOOSTS = (data.fields || []).map(parseBoost);
   const golden = data.cases.length ? `${data.cases.length} golden cases` : "no golden set";
-  const cols = data.columns ? ` · ${data.columns.length} columns` : "";
+  // when we discovered all columns live, show boostable as a subset of the total so it's
+  // clear why the two numbers differ (non-text column types are excluded — see the
+  // "Which column types can be boosted?" note in the sidebar).
+  const fields = data.columns
+    ? `${data.columns.length} columns (${BOOSTS.length} boostable)`
+    : `${BOOSTS.length} boostable fields`;
   const gen = data.generated ? ` · <span class="ok">auto-boosts</span>` : "";
-  setStatus(`<span class="ok">${esc(data.index_name)}</span> · ${esc(data.index)}${cols} · ${BOOSTS.length} boosted fields · ${golden}${gen}`);
+  setStatus(`<span class="ok">${esc(data.index_name)}</span> · ${esc(data.index)} · ${fields} · ${golden}${gen}`);
+  updateSearchPlaceholder(data);
   $("#sizeInput").value = data.k || 10;
   renderBoostEditor();
   // clear stale playground results from the previous index
@@ -151,14 +166,13 @@ function setupTabs() {
 }
 
 // ---------------------------------------------------------------- boosts collapse-to-side
+function setBoostsCollapsed(on) {
+  $(".layout").classList.toggle("boosts-collapsed", on);
+  $("#boostToggle").setAttribute("aria-expanded", String(!on));
+}
 function setupBoostCollapse() {
-  const layout = $(".layout");
-  const setCollapsed = (on) => {
-    layout.classList.toggle("boosts-collapsed", on);
-    $("#boostToggle").setAttribute("aria-expanded", String(!on));
-  };
-  $("#boostToggle").addEventListener("click", () => setCollapsed(true));
-  $("#boostExpand").addEventListener("click", () => setCollapsed(false));
+  $("#boostToggle").addEventListener("click", () => setBoostsCollapsed(true));
+  $("#boostExpand").addEventListener("click", () => setBoostsCollapsed(false));
 }
 
 // ---------------------------------------------------------------- boost editor
@@ -168,7 +182,7 @@ function setupBoostEditor() {
     const i = e.target.dataset.i;
     if (i != null) BOOSTS[i].boost = Math.max(0, Number(e.target.value) || 0);
   });
-  $("#resetBoosts").addEventListener("click", () => { BOOSTS = (DATA.fields || []).map(parseBoost); renderBoostEditor(); });
+  $("#resetBoosts").addEventListener("click", () => { BOOSTS = BOOSTS.map(({ field }) => ({ field, boost: 1 })); renderBoostEditor(); });
 }
 function renderBoostEditor() {
   $("#boostEditor").innerHTML = BOOSTS.map((b, i) =>
@@ -178,7 +192,9 @@ function renderBoostEditor() {
 
 // ---------------------------------------------------------------- playground
 function setupColumns() {
-  const opts = STRATEGY_ORDER.map((k) => `<option value="${k}">${esc(strategyLabel(k).name)}</option>`).join("");
+  const opts = STRATEGY_ORDER.map((k) =>
+    `<option value="${k}"${BOOSTED_KEYS.has(k) ? ' title="Uses Custom Field Boosts"' : ""}>${esc(strategyLabel(k).name)}</option>`
+  ).join("");
   const defaults = { A: "frontend_default", B: "multi_match_cross" };
   $$(".col").forEach((col) => {
     const which = col.dataset.col;
@@ -191,6 +207,7 @@ function setupColumns() {
              <span class="col-tip" role="tooltip"></span>
            </span>
          </div>
+         <span class="boost-ref"></span>
        </div>
        <ul class="results"></ul>`;
     const sel = $(".col-pick", col);
@@ -198,10 +215,28 @@ function setupColumns() {
     const refreshBlurb = () => {
       const l = strategyLabel(sel.value);
       $(".col-tip", col).innerHTML = `${esc(l.blurb)} <span class="best-for">${esc(l.bestFor)}</span>`;
+      const boosted = BOOSTED_KEYS.has(sel.value);
+      const ref = $(".boost-ref", col);
+      ref.textContent = boosted ? "→ with Custom Field Boosts" : "no boosts";
+      ref.classList.toggle("is-boosted", boosted);
+      refreshBoostLink();
     };
     refreshBlurb();
     sel.addEventListener("change", () => { refreshBlurb(); if (lastQuery) runPlayground(); });
   });
+}
+
+// Highlights the "Custom Field Boosts" sidebar panel whenever a currently-selected recipe
+// (in either column) actually reads it, so the link between the two is obvious — and keeps
+// the panel's open/collapsed state in sync: pops it open once a boosted recipe is picked,
+// tucks it away again once neither column needs it.
+function refreshBoostLink() {
+  const linked = $$(".col-pick").some((sel) => BOOSTED_KEYS.has(sel.value));
+  $(".boost-card")?.classList.toggle("is-linked", linked);
+  $(".boost-rail")?.classList.toggle("is-linked", linked);
+  const collapsed = $(".layout").classList.contains("boosts-collapsed");
+  if (linked && collapsed) setBoostsCollapsed(false);
+  else if (!linked && !collapsed) setBoostsCollapsed(true);
 }
 
 let lastQuery = "";
@@ -312,10 +347,11 @@ function setBenchMode() {
   const notice = $("#benchNotice");
   notice.hidden = hasGolden;
   if (!hasGolden) {
-    notice.innerHTML = `No golden set for <strong>${esc(DATA.index_name)}</strong>. Benchmarking scores recipes
-      against expert-verified searches, so it’s only available for indexes with a curated golden set
-      (currently <strong>nf-tools</strong>). The <strong>Search playground</strong> works for every index —
-      use it to compare recipes by eye.`;
+    notice.innerHTML =
+      `<svg class="notice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+            stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.8 5.8l12.4 12.4"/></svg>
+       <span>No golden set for <strong>${esc(DATA.index_name)}</strong> — benchmarking needs curated
+       queries with known-correct results. Try the <strong>Search playground</strong> instead.</span>`;
     return;
   }
   updateEstimate();
@@ -378,11 +414,14 @@ async function runBenchmark() {
   renderBench(LAST_BENCH, `Live run · ${tasks.length} queries against ${esc(DATA.index_name)} · k=${k}.`);
 }
 
-let sortState = { key: "mrr" };
+// `reverse` flips the metric's natural "best first" direction — toggled by clicking the
+// already-sorted column again, so a second click does something instead of re-sorting
+// into the exact same order.
+let sortState = { key: "mrr", reverse: false };
 function renderBench(bench, note) {
   const k = bench.k;
   const rows = Object.entries(bench.strategies);
-  const dir = (key) => (METRIC_LABELS[key].dir === "up" ? -1 : 1);
+  const dir = (key) => (METRIC_LABELS[key].dir === "up" ? -1 : 1) * (sortState.reverse ? -1 : 1);
   rows.sort((a, b) => (a[1][sortState.key] - b[1][sortState.key]) * dir(sortState.key));
 
   const best = {};
@@ -393,7 +432,8 @@ function renderBench(bench, note) {
 
   const head = METRIC_KEYS.map((key) => {
     const m = METRIC_LABELS[key];
-    return `<th data-key="${key}" title="${esc(m.help)}" class="${sortState.key === key ? "sorted" : ""}">${esc(m.name.replace("@k", `@${k}`))}</th>`;
+    const cls = sortState.key === key ? `sorted${sortState.reverse ? " reverse" : ""}` : "";
+    return `<th data-key="${key}" title="${esc(m.help)}" class="${cls}">${esc(m.name.replace("@k", `@${k}`))}</th>`;
   }).join("");
 
   const body = rows.map(([name, a]) => {
@@ -415,7 +455,11 @@ function renderBench(bench, note) {
      <p class="score-note">${note} ★ marks the best recipe per column. Click a column header to re-sort.</p>
      ${bench.per_case ? casesSection(bench) : ""}`;
 
-  $$(".scoreboard thead th[data-key]").forEach((th) => th.addEventListener("click", () => { sortState.key = th.dataset.key; renderBench(bench, note); }));
+  $$(".scoreboard thead th[data-key]").forEach((th) => th.addEventListener("click", () => {
+    sortState.reverse = sortState.key === th.dataset.key ? !sortState.reverse : false;
+    sortState.key = th.dataset.key;
+    renderBench(bench, note);
+  }));
 }
 
 function casesSection(bench) {

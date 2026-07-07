@@ -50,3 +50,7 @@ export const STRATEGIES = {
 
 // Stable display order (matches strategies.py STRATEGIES insertion order).
 export const STRATEGY_ORDER = Object.keys(STRATEGIES);
+
+// Strategies that pass the (editable) per-field boosts through as-is, i.e. the ones the
+// sidebar's "Custom Field Boosts" panel actually affects.
+export const BOOSTED_KEYS = new Set(["multi_match_boosted", "multi_match_cross", "boosted_fuzzy", "phrase_prefix"]);

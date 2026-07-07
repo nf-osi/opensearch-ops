@@ -23,6 +23,11 @@
 
 * { box-sizing: border-box; }
 
+/* The hidden attribute must always win over any class's `display`, no matter its
+   specificity — several sections here are toggled via `.hidden` and would otherwise
+   leak through as empty boxes. */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -120,10 +125,12 @@ h1, .lede { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
 .inst-status .ok { color: var(--teal-deep); }
 
 .bench-notice {
+  display: flex; align-items: flex-start; gap: 12px;
   margin: 16px 0; padding: 14px 18px; border-radius: var(--radius);
   background: var(--clay-wash); border: 1px solid #e8c5a8; color: #7a3d18; font-size: 14px;
 }
 .bench-notice strong { color: #5c2d10; }
+.bench-notice .notice-icon { flex: none; width: 19px; height: 19px; margin-top: 2px; color: var(--clay); }
 
 main { padding: 16px 0 48px; }
 .panel-tab { display: none; animation: fade .35s ease both; }
@@ -149,8 +156,11 @@ main { padding: 16px 0 48px; }
 }
 .boost-card {
   background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 16px 18px; box-shadow: var(--shadow);
+  padding: 16px 18px; box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s;
 }
+/* a selected recipe currently reads these boosts — draw the eye here */
+.boost-card.is-linked { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-wash), var(--shadow); }
+.boost-rail.is-linked { background: var(--teal); color: #fff; border-color: var(--teal); }
 .boost-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .boost-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 19px; letter-spacing: -.01em; color: var(--ink); }
 .boost-toggle {
@@ -170,6 +180,16 @@ main { padding: 16px 0 48px; }
 .boost-rail::before { content: "«"; writing-mode: horizontal-tb; font-size: 15px; }
 .boost-rail:hover { background: var(--teal); color: #fff; border-color: var(--teal); }
 .boost-card .adv-note { font-size: 12px; line-height: 1.5; margin: 0 0 12px; }
+.type-note { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 0 0 12px; }
+.type-note summary {
+  cursor: pointer; color: inherit; font: inherit; list-style: none;
+  display: flex; align-items: center; gap: 6px;
+}
+.type-note summary::-webkit-details-marker { display: none; }
+.type-note .disclosure-icon { flex: none; width: 11px; height: 11px; transition: transform .15s ease; }
+.type-note[open] .disclosure-icon { transform: rotate(90deg); }
+.type-note p { margin: 8px 0 0; }
+.type-note code { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--ink); }
 .boost-card .boost-editor {
   grid-template-columns: 1fr; gap: 6px; max-height: 46vh; overflow-y: auto; padding-right: 6px;
 }
@@ -221,14 +241,23 @@ main { padding: 16px 0 48px; }
 .col-head { margin-bottom: 10px; }
 .col-pick {
   width: 100%; font: 600 15px "Public Sans", sans-serif; color: var(--ink);
-  padding: 11px 14px; border: 1.5px solid var(--rule); border-radius: 11px; background: var(--card);
+  padding: 11px 34px 11px 14px; border: 1.5px solid var(--rule); border-radius: 11px; background: var(--card);
   cursor: pointer; transition: .18s; appearance: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230e8c7f' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
   background-repeat: no-repeat; background-position: right 14px center;
 }
 .col-pick:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 4px var(--teal-wash); }
 .col-pickrow { display: flex; align-items: center; gap: 8px; }
 .col-pickrow .col-pick { flex: 1; width: auto; }
+.boost-ref {
+  display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 700; white-space: nowrap;
+  border-radius: 999px; padding: 3px 10px; border: 1px solid var(--rule);
+  color: var(--muted); background: var(--paper-2);
+}
+.boost-ref.is-boosted {
+  color: var(--teal-deep); background: var(--teal-wash); border-color: var(--teal-line);
+}
 .info { position: relative; flex: none; display: inline-flex; }
 .info-trigger {
   width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--rule);
@@ -298,7 +327,11 @@ main { padding: 16px 0 48px; }
 
 .empty, .loading, .errbox { padding: 22px; text-align: center; color: var(--faint); border: 1px dashed var(--rule); border-radius: 12px; font-size: 14px; }
 .errbox { color: var(--clay); border-color: var(--clay); background: var(--clay-wash); }
-.loading::after { content: " ⟲"; display: inline-block; animation: spin 1s linear infinite; }
+.loading::after {
+  content: ""; display: inline-block; margin-left: 8px; vertical-align: -3px;
+  width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--rule);
+  border-top-color: var(--teal); animation: spin .7s linear infinite;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ---------- benchmark ---------- */
@@ -324,7 +357,13 @@ main { padding: 16px 0 48px; }
 .scoreboard th, .scoreboard td { padding: 11px 12px; text-align: right; border-bottom: 1px solid var(--rule-soft); font-variant-numeric: tabular-nums; }
 .scoreboard thead th { background: var(--ink); color: #f7f4ec; font-weight: 600; font-size: 13px; cursor: pointer; user-select: none; position: relative; white-space: nowrap; }
 .scoreboard thead th:hover { background: #20302d; }
-.scoreboard thead th.sorted::after { content: " ▾"; color: var(--teal); }
+.scoreboard thead th.sorted::after {
+  content: ""; display: inline-block; margin-left: 5px; vertical-align: middle;
+  width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--teal);
+}
+/* reversed (worst-first) order — point the triangle up instead of down */
+.scoreboard thead th.sorted.reverse::after { border-top: none; border-bottom: 5px solid var(--teal); }
 .scoreboard th:first-child, .scoreboard td:first-child { text-align: left; }
 .scoreboard td.metric { font-family: "IBM Plex Mono", monospace; }
 .scoreboard tbody tr:hover { background: var(--teal-wash); }

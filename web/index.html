@@ -45,7 +45,7 @@
   <!-- ============================ PLAYGROUND ============================ -->
   <section id="playground" class="panel-tab is-active" role="tabpanel">
     <form id="searchForm" class="searchbar" autocomplete="off">
-      <input id="q" type="search" placeholder="Search tools — e.g. “neurofibromin antibody”, “ipNF95.11b”, “plexiform”…" aria-label="Search query">
+      <input id="q" type="search" placeholder="Type a search query…" aria-label="Search query">
       <button type="submit" class="go">Search</button>
     </form>
 
@@ -98,23 +98,38 @@
 <aside class="sidebar">
   <div class="boost-card">
     <div class="boost-head">
-      <span class="boost-title">Field boosts</span>
-      <button type="button" class="boost-toggle" id="boostToggle" aria-label="Collapse field boosts" aria-expanded="true" title="Collapse">»</button>
+      <span class="boost-title">Custom Field Boosts</span>
+      <button type="button" class="boost-toggle" id="boostToggle" aria-label="Collapse custom field boosts" aria-expanded="true" title="Collapse">»</button>
     </div>
     <p class="adv-note">
       How much a match in each field counts — a higher number floats matches in that field to the
       top. Applies to the <em>boosted</em> recipes (Boosted&nbsp;by&nbsp;name, Cross&nbsp;fields,
-      Typo-tolerant) in <strong>both</strong> the playground and a live benchmark run; the
-      equal-weight recipes ignore them and “Current&nbsp;site&nbsp;search” always searches every
+      Typo-tolerant, As-you-type) in <strong>both</strong> the playground and a live benchmark run;
+      the equal-weight recipes ignore them and “Default&nbsp;site&nbsp;search” always searches every
       field. Index-side settings (analyzers, synonyms) need an admin rebuild and aren’t adjustable here.
     </p>
+    <details class="type-note">
+      <summary>
+        <svg class="disclosure-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        Which column types can be boosted?
+      </summary>
+      <p>
+        Only free-text columns are eligible match targets: <code>STRING</code>,
+        <code>STRING_LIST</code>, <code>LARGETEXT</code>, <code>MEDIUMTEXT</code>. Everything
+        else — <code>ENTITYID</code>, <code>DATE</code>, <code>INTEGER</code>, <code>DOUBLE</code>,
+        <code>BOOLEAN</code>, <code>FILEHANDLEID</code>, <code>USERID</code>, and their
+        <code>*_LIST</code> variants — isn’t text to match against, so it's left out automatically.
+        This only applies to auto-discovered indexes; curated tables ship a hand-picked field list.
+      </p>
+    </details>
     <div id="boostEditor" class="boost-editor"></div>
     <div class="adv-row">
       <label>Results / recipe <input id="sizeInput" type="number" min="1" max="50" value="10"></label>
-      <button type="button" id="resetBoosts" class="link-btn">Reset to defaults</button>
+      <button type="button" id="resetBoosts" class="link-btn">Reset all to 1</button>
     </div>
   </div>
-  <button type="button" class="boost-rail" id="boostExpand" aria-label="Show field boosts" title="Show field boosts">Field boosts</button>
+  <button type="button" class="boost-rail" id="boostExpand" aria-label="Show custom field boosts" title="Show custom field boosts">Custom Field Boosts</button>
 </aside>
 </div>
 
