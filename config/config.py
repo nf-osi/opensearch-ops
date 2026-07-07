@@ -2,16 +2,16 @@
 """Manage org.synapse.nf search config objects: register, apply, list, and check.
 
 Subcommands:
-  register  Create/update the org.synapse.nf config objects declared in the
-          OBJECTS list, each from its local JSON artifact in config/ (every
-          object is upserted by name — POST to create, PUT /{id} with the
-          current etag to update). OBJECTS currently holds the nf-tools set:
-            1. TextAnalyzer        nf_scientific_synonyms   (nf_scientific_synonyms.analyzer.json)
-            2. ColumnAnalyzerOverride nf_tools_columns       (nf_tools_columns.override.json)
-            3. SearchConfiguration nf_tools_search_config    (nf_tools_search_config.json)
-          but is meant to grow to cover other portals' config objects too —
-          add an artifact file plus its OBJECTS entry and `register` picks it
-          up. Prints the resulting SearchConfiguration id — pass it to
+  register  Create/update every org.synapse.nf config object declared by a
+          *.json artifact in config/ (every object is upserted by name —
+          POST to create, PUT /{id} with the current etag to update). Each
+          artifact's type (TextAnalyzer / ColumnAnalyzerOverride /
+          SearchConfiguration) is inferred from its shape — "settings" =>
+          TextAnalyzer, "overrides" => ColumnAnalyzerOverride, "defaultAnalyzer"
+          => SearchConfiguration.
+          Registers TextAnalyzers and ColumnAnalyzerOverrides before
+          SearchConfigurations, since the latter reference the former by
+          name. Prints each resulting SearchConfiguration's id — pass one to
           `apply` to bind it.
   apply   Bind an existing SearchConfiguration (by id — see `list`) to a
           SearchIndex, and optionally rebuild:
@@ -65,17 +65,48 @@ SYN_ID_RE = re.compile(r"^syn\d+$", re.IGNORECASE)
 ORG = "org.synapse.nf"
 HERE = Path(__file__).resolve().parent
 
-OBJECTS = [
-    # (type, artifact file, create endpoint, list endpoint, item-path prefix)
-    ("TextAnalyzer", "nf_scientific_synonyms.analyzer.json", "search/text/analyzer",
-     "search/text/analyzer/list", "search/text/analyzer"),
-    ("ColumnAnalyzerOverride", "nf_tools_columns.override.json", "search/column/analyzer/override",
-     "search/column/analyzer/override/list", "search/column/analyzer/override"),
-    ("SearchConfiguration", "nf_tools_search_config.json", "search/configuration",
-     "search/configuration/list", "search/configuration"),
-]
+# Each config object type, its REST endpoints, and the JSON key whose presence
+# identifies an artifact as that type (checked in this order, first match wins).
+TYPE_SPECS = {
+    "TextAnalyzer": {
+        "discriminator": "settings",
+        "create_ep": "search/text/analyzer",
+        "list_ep": "search/text/analyzer/list",
+        "item_ep": "search/text/analyzer",
+    },
+    "ColumnAnalyzerOverride": {
+        "discriminator": "overrides",
+        "create_ep": "search/column/analyzer/override",
+        "list_ep": "search/column/analyzer/override/list",
+        "item_ep": "search/column/analyzer/override",
+    },
+    "SearchConfiguration": {
+        "discriminator": "defaultAnalyzer",
+        "create_ep": "search/configuration",
+        "list_ep": "search/configuration/list",
+        "item_ep": "search/configuration",
+    },
+}
+# registration order: types with no intra-config dependency first, since a
+# SearchConfiguration references a TextAnalyzer/ColumnAnalyzerOverride by name
+TYPE_ORDER = ["TextAnalyzer", "ColumnAnalyzerOverride", "SearchConfiguration"]
 
-TYPE_LIST_EP = {type_: list_ep for type_, _, _, list_ep, _ in OBJECTS}
+TYPE_LIST_EP = {t: s["list_ep"] for t, s in TYPE_SPECS.items()}
+
+
+def infer_type(spec):
+    for t in TYPE_ORDER:
+        if TYPE_SPECS[t]["discriminator"] in spec:
+            return t
+    sys.exit(f"  could not infer config type for artifact with keys {sorted(spec.keys())}")
+
+
+def discover_artifacts():
+    """Return config/*.json artifact paths, sorted per TYPE_ORDER so dependencies
+    (TextAnalyzer, ColumnAnalyzerOverride) register before the SearchConfigurations
+    that reference them by name."""
+    paths = sorted(HERE.glob("*.json"))
+    return sorted(paths, key=lambda p: TYPE_ORDER.index(infer_type(json.loads(p.read_text()))))
 
 
 def get_token(cli_token):
@@ -93,31 +124,35 @@ def get_token(cli_token):
 
 def find_existing(list_ep, name, token, base):
     """Return the existing object dict for `name` in ORG, or None."""
-    _, body = _call(list_ep, "POST", {"organizationName": ORG}, token, base=base)
+    code, body = _call(list_ep, "POST", {"organizationName": ORG}, token, base=base)
+    if code >= 400:
+        sys.exit(f"  could not list {list_ep} ({code}): {json.dumps(body)[:500]}")
     for r in body.get("results", []):
         if r.get("name") == name:
             return r
     return None
 
 
-def upsert(artifact, create_ep, list_ep, item_ep, token, dry, base):
-    spec = json.loads((HERE / artifact).read_text())
+def upsert(artifact_path, token, dry, base):
+    spec = json.loads(artifact_path.read_text())
+    type_ = infer_type(spec)
+    endpoints = TYPE_SPECS[type_]
     name = spec["name"]
-    existing = find_existing(list_ep, name, token, base)
+    existing = find_existing(endpoints["list_ep"], name, token, base)
     if existing:
         spec["id"] = existing["id"]
         spec["etag"] = existing["etag"]
-        action, ep, method = "UPDATE", f"{item_ep}/{existing['id']}", "PUT"
+        action, ep, method = "UPDATE", f"{endpoints['item_ep']}/{existing['id']}", "PUT"
     else:
-        action, ep, method = "CREATE", create_ep, "POST"
-    print(f"  {action} {name} -> {method} /{ep}")
+        action, ep, method = "CREATE", endpoints["create_ep"], "POST"
+    print(f"  {action} [{type_}] {name} -> {method} /{ep}")
     if dry:
-        return existing["id"] if existing else "(new)"
+        return type_, name, (existing["id"] if existing else "(new)")
     code, body = _call(ep, method, spec, token, base=base)
     if code >= 400:
         sys.exit(f"  FAILED ({code}): {json.dumps(body)[:500]}")
     print(f"    ok id={body.get('id')} etag={body.get('etag')}")
-    return body["id"]
+    return type_, name, body["id"]
 
 
 def list_configs(token, base, org=ORG, type_filter=None):
@@ -126,7 +161,9 @@ def list_configs(token, base, org=ORG, type_filter=None):
     types = [type_filter] if type_filter else list(TYPE_LIST_EP)
     result = {}
     for t in types:
-        _, body = _call(TYPE_LIST_EP[t], "POST", {"organizationName": org}, token, base=base)
+        code, body = _call(TYPE_LIST_EP[t], "POST", {"organizationName": org}, token, base=base)
+        if code >= 400:
+            sys.exit(f"  could not list {t} configs ({code}): {json.dumps(body)[:500]}")
         result[t] = body.get("results", [])
     return result
 
@@ -220,14 +257,17 @@ def cmd_register(args):
 
     print(f"Target: {base}")
     print("Registering org.synapse.nf search objects:")
-    config_id = None
-    for _type, artifact, create_ep, list_ep, item_ep in OBJECTS:
-        config_id = upsert(artifact, create_ep, list_ep, item_ep, token, args.dry_run, base)
+    configs = []
+    for artifact_path in discover_artifacts():
+        type_, name, result_id = upsert(artifact_path, token, args.dry_run, base)
+        if type_ == "SearchConfiguration":
+            configs.append((name, result_id))
 
-    print(f"\nDone. SearchConfiguration id={config_id}"
-          + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
-    if not args.dry_run:
-        print(f"Bind it with: config.py apply {config_id}")
+    print("\nDone." + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
+    if configs and not args.dry_run:
+        print("SearchConfiguration id(s):")
+        for name, cid in configs:
+            print(f"  {name}: {cid}  ->  bind with: config.py apply {cid}")
 
 
 def cmd_apply(args):
@@ -300,7 +340,7 @@ def main():
                                   formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="command", required=True)
 
-    ap_register = sub.add_parser("register", help="create/update the org.synapse.nf config objects declared in OBJECTS")
+    ap_register = sub.add_parser("register", help="create/update every org.synapse.nf config object found in config/*.json")
     ap_register.add_argument("--token")
     ap_register.add_argument("--dry-run", action="store_true")
     ap_register.add_argument("--staging", action="store_true",
