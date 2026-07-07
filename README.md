@@ -57,41 +57,51 @@ The index objects themselves are managed as entities:
 | Get an index object | `GET /entity/{id}` |
 | Run a search query (async) | `POST /search/query/async/start` → `GET /search/query/async/get/{asyncToken}` |
 | Autocomplete | `POST /search/autocomplete` |
-| Bind/get/unbind a search config to an entity | `PUT` / `GET` / `DELETE /entity/{entityId}/searchconfig/binding` |
+| Bind/get/unbind a search config to a Project/Folder | `PUT` / `GET` / `DELETE /entity/{entityId}/searchconfig/binding` |
+| Bind a search config directly to a `SearchIndex` | set `searchConfigurationId` via `PUT /entity/{id}` (normal entity update — see below) |
 
-### Where to bind a config (best practice: on the `SearchIndex` object)
+### Where to bind a config (`SearchIndex`: set its own `searchConfigurationId`)
 
-A `SearchConfiguration` is an **override** of the platform default analysis; it only
-takes effect once it is *bound* to an entity, and the binding lookup
-(`GET /entity/{id}/searchconfig/binding`) resolves **up the entity hierarchy** (it returns
-the nearest config found on the entity or any ancestor). Per the rest-docs:
+> [!WARNING]
+> **Breaking API change (discovered 2026-07-07).** The generic binding endpoint used to
+> accept `SearchIndex` as a target — the rest-docs said *"Attach a SearchConfiguration to an
+> entity (SearchIndex, Folder, or Project) by creating a binding."* That's no longer true: the
+> docs now say *"Bind a SearchConfiguration to an entity (**typically a project**)"*, and
+> `PUT /entity/{entityId}/searchconfig/binding` on a `SearchIndex` now returns 400:
+> `"A search configuration can only be bound to a Project or Folder."` This only blocks *new*
+> bindings — `nf-tools`'s binding (created before the change) still resolves fine via
+> `GET .../searchconfig/binding`; it just can no longer be created/recreated that way.
 
-> Attach a `SearchConfiguration` to an entity (SearchIndex, Folder, or Project) by creating
-> a binding.
+A `SearchConfiguration` is an **override** of the platform default analysis. Per the
+`SearchIndex` [model docs](https://rest-docs.synapse.org/rest/org/sagebionetworks/repo/model/search/table/SearchIndex.html),
+there are now two distinct ways it takes effect:
 
-So all three are legal targets — `SearchIndex` is explicitly allowed, and it's the one we want.
+1. **Direct** — the `SearchIndex` entity's own `searchConfigurationId` field (`STRING`,
+   optional). Set it with a normal entity update: `GET /entity/{id}`, add/update the field,
+   `PUT /entity/{id}` it back. This **also fires a full index rebuild** as a side effect of
+   the entity update — bind and rebuild happen in one call.
+2. **Inherited** — if the field is unset, the build walks up the hierarchy (entity → folder →
+   project) via `GET /entity/{id}/searchconfig/binding`, looking for the nearest Project/Folder
+   binding created with the (now Project/Folder-only) generic binding endpoint. If none is
+   found, platform defaults apply.
 
-**Bind a table-specific config directly to its `SearchIndex` object** (e.g. the NF-tools
-config → `syn75081636`), **not** to the folder/project. The reason is the entity layout:
-all portals' indexes are flat children of one shared collection project
-[`syn74909065`](https://www.synapse.org/Synapse:syn74909065), so a config bound at the
-project level would resolve down to **every portal's** index, not just ours. The
-`SearchIndex` object is the only entity with the right per-index scope. (Note the index
-object and its `definingSQL` source table live in *different* project trees — the source
-table's project, e.g. NF's `syn26338068`, is **not** an ancestor of the index object, so
-binding there would not reach the index.)
-
-The documented target list (SearchIndex → Folder → Project) is exactly the index object's
-own ancestor chain, which is consistent with binding resolution anchoring on the
-`SearchIndex` and walking up — so the index object is both an allowed and the
-most-specific target.
+**Bind a table-specific config directly via its `SearchIndex` object's `searchConfigurationId`**
+(e.g. the nf-tools config → `syn75081636`), **not** via a Project/Folder binding on the shared
+collection project. The reason is unchanged: all portals' indexes are flat children of one
+shared project [`syn74909065`](https://www.synapse.org/Synapse:syn74909065), so a Project-level
+binding would resolve down to **every portal's** index, not just ours — the per-index
+`searchConfigurationId` field is the only way to scope a config to one portal's index. (Note the
+index object and its `definingSQL` source table live in *different* project trees — the source
+table's project, e.g. NF's `syn26338068`, is **not** an ancestor of the index object, so a
+Project/Folder binding there would not reach the index either way.)
 
 > [!IMPORTANT]
-> **Config/binding edits don't rebuild the index on their own — updating the `SearchIndex`
-> entity does.** A rebuild fires on `SearchIndex` entity lifecycle events
-> (create/update/delete), not on source-table changes: it deletes and recreates the index
-> with the currently-bound config and re-streams all rows. Recipe: edit/bind the config, then
-> **`PUT /entity/{id}`** on the `SearchIndex` to trigger a full rebuild.
+> **Setting `searchConfigurationId` already triggers a rebuild** — it's a normal entity
+> update, and any `SearchIndex` entity update (create/update/delete) fires the same rebuild
+> lifecycle: delete + recreate the OpenSearch index with the currently-effective config, then
+> re-stream all rows. A *separate* touch (`PUT /entity/{id}` with no field changes) is only
+> needed to force a rebuild **without** changing which config is bound — e.g. after editing a
+> referenced analyzer/override object in place.
 >
 > Constraints: creating/updating a `SearchIndex` entity is restricted to Sage
 > employees/admins; indexing runs anonymously, so only public **OPEN_DATA** rows are indexed.
@@ -99,11 +109,12 @@ most-specific target.
 > rebuild.
 
 > [!NOTE]
-> **Current state:** the NF config objects exist (`nf_tools_search_config`, id `9`) but aren't
-> bound yet. Binding and the rebuild touch require `UPDATE` on the `SearchIndex` entity
-> `syn75081636` (which has its own ACL); the service account that creates the org-scoped
-> objects lacks it, so this must be done by an authorized principal — via an ACL grant or an
-> owner running the final steps. Check any entity's binding with [`check_config.py`](check_config.py).
+> **Current state:** six NF indexes are registered and bound — `nf-tools` (config id `9`,
+> inherited via its pre-change binding), `nf-datasets` (`11`), `nf-hackathons` (`12`),
+> `nf-initiatives` (`13`), `nf-studies` (`10`), `nf-publications` (`14`) — all via the direct
+> `searchConfigurationId` field. Check any entity's binding with [`config/config.py check`](config/config.py),
+> list all registered configs with [`config/config.py list`](config/config.py), and bind/rebuild
+> with [`config/config.py apply <id> --index <name-or-synId>`](config/config.py).
 
 The tuning objects (organization-scoped; list with optional `organizationName` filter):
 
@@ -122,10 +133,18 @@ The tuning objects (organization-scoped; list with optional `organizationName` f
 | Synonym set | `17` | `synonym_rules` | `synonym_graph`, empty (placeholder) |
 | Text analyzer | `1017` | `nf_scientific_synonyms` | standard+lowercase+english stop/stemmer; `default_search` adds set 16 via `synonym_graph` (search-time only) |
 | Column analyzer override | `9` | `nf_tools_columns` | per-column map for nf-tools: IDENTIFIER for id fields, `nf_scientific_synonyms` for discovery free-text, KEYWORD for clean categoricals |
-| Search configuration | `9` | `nf_tools_search_config` | `defaultAnalyzer`=STANDARD + `columnAnalyzerOverrides`=[`nf_tools_columns`]; **created, not yet bound** (see below) |
+| Search configuration | `9` | `nf_tools_search_config` | `defaultAnalyzer`=STANDARD + `columnAnalyzerOverrides`=[`nf_tools_columns`]; **bound to `syn75081636`** |
 
-These NF objects are versioned in [`config/`](config/) and (re)applied with
-[`config/apply_config.py`](config/apply_config.py). They reference the platform's shared
+The other indices follow the same pattern — their own `ColumnAnalyzerOverride` +
+`SearchConfiguration` pair (reusing the shared `nf_scientific_synonyms` text analyzer), bound to
+their own `SearchIndex`: `nf-datasets`, `nf-hackathons`, `nf-initiatives`, `nf-studies`,
+`nf-publications`. See [`config/config.py list`](config/config.py) for the full current registry
+rather than duplicating it here.
+
+These NF objects are versioned in [`config/`](config/) and (re)created/updated with
+[`config/config.py register`](config/config.py); the resulting SearchConfiguration id is
+then bound to a SearchIndex with [`config/config.py apply <id>`](config/config.py). They
+reference the platform's shared
 built-in text analyzers (org `org.sagebionetworks`), available to any config:
 `SCIENTIFIC` (1), `STANDARD` (2), `IDENTIFIER` (3), `KEYWORD` (4), `AUTOCOMPLETE` (5).
 
@@ -144,6 +163,15 @@ by the `IDENTIFIER` analyzer on the id columns.
 > query DSL** object in `searchQuery` and rejects the structured fields (`"JSON Element ...
 > Unsupported: queryType/limit/queryText"`). This gives the client the full power of
 > OpenSearch; benchmark against the raw DSL.
+
+**No authentication is required; these indexes are public and queries work anonymously.**
+
+Use [`query.py`](query.py) (handles polling and field flattening):
+```bash
+python3 query.py '{"query":{"multi_match":{"query":"schwann","fields":["resourceName^3","description","synonyms"]}},"size":5}'
+```
+
+### More details
 
 Query flow (async job pattern):
 1. `POST /search/query/async/start` with a `SearchIndexQuery` → returns `{token}`.
@@ -171,13 +199,6 @@ particular [`multi_match` query types](https://docs.opensearch.org/latest/query-
 > clause — `{"match":{"description":{"query":"plexiform"}}}`, **not**
 > `{"match":{"description":"plexiform"}}` (the latter errors with
 > `JSONObject["description"] is not a JSONObject`).
-
-**No authentication is required; these indexes are public and queries work anonymously.**
-
-Use [`query.py`](query.py) (handles polling and field flattening):
-```bash
-python3 query.py '{"query":{"multi_match":{"query":"schwann","fields":["resourceName^3","description","synonyms"]}},"size":5}'
-```
 
 ### `nf-tools` index (syn75081636)
 
