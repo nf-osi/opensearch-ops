@@ -372,6 +372,7 @@ main { padding: 16px 0 48px; }
 .scoreboard td.best { color: var(--teal-deep); font-weight: 700; position: relative; }
 .scoreboard td.best::before { content: "★"; color: var(--clay); margin-right: 4px; font-size: 11px; }
 .score-note { font-size: 12.5px; color: var(--faint); margin: 2px 0 24px; }
+.score-note .note-star { display: inline-block; width: 11px; height: 11px; vertical-align: -1px; color: var(--clay); }
 
 .cases-toggle { margin: 10px 0; }
 .case-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
