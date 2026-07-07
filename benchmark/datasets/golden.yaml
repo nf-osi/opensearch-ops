@@ -10,7 +10,7 @@
 #
 index:      syn75081630
 index_name: nf-datasets
-version:    2026.07.03
+version:    2026.07.06
 k:          10
 id_field:   id
 
