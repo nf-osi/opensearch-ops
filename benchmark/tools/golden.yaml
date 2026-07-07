@@ -336,7 +336,7 @@ cases:
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
     recall_gap_current: false   # verified 2026-07-07 (post-synonym-fix): 2/2 in top 20, ranks 5-6 — no longer a recall gap
-    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none. 2026-07-07: 'pnf' synonym confirmed working — both now rank 5-6 (top 10), swamped by other pNF-named siblings incl. some mislabeled 'Cutaneous' (not 'Plexiform') manifestation. Boost tuning tested and made this WORSE (shared 'neurofibroma' token amplifies swamping) — not a boost-tuning fix; same pattern as mpnst/cnf."
+    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none. 2026-07-07: 'pnf' synonym confirmed working — both now rank 5-6 (top 10), swamped by 6 other '#PNF_...' Spanish National Cell Bank iPSC lines (correctly Cutaneous Neurofibroma per their own description — 'PNF' here is that cohort's naming convention, not our 'Plexiform NF' abbreviation; a coincidental collision, not a data mislabel) plus 3 genuinely-plexiform 'JH-2-0xx (pNF)' lines. Boost tuning tested and made this WORSE (shared 'neurofibroma' token amplifies swamping) — not a boost-tuning fix; same pattern as mpnst/cnf."
     relevant:
       - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line)
       - 7deb7765-38aa-4d8a-a3cb-bd4aefeb3a86   # 3PNF_FiPSsv_PM_2 (Cell Line)
