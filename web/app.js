@@ -322,7 +322,10 @@ function renderColumn({ col, hits, total, error }, otherRanks) {
 }
 
 function deltaBadge(rank, oRank) {
-  if (oRank == null) return `<span class="delta new" title="only on this side">new</span>`;
+  // absent from the other side entirely isn't worth a per-row badge — with two very
+  // different recipes that's most rows, and it's just noise; the compare-summary bar
+  // above already states "N only in <recipe>" in aggregate.
+  if (oRank == null) return "";
   const diff = oRank - rank;
   if (diff === 0) return `<span class="delta same" title="same position">=</span>`;
   return `<span class="delta ${diff > 0 ? "up" : "down"}" title="vs other side">${diff > 0 ? "▲" : "▼"}${Math.abs(diff)}</span>`;

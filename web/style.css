@@ -13,7 +13,10 @@
   --teal-deep:  #0a655b;
   --teal-wash:  #e4f0ee;
   --teal-line:  #bfdcd7;
-  --clay:       #c4622d;   /* sharp accent: highlights, "best", upward delta */
+  --green:      #4c9a2a;   /* distinct from teal — upward delta only, so it doesn't blend in */
+  --green-deep: #2e6b19;
+  --green-wash: #e9f3e0;
+  --clay:       #c4622d;   /* sharp accent: highlights, "best", downward delta */
   --clay-wash:  #f7e7dc;
   --rule:       #e2dccf;
   --rule-soft:  #ece7db;
@@ -304,9 +307,8 @@ main { padding: 16px 0 48px; }
 
 /* rank-delta badge */
 .delta { position: absolute; right: 11px; top: 11px; font: 600 11px "IBM Plex Mono", monospace; padding: 2px 7px; border-radius: 999px; }
-.delta.up { color: var(--teal-deep); background: var(--teal-wash); }
+.delta.up { color: var(--green-deep); background: var(--green-wash); }
 .delta.down { color: var(--clay); background: var(--clay-wash); }
-.delta.new { color: #fff; background: var(--clay); }
 .delta.same { color: var(--faint); background: var(--paper-2); }
 
 .compare-summary {
@@ -322,7 +324,7 @@ main { padding: 16px 0 48px; }
 
 .compare-hint { font-size: 13px; color: var(--muted); margin-top: 16px; }
 .delta-key { font-family: "IBM Plex Mono", monospace; padding: 0 4px; border-radius: 5px; }
-.delta-key.up { color: var(--teal-deep); background: var(--teal-wash); }
+.delta-key.up { color: var(--green-deep); background: var(--green-wash); }
 .delta-key.down { color: var(--clay); background: var(--clay-wash); }
 
 .empty, .loading, .errbox { padding: 22px; text-align: center; color: var(--faint); border: 1px dashed var(--rule); border-radius: 12px; font-size: 14px; }
