@@ -12,7 +12,9 @@ Subcommands:
           Registers TextAnalyzers and ColumnAnalyzerOverrides before
           SearchConfigurations, since the latter reference the former by
           name. Prints each resulting SearchConfiguration's id — pass one to
-          `apply` to bind it.
+          `apply` to bind it. Takes an optional glob (relative to config/,
+          default '*.json') to restrict which artifacts get registered, e.g.
+          'nf_studies*' to touch only one portal's config objects.
   apply   Bind an existing SearchConfiguration (by id — see `list`) to a
           SearchIndex, and optionally rebuild:
             1. Bind the config to the target SearchIndex    (PUT /entity/{id}/searchconfig/binding)
@@ -37,9 +39,10 @@ scope. Reads it from $NF_SERVICE_TOKEN, else the `NF_SERVICE_TOKEN=` line in
 ~/.bashrc, else --token.
 
 Usage:
-  python3 config/config.py register --dry-run   # print what would happen, no writes
-  python3 config/config.py register             # create/update the config objects
-  python3 config/config.py register --staging   # same, but against the staging repo API
+  python3 config/config.py register --dry-run     # print what would happen, no writes
+  python3 config/config.py register               # create/update all config objects
+  python3 config/config.py register --staging     # same, but against the staging repo API
+  python3 config/config.py register 'nf_studies*'  # only nf-studies' config objects
 
   python3 config/config.py apply 9                     # bind SearchConfiguration id 9 to nf-tools
   python3 config/config.py apply 9 --rebuild            # ... and trigger the index rebuild
@@ -101,11 +104,12 @@ def infer_type(spec):
     sys.exit(f"  could not infer config type for artifact with keys {sorted(spec.keys())}")
 
 
-def discover_artifacts():
-    """Return config/*.json artifact paths, sorted per TYPE_ORDER so dependencies
+def discover_artifacts(pattern="*.json"):
+    """Return config/{pattern} artifact paths, sorted per TYPE_ORDER so dependencies
     (TextAnalyzer, ColumnAnalyzerOverride) register before the SearchConfigurations
-    that reference them by name."""
-    paths = sorted(HERE.glob("*.json"))
+    that reference them by name. `pattern` is a glob relative to config/, e.g.
+    'nf_studies*' to restrict to one portal's artifacts."""
+    paths = sorted(HERE.glob(pattern))
     return sorted(paths, key=lambda p: TYPE_ORDER.index(infer_type(json.loads(p.read_text()))))
 
 
@@ -255,10 +259,14 @@ def cmd_register(args):
     base = STAGING_BASE if args.staging else BASE
     token = get_token(args.token)
 
+    artifacts = discover_artifacts(args.pattern)
+    if not artifacts:
+        sys.exit(f"  no config/{args.pattern} artifacts found")
+
     print(f"Target: {base}")
-    print("Registering org.synapse.nf search objects:")
+    print(f"Registering org.synapse.nf search objects matching '{args.pattern}':")
     configs = []
-    for artifact_path in discover_artifacts():
+    for artifact_path in artifacts:
         type_, name, result_id = upsert(artifact_path, token, args.dry_run, base)
         if type_ == "SearchConfiguration":
             configs.append((name, result_id))
@@ -341,6 +349,9 @@ def main():
     sub = ap.add_subparsers(dest="command", required=True)
 
     ap_register = sub.add_parser("register", help="create/update every org.synapse.nf config object found in config/*.json")
+    ap_register.add_argument("pattern", nargs="?", default="*.json",
+                              help="glob (relative to config/) restricting which artifacts to register, "
+                                   "e.g. 'nf_studies*' (default: *.json, everything)")
     ap_register.add_argument("--token")
     ap_register.add_argument("--dry-run", action="store_true")
     ap_register.add_argument("--staging", action="store_true",
