@@ -8,9 +8,7 @@ are in the header of `golden.yaml`; how cases are produced is in the
 dataset-level provenance and **coverage gaps** — queries deliberately not turned into cases, and
 why.
 
-> **Not** the same as `nf-publications-v2` (`syn75081644`), a *usage-grained* table (1892 rows,
-> ~655 distinct publications, one row per publication×resource). That set lives locally at
-> `benchmark/usage-publications/` and is gitignored; this publication-grained set supersedes it.
+> This is *not** `nf-publications-v2` (`syn75081644`), which is actually *usage-publication*. 
 
 ## `id_field`: `doi`
 
