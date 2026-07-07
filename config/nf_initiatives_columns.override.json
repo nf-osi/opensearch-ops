@@ -1,0 +1,14 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_initiatives_columns",
+  "description": "Per-column analyzer assignments for the nf-initiatives SearchIndex (syn75081635, source syn24189696). Roles: IDENTIFIER for id-like fields (abbreviations, URLs, hierarchical paths — preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time); KEYWORD for clean categorical/facet fields. The initiative column (each row's own name/title) and the image file handle fall through to the config defaultAnalyzer (STANDARD). Columns absent from the index are silently skipped at build time.",
+  "overrides": [
+    { "columnName": "abbreviation", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "website", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "initiativePath", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+
+    { "columnName": "summary", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+
+    { "columnName": "fundingAgency", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+  ]
+}

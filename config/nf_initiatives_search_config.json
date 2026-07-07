@@ -1,0 +1,9 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_initiatives_search_config",
+  "description": "Search configuration for the nf-initiatives SearchIndex, syn75081635. Default analyzer is the built-in STANDARD (tokenize + lowercase, no stemming) so the initiative name/free-text stays searchable; per-column overrides (org.synapse.nf-nf_initiatives_columns) route id-like fields (abbreviation, website, initiativePath) to IDENTIFIER, the summary to the nf_scientific_synonyms analyzer, and fundingAgency to KEYWORD. Bind only to syn75081635.",
+  "defaultAnalyzer": { "$ref": "org.sagebionetworks-STANDARD" },
+  "columnAnalyzerOverrides": [
+    { "$ref": "org.synapse.nf-nf_initiatives_columns" }
+  ]
+}
