@@ -47,6 +47,7 @@
 
 index: syn75081636
 index_name: nf-tools
+version: 2026.07.10
 k: 10
 # id_field: which column the `relevant` ids below come from, i.e. what the runner
 # matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
@@ -149,16 +150,16 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 33
+    expected_pool: 12
     entity_types: [Animal Model]
     recall_gap_current: false
-    notes: "SME-curated; ~33 expected in registry; these are the ideal head."
+    notes: "SME-curated; re-verified live 2026-07-10: only 12 Animal Models actually reference Dhh-Cre/DhhCre (not 33). Dropped B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (5511a019) — a generic EIIa-Cre driver line with no Dhh-Cre reference, a false friend from the original draft. These are the ideal head of the corrected pool."
     relevant:
-      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
-      - 5511a019-88aa-43c8-86c3-ad1677c8a3d0   # B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (Animal Model)
       - bfa7ccaa-fee4-42bd-bc74-afe859d56fb6   # NF1fl/fl;Dhh-Cre (Animal Model)
+      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
+      - 6159b19a-c94f-4001-887f-778a8fb1e685   # Nf1 flox/+; DhhCre/+ (Animal Model)
+      - eb4aff73-9da2-42b5-8f94-0a6084db75b0   # Nf14F/4F; DhhCre (Animal Model)
       - 667881c8-e235-4d82-84af-2d1be9c6ef9b   # Dhh-Cre; Nf1flox/+; Ptenflox/flox (Animal Model)
-      - dc6bf003-6330-4fc9-b851-8c6a3ada5d79   # Dhh-Cre; Ptenflox/+ (Animal Model)
 
   - id: ipnf05-5
     query: ipnf05.5
@@ -205,26 +206,23 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 34
+    expected_pool: 3
     entity_types: [Animal Model]
     recall_gap_current: false
-    notes: "SME-curated; ~34 expected in registry; these are the ideal head."
+    notes: "SME-curated; re-verified live 2026-07-10: only 3 Animal Models actually reference Krox20-Cre (not 34). Dropped B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (5511a019, a generic EIIa-Cre driver) and NF1flox4/Arg681*;Dhh-Cre (033b7173, a Dhh-Cre model) — both false friends from the original draft with no Krox20 reference."
     relevant:
       - 46fb4411-d129-488c-83a5-c8e20176018e   # Nf1flox/-;Krox20-Cre (Animal Model)
       - 441ea70d-e784-4fc0-a080-50e07acf5f05   # Nf1flox/flox;Krox20-Cre (Animal Model)
-      - 5511a019-88aa-43c8-86c3-ad1677c8a3d0   # B6.FVB-Tg(EIIa-cre)C5379Lmgd/J (Animal Model)
       - 6f865b65-5995-4243-8832-b8120fd2c36f   # Krox20;Nf1flox/- (Animal Model)
-      - 033b7173-4c58-410e-b441-579ba05c388a   # NF1flox4/Arg681*;Dhh-Cre (Animal Model)
 
   - id: mpnst
     query: mpnst
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 43
+    expected_pool: 27
     entity_types: [Cell Line]
-    recall_gap_current: false   # verified 2026-07-07: 4/5 in top 20 (ranks 16-26) — ranking-depth gap, not recall
-    notes: "SME-curated; ~43 expected in registry; these are the ideal head. 2026-07-07: synonym expansion confirmed working (66 total hits via tumorType), but these 5 rank 16-26 — a ranking-depth/pool-size gap, not a recall gap. Boost reweighting (resourceName vs disease fields) tested and made no difference."
+    recall_gap_current: false
     relevant:
       - 7db6b49f-7eec-4b47-bbdc-675a8a464735   # MPNST 724 (Cell Line)
       - 1b604846-d41c-4969-a79a-9660c04e585c   # NCC-MPNST3-X2-C1 (Cell Line)
@@ -399,10 +397,10 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
-    expected_pool: 11
+    expected_pool: 8
     entity_types: [Animal Model]
     recall_gap_current: false
-    notes: "SME-curated; ~11 expected in registry; these are the ideal head."
+    notes: "SME-curated; re-verified live 2026-07-10: 8 zebrafish Animal Models in the registry (down from the SME's ~11 estimate); these are the ideal head."
     relevant:
       - e7a8732a-73ba-4d05-88a9-8d796d0f1a6b   # Nf1adelta5 zebrafish (Animal Model)
       - 7d5e90cc-e97a-4321-b0a5-82feed840c50   # Nf1b+10 zebrafish (Animal Model)
@@ -425,16 +423,16 @@ cases:
     query: pdx
     type: topical
     source: agent-generated
-    expected_pool: 24
+    expected_pool: 23
     entity_types: [Patient-Derived Model]
     recall_gap_current: false
-    notes: "Realistic shorthand for patient-derived xenograft. Ground truth = resourceType='Patient-Derived Model' (source table, 24 rows incl the JH-2 PDX series and patient-derived organoids). Head spans tumor types."
+    notes: "Realistic shorthand for patient-derived xenograft. Ground truth = resourceType='Patient-Derived Model' (source table; live count is now 23, incl the JH-2 PDX series and patient-derived organoids — down from the original 24). Dropped the stale 'NF1 MPNST PDX4' (a4a33fb7): that resourceId no longer resolves to anything in the live registry. Head spans tumor types."
     relevant:
       - e080df79-e33c-56de-9299-07dd79ddee51   # human neurofibroma xenografts (PDX) (Patient-Derived Model)
       - 571cb9d8-dee4-506e-988c-3c45a80ab776   # vestibular schwannoma xenografts (PDX) (Patient-Derived Model)
-      - a4a33fb7-5dc0-5632-a437-c8fe1e38d4f7   # NF1 MPNST PDX4 (PDX) (Patient-Derived Model)
       - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX) (Patient-Derived Model)
       - 75944a7c-dca5-5796-913c-2585330ab1cc   # MN-2 (PDX) (Patient-Derived Model)
+      - 0a2a48e9-cfc3-5337-b5f6-e5aee18e7113   # JH-2-031 (PDX) (Patient-Derived Model)
   - id: ipsc
     query: ipsc
     type: topical
@@ -521,10 +519,10 @@ cases:
     query: nf1 p53 mouse
     type: topical
     source: agent-generated
-    expected_pool: 8
+    expected_pool: 7
     entity_types: [Animal Model]
     recall_gap_current: false
-    notes: "Multi-word co-mutation discovery: the classic Nf1;Trp53 cis MPNST GEMMs. Ground truth = Animal Model with p53/Trp53 in name, zebrafish excluded (source table, 8 mouse rows). 7d71c2b4 ranks just outside the top 20 — kept as a ranking-depth signal."
+    notes: "Multi-word co-mutation discovery: the classic Nf1;Trp53 cis MPNST GEMMs. Ground truth = Animal Model with p53/Trp53 in name, zebrafish excluded (re-verified live 2026-07-10: 7 mouse rows, down from the original 8). 7d71c2b4 ranks just outside the top 20 — kept as a ranking-depth signal."
     relevant:
       - 426a3531-5785-4972-83ad-d88e54d2ef7f   # Nf1-/+;Trp53-/+cis (Animal Model)
       - 27b4443a-06bb-454f-a253-ffb60b70a129   # CisNf1+/-; p53+/- (Animal Model)
@@ -678,10 +676,10 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
-    expected_pool: 6
+    expected_pool: 5
     entity_types: [Cell Line]
-    recall_gap_current: true   # verified live 2026-06-22: 0/6 in top 20 — race is a weak/low-signal field for free-text search
-    notes: "Eval CL-004. Ground truth = race='Black' AND cellLineGeneticDisorder HAS ('Neurofibromatosis type 1') (source table, 6 rows)."
+    recall_gap_current: true   # verified live 2026-07-10: 0/5 in top 20 — race is a weak/low-signal field for free-text search
+    notes: "Eval CL-004. Ground truth = race='Black' AND cellLineGeneticDisorder HAS ('Neurofibromatosis type 1') (re-verified live 2026-07-10: 5 rows, not 6 — the 5 listed below are the complete pool, not just the head)."
     relevant:
       - 7ef2fd6f-9ba6-4e30-94fc-d4ffd61de6e6   # icNF00.10a (Cell Line)
       - ad2e271b-55ac-44ae-b39d-f1a6d76e1dc3   # cNF00.10a (Cell Line)

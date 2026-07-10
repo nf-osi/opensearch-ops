@@ -1,0 +1,387 @@
+# ---------------------------------------------------------------------------
+# Agent-generated (generate-goldens skill), nf-studies syn75081633, 2026-07-03.
+# Relevant sets derived from the SOURCE table (syn52694652, 355 rows) data.
+# SME-simulated discovery queries + ideal ranked heads. DRAFT -- review before trusting.
+#
+# id_field: studyId (Synapse id of the study; 100% fill, 355/355 unique; identical to
+#   the `id` column). Every hit also carries studyName for the display comments.
+# Relevant sets built via tquery() predicates over source columns:
+#   manifestation / diseaseFocus / dataType (STRING_LIST -> HAS), initiative /
+#   fundingAgency / institutions (enum), and LIKE over studyName/summary for
+#   method/gene/therapy concepts with no clean category column.
+# Heads are ordered best-first (canonical / most on-topic studies first). expected_pool
+#   is the true source COUNT(*) for the predicate; `relevant` is only the ideal head.
+# ---------------------------------------------------------------------------
+
+index:      syn75081633
+index_name: nf-studies
+version:    2026.07.10
+k:          10
+id_field:   studyId
+
+cases:
+  - id: mpnst-drug-screen
+    query: mpnst drug screen
+    type: topical
+    source: agent-generated
+    notes: "MPNST studies with drug-screening data. Source: manifestation HAS ('MPNST') AND dataType HAS ('drugScreen')."
+    expected_pool: 5
+    relevant:
+      - syn11638893   # Development of a Preclinical NF1-MPNST Platform Suitable for Precision Oncology Drug Discovery and Evaluation
+      - syn21984813   # Predictive Modeling Utilizing a Preclinical NF1-MPNST Platform Suitable for Precision Oncology
+      - syn11817821   # NF Cell Line Compound Screens
+      - syn23639889   # TYK2 as a Biomarker and Therapeutic Target for NF1-Associated Malignant Peripheral Nerve Sheath Tumors
+      - syn74288412   # Triple Combination of MEK, BET, and CDK Inhibitors Significantly Reduces Human MPNST in Mouse Models
+
+  - id: mpnst-rnaseq
+    query: mpnst rna-seq gene expression
+    type: topical
+    source: agent-generated
+    notes: "MPNST studies with gene-expression/RNA-seq data. Source: manifestation HAS ('MPNST') AND dataType HAS ('geneExpression'), pool 15; head favors MPNST-centric titles over the biospecimen repository."
+    expected_pool: 15
+    relevant:
+      - syn32128792   # Genomic landscape of malignant peripheral nerve sheath tumor (MPNST)
+      - syn11681835   # Novel therapeutic development of NF1-associated malignant peripheral nerve sheath tumor (MPNST)
+      - syn39800678   # Uncovering the Molecular Alterations that Drive Malignant Transformation in NF1-associated Peripheral Nerve Sheath Tumors
+      - syn11638893   # Development of a Preclinical NF1-MPNST Platform Suitable for Precision Oncology Drug Discovery and Evaluation
+      - syn25999248   # Targeting the Let7-HMGA2 axis in Malignant Peripheral Nerve Sheath Tumor Prevention
+
+  - id: plexiform-drug-screening
+    query: plexiform neurofibroma drug screening
+    type: topical
+    source: agent-generated
+    notes: "pNF preclinical drug-screening studies. Source: manifestation HAS ('Plexiform Neurofibroma') AND dataType HAS ('drugScreen'), pool 8."
+    expected_pool: 8
+    relevant:
+      - syn7217928    # Plexiform Neurofibroma Model Systems for Preclinical Drug Screening
+      - syn8016635    # A Robust Plexiform Neurofibroma Model for Preclinical Drug Screening
+      - syn4939874    # Development of Plexiform Neurofibroma Cellular Assay for High-Throughput Screening
+      - syn4939906    # Drug Screening of pNF Cell Lines
+      - syn4939916    # Transition to confirmatory and secondary screening of plexiform neurofibroma models in 96-well format
+
+  - id: cnf-models
+    query: cutaneous neurofibroma model
+    type: topical
+    source: agent-generated
+    notes: "cNF model-system studies. Source: manifestation HAS ('Cutaneous Neurofibroma') AND dataType HAS ('image'); head favors explicit model/3D titles."
+    expected_pool: 13
+    relevant:
+      - syn11374333   # Cutaneous Neurofibroma - Models
+      - syn11374354   # A 3D Cutaneous Neurofibroma Model for Automated High-Throughput Drug Screenings
+      - syn11374337   # Use of the mouse model of cutaneous neurofibromas for identification of cells of origin and drug screening studies
+      - syn11374349   # Modeling cNF with human Schwann Cells via tunable and reversible control of NF1 protein
+      - syn11374357   # Deconstruction and Reconstitution of NF1 Cutaneous Neurofibromas
+
+  - id: optic-glioma
+    query: nf1 optic glioma
+    type: topical
+    source: agent-generated
+    notes: "Studies of NF1 optic pathway glioma. Source: manifestation HAS ('Optic Glioma'), pool 6."
+    expected_pool: 6
+    relevant:
+      - syn21650395   # Optimizing strategies to improve visual recovery from NF1 optic glioma
+      - syn60057901   # Restoring oligodendrocyte precursor function and myelination in NF1 optic glioma
+      - syn36544468   # NF1-mutation mediated dysregulation of OPC function and myelination in the optic nerve
+      - syn36501485   # Optimizing visual recovery using Nf1 genetically engineered mice
+      - syn73926435   # Multi-dimensional Algorithmic Prediction for NF1-Associated OPG (MAP-NF1)
+
+  - id: schwannoma-therapy
+    query: schwannoma targeted therapy
+    type: topical
+    source: agent-generated
+    notes: "Studies addressing schwannoma. Source: manifestation HAS ('Schwannoma'), pool 22; head favors schwannoma-drug/therapy titles."
+    expected_pool: 22
+    relevant:
+      - syn5562324    # Phenotypic screening of anti-NF2 drug candidates in merlin-deficient and normal mouse Schwann cells
+      - syn23532273   # Exploiting macropinocytosis for therapeutic delivery to Nf2-deficient schwannoma cells
+      - syn2343195    # Synodos NF2
+      - syn27261816   # Evaluation of a PAK1-selective PROTAC, alone and with Hippo inhibitors, as a targeted therapy in NF2
+      - syn9727752    # Synodos Schwannomatosis
+
+  - id: nf2-meningioma
+    query: nf2 meningioma
+    type: topical
+    source: agent-generated
+    notes: "NF2-associated meningioma studies. Source: manifestation HAS ('Meningioma'), pool 7; head favors explicit meningioma titles over broader NF2-tumor studies."
+    expected_pool: 7
+    relevant:
+      - syn27761862   # Leveraging Synodos NF2 data to test novel single and combination drugs in NF2-deficient meningioma models
+      - syn69715590   # Analyzing the role and therapeutic potential of ALDH1A3 in NF2-null meningioma
+      - syn71852641   # Advancing Precision Medicine for AYAs with NF2 and Meningiomas Through Multi-Omics and AI
+      - syn53183744   # To understand the role of Apelin mediated angiogenesis in NF2 associated tumors
+      - syn2343195    # Synodos NF2
+
+  - id: jmml
+    query: juvenile myelomonocytic leukemia jmml
+    type: topical
+    source: agent-generated
+    notes: "JMML studies. Source: manifestation HAS ('JMML'), pool 4. syn21452685 (NFTC-UCSF) is a broad consortium project tagged JMML; kept last as weakest of the four."
+    expected_pool: 4
+    relevant:
+      - syn51133946   # DHART SPORE Project 3 - Clinical Trial (ADVL1521) of MEK Inhibitor Trametinib in JMML
+      - syn51133957   # DHART SPORE Project 3 Phase 2 - Clinical Trial of MEK Inhibitor Trametinib in JMML
+      - syn74306229   # Cellular immunotherapy targeting CLL1 for juvenile myelomonocytic leukemia
+      - syn21452685   # Neurofibromatosis Therapeutic Consortium - University of California, San Francisco
+
+  - id: low-grade-glioma
+    query: nf1 low grade glioma
+    type: topical
+    source: agent-generated
+    notes: "NF1 low-grade / optic-pathway glioma studies. Source: manifestation HAS ('Low Grade Glioma'), pool 9."
+    expected_pool: 9
+    relevant:
+      - syn5698493    # Synodos NF1 Low Grade Glioma
+      - syn36366922   # Natural History of NF1-Associated Non-Optic Pathway Low Grade Glioma
+      - syn25881328   # Defining the factors that dictate the pattern of glioma formation in NF1
+      - syn6633069    # Columbia University NF1 Glioma Project
+      - syn4939894    # Imaging Biomarkers of Neurofibromatosis Type 1-Associated Optic Pathway Glioma
+
+  - id: atypical-neurofibroma
+    query: atypical neurofibroma malignant transformation
+    type: topical
+    source: agent-generated
+    notes: "Atypical neurofibroma / ANNUBP malignant-progression studies. Source: manifestation HAS ('Atypical Neurofibroma'), pool 6."
+    expected_pool: 6
+    relevant:
+      - syn74765126   # Understand the molecular mechanisms underlying malignant transformation of NF1-associated nerve sheath tumors
+      - syn74288246   # Deciphering cellular and molecular signatures of malignant progression in NF1 using single-cell transcriptomics
+      - syn26241781   # How epigenetic dysregulation and Ras misactivation cooperate during NF1-deficient Schwann cell tumorigenesis
+      - syn68805918   # Genomics-assisted early detection, diagnosis and management of NF1-related tumors
+      - syn25999248   # Targeting the Let7-HMGA2 axis in Malignant Peripheral Nerve Sheath Tumor Prevention
+
+  - id: liquid-biopsy-cfdna
+    query: liquid biopsy mpnst
+    type: topical
+    source: agent-generated
+    notes: "Circulating-DNA / liquid-biopsy early-detection studies. Source: studyName/summary LIKE cfDNA / liquid biopsy / cell-free DNA, pool 7."
+    expected_pool: 7
+    relevant:
+      - syn35638003   # Early Detection and Model Development of NF1-MPNST Using Liquid Biopsy of cfDNA
+      - syn51117783   # Utilization of Cell Free DNA Liquid Biopsy for Diagnosis and Monitoring of Tumor Evolution in MPNST
+      - syn58577585   # Liquid biopsy with ctDNA to detect minimal residual disease after MPNST resection
+      - syn51115812   # Multi-omic liquid biopsy analysis for early detection of malignant transformation of PNST in NF1
+      - syn23651229   # Ultra-low-pass whole genome sequencing of plasma cfDNA from patients with pNF and MPNST
+
+  - id: whole-genome-sequencing
+    query: plasma wgs early detection
+    type: topical
+    source: agent-generated
+    notes: "Plasma/ulp whole-genome-sequencing early-detection studies. Source: studyName LIKE whole genome / genome sequencing, pool 2 (small but distinct sub-domain)."
+    expected_pool: 2
+    relevant:
+      - syn35630161   # Integrated Analysis of Plasma Whole Genome Sequencing for Early Detection of Malignant Tumours in NF1
+      - syn23651229   # Ultra-low-pass whole genome sequencing of plasma cfDNA from patients with pNF and MPNST
+
+  - id: single-cell-sequencing
+    query: scrnaseq nf1 tumor
+    type: topical
+    source: agent-generated
+    notes: "Single-cell / scRNA-seq studies of NF tumors. Source: studyName/summary LIKE single cell / single-cell; head favors titles that are explicitly single-cell. syn11374353 and syn27261848 only mention 'single cell' tangentially in the description (culture/suspension technique, not the study's method) and were swapped out for stronger explicit matches."
+    expected_pool: 20
+    relevant:
+      - syn25999950   # Single cell sequencing of glioma in NF1 patients
+      - syn74278763   # Human cutaneous neurofibroma matrisome revealed by single-cell RNA sequencing
+      - syn74288246   # Deciphering cellular and molecular signatures of malignant progression in Neurofibromatosis type 1 using single-cell transcriptomic analysis
+      - syn68805918   # Genomics-assisted early detection, diagnosis and management of NF1-related tumors
+
+  - id: ipsc-models
+    query: ipsc derived schwann cell model
+    type: topical
+    source: agent-generated
+    notes: "iPSC / induced-pluripotent-stem-cell modeling studies. Source: summary/studyName LIKE induced pluripotent / iPSC, pool 15."
+    expected_pool: 15
+    relevant:
+      - syn4939918    # Differentiation of NF1 heterozygous and homozygous iPS cells into Neural Crest-Schwann cell lineage
+      - syn26238964   # Human induced pluripotent stem cell modeling of sensory neuron-regulated NF1-deficient Schwann cell growth
+      - syn11374345   # Leveraging human iPSCs to determine the impact of patient-derived NF1 mutations on Schwann cell growth
+      - syn7231973    # Perpetuating NF1 het/homozygous plexiform neurofibroma-derived tumor cells via iPS cells
+      - syn36501381   # hiPSC modeling of NF1 high-grade glioma
+
+  - id: organoid-models
+    query: patient derived organoid drug screening
+    type: topical
+    source: agent-generated
+    notes: "Patient-derived organoid / 3D model studies. Source: summary/studyName LIKE organoid; head favors explicit organoid titles."
+    expected_pool: 15
+    relevant:
+      - syn51116567   # Patient-derived plexiform neurofibromas organoid model for drug repositioning in precision medicine
+      - syn51301409   # Leveraging patient-derived cutaneous neurofibroma organoid models to identify biomarkers of drug response
+      - syn62031004   # A deep learning microscopy framework for NF1 patient-derived organoid drug screening
+      - syn11374354   # A 3D Cutaneous Neurofibroma Model for Automated High-Throughput Drug Screenings
+
+  - id: gene-editing
+    query: crispr gene editing nf1 correction
+    type: topical
+    source: agent-generated
+    notes: "Genome/base/prime-editing NF1 correction studies. Source: studyName LIKE genome editing / gene editing / base edit / prime edit, pool 3."
+    expected_pool: 3
+    relevant:
+      - syn21641872   # Genome Editing with Engineered Vectors to Correct Neurofibromatosis Type I
+      - syn33820507   # Genome Editing for the Treatment of Neurofibromatosis Type I
+      - syn36530086   # Optimization of Base and Prime Editing Strategies for NF1 Therapeutics
+
+  - id: antisense-nonsense-suppression
+    query: antisense oligonucleotide exon skipping nonsense suppression
+    type: topical
+    source: agent-generated
+    notes: "RNA-therapeutic studies (ASO, exon skipping, nonsense suppression, ribozyme). Source: studyName LIKE antisense / exon skip / nonsense / ribozyme, pool 9."
+    expected_pool: 9
+    relevant:
+      - syn21641985   # AAV, Zinc Finger Protein and Antisense Oligonucleotide Strategies for Restoration of Neurofibromin
+      - syn21642010   # Exon skipping to treat Neurofibromatosis Type 1 (NF1) mutations
+      - syn21641876   # Ataluren-promoted therapeutic nonsense suppression for neurofibromatosis
+      - syn21355225   # Antisense oligonucleotides as a personalized therapy for Neurofibromatosis Type 2 patients
+      - syn21641945   # NF1 RNA Repair Based on Therapeutic Ribozymes
+
+  - id: gene-therapy-initiative
+    query: nf1 gene therapy
+    type: topical
+    source: agent-generated
+    notes: "Studies in CTF's Gene Therapy Initiative. Source: initiative = 'Gene Therapy Initiative', pool 29."
+    expected_pool: 29
+    relevant:
+      - syn21641872   # Genome Editing with Engineered Vectors to Correct Neurofibromatosis Type I
+      - syn21641931   # NF1 Gene Rescue in Translational Animal Models
+      - syn21641985   # AAV, Zinc Finger Protein and Antisense Oligonucleotide Strategies for Restoration of Neurofibromin
+      - syn21641813   # Exploring Nonsense Suppression as a Treatment for NF1
+      - syn21642010   # Exon skipping to treat Neurofibromatosis Type 1 (NF1) mutations
+
+  - id: vision-restoration
+    query: optic nerve regeneration vision restoration
+    type: topical
+    source: agent-generated
+    notes: "GFF Vision Restoration Initiative studies (RGC regeneration/transplantation). Source: initiative = 'Vision Restoration Initiative', pool 31."
+    expected_pool: 31
+    relevant:
+      - syn21650366   # Axon regeneration and vision restoration in NF1 OPG
+      - syn21650464   # Structural and functional restoration of the visual system in NF1
+      - syn21650326   # Neuroprotection and optic nerve regeneration in a mouse NF1 OPG model
+      - syn21650480   # RGC differentiation and transplantation for NF1 OPG
+      - syn21650476   # Generation and neuroprotective studies of NF1 patient-derived RGCs
+
+  - id: synodos
+    query: synodos
+    type: topical
+    source: agent-generated
+    notes: "CTF Synodos team-science projects. Source: initiative = 'Synodos', pool 8. Two later rows (syn25999950, syn51117783) are Synodos-initiative studies with non-Synodos titles; kept last."
+    expected_pool: 8
+    relevant:
+      - syn2343195    # Synodos NF2
+      - syn5610418    # Synodos NF1 Preclinical Models
+      - syn5698493    # Synodos NF1 Low Grade Glioma
+      - syn9727752    # Synodos Schwannomatosis
+      - syn52740594   # Synodos NF1 Preclinical Models (Minnesota CCHMC Recombinetics)
+
+  - id: dhart-spore
+    query: dhart spore
+    type: topical
+    source: agent-generated
+    notes: "DHART-SPORE program projects. Source: initiative LIKE '%DHART-SPORE%', pool 25; head favors the explicitly-named Project/Phase studies."
+    expected_pool: 25
+    relevant:
+      - syn51133914   # DHART SPORE Project 1 Phase 1 - Molecular/Developmental/Genetic Evaluation of Plexiform Neurofibromas
+      - syn51133929   # DHART SPORE Project 2 Phase 1 - Targeted Therapies for MPNST
+      - syn51133946   # DHART SPORE Project 3 - Clinical Trial (ADVL1521) of MEK Inhibitor Trametinib in JMML
+      - syn51133924   # DHART SPORE Project 1 Phase 2 - Molecular/Developmental/Genetic Evaluation of Plexiform Neurofibromas
+      - syn51133935   # DHART SPORE Project 2 Phase 2 - Targeted Therapies for MPNST
+
+  - id: mek-inhibitor
+    query: meki selumetinib
+    type: topical
+    source: agent-generated
+    notes: "MEK-inhibitor / selumetinib / trametinib therapy studies. Source: studyName/summary LIKE MEK / selumetinib; head favors explicit MEK-inhibitor titles."
+    expected_pool: 39
+    relevant:
+      - syn4939914    # The Role of MEK-inhibitors for the Prevention and Treatment of Optic Pathway Gliomas in an Nf1 Deficient Mouse Model
+      - syn8012530    # NF1 Cutaneous Neurofibroma Longitudinal Natural History Study and Selumetinib Clinical Trial
+      - syn51133946   # DHART SPORE Project 3 - Clinical Trial of MEK Inhibitor Trametinib in JMML
+      - syn74288412   # Triple Combination of MEK, BET, and CDK Inhibitors Reduces Human MPNST in Mouse Models
+
+  - id: proteomics
+    query: nf1 proteomics
+    type: topical
+    source: agent-generated
+    notes: "Studies contributing proteomics data. Source: dataType HAS ('proteomics'), pool 13; head favors protein-focused titles."
+    expected_pool: 13
+    relevant:
+      - syn22267284   # Mapping and Identifying the Roles of Protein Glycosylation in Neurofibromatosis 1
+      - syn26238842   # Signaling pathways regulated by nitrated proteins as novel therapeutic targets for NF2
+      - syn5610418    # Synodos NF1 Preclinical Models
+      - syn4984604    # Cutaneous Neurofibroma Data Resource
+
+  - id: ntap-mpnst
+    query: ntap malignant peripheral nerve sheath tumor
+    type: topical
+    source: agent-generated
+    notes: "NTAP-funded MPNST studies. Source: fundingAgency HAS ('NTAP') AND manifestation HAS ('MPNST'), pool 16 (live); head favors clearly MPNST-focused NTAP titles. syn21984813 no longer carries the NTAP funder tag live (now NFRI/NIH-NCI) and was replaced."
+    expected_pool: 16
+    relevant:
+      - syn11681835   # Novel therapeutic development of NF1-associated MPNST
+      - syn11638893   # Development of a Preclinical NF1-MPNST Platform Suitable for Precision Oncology
+      - syn25999248   # Targeting the Let7-HMGA2 axis in MPNST Prevention
+      - syn39800678   # Uncovering the Molecular Alterations that Drive Malignant Transformation in NF1-associated Peripheral Nerve Sheath Tumors
+
+  - id: cdmrp-funded
+    query: dod cdmrp mpnst precision medicine
+    type: topical
+    source: agent-generated
+    notes: "CDMRP (DoD)-funded studies. Source: fundingAgency HAS ('CDMRP'), pool 4 (all four are the full CDMRP set)."
+    expected_pool: 4
+    relevant:
+      - syn52369030   # Leveraging a Precision Medicine Platform to Predict Novel Therapies for MPNST
+      - syn53128248   # Exploiting Aneuploidy in NF1-MPNST - Prognostication and Understanding Pathogenesis
+      - syn23639889   # TYK2 as a Biomarker and Therapeutic Target for NF1-Associated MPNST
+      - syn30264486   # Regulating Neurofibromin Through Degradation, Dimerization, and Binding to SPRED1
+
+  - id: young-investigator
+    query: young investigator award neurofibromin
+    type: topical
+    source: agent-generated
+    notes: "CTF Young Investigator Award studies. Source: initiative = 'Young Investigator Award', pool 50; head favors neurofibromin/mechanism-focused early-career titles."
+    expected_pool: 50
+    relevant:
+      - syn22266606   # Unveiling the molecular mechanisms of neurofibromin regulation for therapeutic targeting in NF1
+      - syn22267284   # Mapping and Identifying the Roles of Protein Glycosylation in Neurofibromatosis 1
+      - syn22267330   # MPNST Achilles Heel: Combinatorial Targeting of ERBB3 and Calcium Signaling
+      - syn22267323   # Impact of PRC2 loss on Glutamine metabolism in MPNSTs
+      - syn22268689   # Identification and functional characterization of the substrates of LZTR1 (schwannomatosis)
+
+  - id: cognition-learning
+    query: nf1 cognitive learning memory
+    type: topical
+    source: agent-generated
+    notes: "NF1 cognitive/behavioral studies. Source: manifestation HAS ('Cognition'/'Memory'/'Behavioral'), pool 7."
+    expected_pool: 7
+    relevant:
+      - syn17100988   # The role of GABA in the working memory impairments in Neurofibromatosis Type 1
+      - syn62031290   # Cognitive aging in middle-aged and older adults with neurofibromatosis type 1
+      - syn73671515   # Validation of mGluR7 as a Genetic Modifier and Therapeutic Treatment for Cognitive Symptoms in NF1
+      - syn74755292   # BLTS Cerebral cortical mechanisms of sensory hypersensitivity in NF1
+
+  - id: nf-pain
+    query: neurofibromatosis pain
+    type: topical
+    source: agent-generated
+    notes: "NF-related pain studies. Source: manifestation HAS ('Pain'), pool 2."
+    expected_pool: 2
+    relevant:
+      - syn56566376   # Role of Schwann cells in NF1-related pain development
+      - syn61783227   # GsMTx-4 as a Novel Inhibitor to Block non-NF2 Schwannomatosis Pain
+
+  - id: synodos-nf2-exact
+    query: Synodos NF2
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK: exact study name lookup. Source: studyName = 'Synodos NF2' (single row). Confirms the harness resolves an exact title; does not discriminate strategies."
+    expected_pool: 1
+    relevant:
+      - syn2343195    # Synodos NF2
+
+  - id: jhu-biospecimen-exact
+    query: Johns Hopkins NF1 biospecimen repository
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK: exact named-resource lookup. Source: studyName LIKE '%biospecimen repository%' (single row). Confirms exact-name retrieval."
+    expected_pool: 1
+    relevant:
+      - syn4939902    # The Johns Hopkins NF1 biospecimen repository
