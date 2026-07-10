@@ -1,0 +1,380 @@
+index:      syn75081644
+index_name: nf-publications-v2
+version:    2026.07.10
+k:          10
+id_field:   pmid
+# id_field rationale: the source table (syn51735450) has 1892 rows but only ~655 distinct
+# publications — each publication is duplicated once per associated resource/usage
+# (usageId is unique per row, resourceId/publicationId repeat). pmid is 100% filled and
+# identifies the *publication*, which is the unit of relevance here, so it is the correct
+# id_field. usageId/rowId would fragment one relevant paper across many duplicate rows.
+# pmid is stored verbatim as in the source: mostly "PMID:<n>", with 2 recent rows as bare
+# "<n>". The runner/validator match hits' pmid value, and multiple index docs may share a
+# pmid — any hit carrying a relevant pmid counts.
+
+cases:
+  # ---------------------------------------------------------------------------
+  # Agent-generated (generate-goldens skill), nf-publications-v2 syn75081644, 2026-07-03.
+  # Relevant sets derived from the SOURCE table (syn51735450) data — LIKE predicates over
+  # publicationTitle/abstract (no clean category columns exist on this table; journal and
+  # authors are the only categoricals and both are high-cardinality free text).
+  # SME-simulated NF-literature discovery queries + ideal ranked heads. DRAFT — review before trusting.
+  #
+  # PARTIAL-COVERAGE DISCLOSURE: source is 1892 rows / ~655 distinct pubs — inside the ACCEPT
+  # range but near the 2k line, and its topical signal is entirely free text (no controlled
+  # vocab to GROUP BY). Coverage below leans on title/abstract LIKE seeds + domain knowledge
+  # and targets the main sub-domains (NF1/NF2 tumor biology + therapy, RAS/MAPK signaling,
+  # models, -omics assays, cognition). A large secondary cluster of generic pan-cancer
+  # cell-line-panel papers (melanoma/pancreatic/colorectal/NCI-60, the Solit/Taylor corpus)
+  # is only lightly sampled. Sub-domains not seeded here are NOT covered.
+  # ---------------------------------------------------------------------------
+
+  # ---- tumor types / NF manifestations ----
+  - id: mpnst-therapy
+    query: mpnst treatment
+    type: topical
+    source: agent-generated
+    notes: "Malignant peripheral nerve sheath tumor + therapeutic intent. Head favors preclinical drug-target papers in MPNST models over pure characterization; pool spans all MPNST-mentioning pubs."
+    expected_pool: 61
+    relevant:
+      - PMID:33032988   # Combined inhibition of SHP2 and MEK in NF1-deficient MPNST
+      - PMID:32266095   # PLK1 as a therapeutic target for MPNST
+      - PMID:33203698   # RTK activation mediates acquired resistance to MEK inhibitors (MPNST)
+      - PMID:28556483   # Drug sensitivity testing identifies PLK1 inhibitors + gemcitabine in MPNST
+      - PMID:30936125   # DUSP1/DUSP6 inhibition suppresses MPNST
+
+  - id: plexiform-neurofibroma
+    query: plexiform neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "Benign PN, the classic NF1 tumor. Head leads with PN models + preclinical therapy; the 3D-culture and pharmacogenomic-profiling papers are canonical PN resources."
+    expected_pool: 26
+    relevant:
+      - PMID:29055717   # 3D culture models of plexiform neurofibroma
+      - PMID:29893754   # Pharmacological + genomic profiling of NF1 PN-derived Schwann cells
+      - PMID:26375012   # Sunitinib malate in plexiform neurofibroma
+      - PMID:33293695   # miR-155 drives plexiform neurofibroma growth downstream of MEK
+      - PMID:32459399   # Imatinib mesylate reduces plexiform neurofibroma burden
+
+  - id: cutaneous-neurofibroma
+    query: cutaneous neurofibroma model
+    type: topical
+    source: agent-generated
+    notes: "cNF — the most common NF1 tumor, distinct from plexiform. Small clean pool; head favors model/mechanism papers over the two very recent QoL/organoid pubs."
+    expected_pool: 5
+    relevant:
+      - PMID:30348677   # Spatiotemporal loss of NF1 in Schwann cell lineage -> different neurofibroma types
+      - PMID:33108355   # Humanized iPSC neurofibroma model (delineates cutaneous vs plexiform)
+      - PMID:31059067   # Androgen receptor accelerates angiogenesis in cutaneous neurofibroma
+      - PMID:38744290   # Patient-derived cutaneous neurofibroma organoid platform
+
+  - id: optic-glioma
+    query: optic pathway glioma nf1 mouse
+    type: topical
+    source: agent-generated
+    notes: "NF1 optic pathway glioma, a pediatric hallmark; qualified to the mouse-model literature. FALSE FRIENDS EXCLUDED: the 'learning/memory' NF1 mouse (PMID:9054942) and the minipig model (PMID:30302402) only mention optic glioma in passing — dropped from head."
+    expected_pool: 8
+    relevant:
+      - PMID:19525901   # Optic nerve dysfunction in a mouse model of NF1 optic glioma
+      - PMID:23318450   # NG2-cells are not the cell of origin for murine NF1 optic glioma
+      - PMID:26585233   # RNA-seq of tumor-associated microglia in optic glioma (Ccl5)
+      - PMID:10973261   # Nf1;Trp53 mice develop glioma
+
+  - id: nf2-schwannoma
+    query: nf2 merlin mutation
+    type: topical
+    source: agent-generated
+    notes: "NF2 / merlin biology — a distinct disease gene from NF1. Small pool; head leads with the NF2 mutation + merlin-function papers. Excludes the two pan-NF pharmacology papers that merely list NF2 lines."
+    expected_pool: 7
+    relevant:
+      - PMID:7479897    # High frequency of inactivating NF2 mutations
+      - PMID:21481793   # Merlin-angiomotin complex mediates Merlin's regulation
+      - PMID:10451704   # Frequent NF2 mutations + 22q12 loss in malignant tumors
+      - PMID:9310240    # Reduced neurofibromin expression in meningiomas
+
+  - id: malignant-schwannoma-cell-line
+    query: malignant schwannoma cell line
+    type: topical
+    source: agent-generated
+    notes: "Schwannoma/neurofibrosarcoma-derived cell lines. Head favors papers establishing/characterizing such lines. FALSE FRIENDS EXCLUDED: melanoma/neuroblastoma NF1 line paper and zebrafish paper share the token but aren't schwannoma lines."
+    expected_pool: 12
+    relevant:
+      - PMID:1980563    # Establishment of epithelioid malignant schwannoma cell line YST-1
+      - PMID:9766530    # Neurofibrosarcoma-derived Schwann cells overexpress PDGF
+      - PMID:16510576   # Large-scale molecular comparison of human Schwann cells to MPNST
+
+  # ---- genes / pathways ----
+  - id: ras-mapk-signaling
+    query: ras mapk pathway nf1
+    type: topical
+    source: agent-generated
+    notes: "Core NF1 signaling axis (neurofibromin is a RAS-GAP). Head favors mechanistic RAS/MAPK-in-NF1 papers over generic pan-cancer RAS papers in the corpus."
+    expected_pool: 36
+    relevant:
+      - PMID:29854299   # Neurofibromin level directs RAS pathway signaling + drug sensitivity
+      - PMID:1568246    # Abnormal p21ras regulation contributes to NF1 malignant tumor growth
+      - PMID:26460546   # Loss of neurofibromin Ras-GAP activity enhances cardiac blood islands
+      - PMID:31548343   # RAS-MAPK co-alterations limit response to MET inhibitors
+
+  - id: tp53-mpnst
+    query: tp53 mutation malignant nerve sheath tumor
+    type: topical
+    source: agent-generated
+    notes: "p53/NF1 cooperation in MPNST transformation. Head leads with the classic TP53-in-NF1-tumors papers and the NF1/p53 model."
+    expected_pool: 8
+    relevant:
+      - PMID:7522538    # TP53 mutations are frequent in malignant NF1 tumors
+      - PMID:27477693   # PDGFRA + loss of NF1 and p53 accelerate MPNST
+      - PMID:10973261   # Nf1;Trp53 mutant mice develop glioblastoma
+
+  - id: pten-schwann
+    query: pten loss schwann cell tumor
+    type: topical
+    source: agent-generated
+    notes: "PTEN cooperation with NF1 in Schwann cells. FALSE FRIENDS EXCLUDED: the melanoma PTEN/MMAC1 lines papers (different tissue/context) trimmed from head; they remain in the pool. CORRECTED 2026-07-10: PMID:21725359 (live title 'Concurrent loss of the PTEN and RB1 tumor suppressors attenuates RAF dependence in melanomas harboring (V600E)BRAF') IS the excluded melanoma false friend, not a Schwann-cell paper -- it had been miscategorized into the head. Replaced with PMID:33707600, a sporadic MPNST cell line paper reporting PTEN mutation alongside CDKN2A/TP53 loss, live-linked via nf:Development."
+    expected_pool: 8
+    relevant:
+      - PMID:22700876   # PTEN and NF1 inactivation in Schwann cells -> severe phenotype
+      - PMID:23319880   # Conditional Pten inactivation + EGFR overexpression in Schwann cells
+      - PMID:33707600   # Establishment + genomic characterization of a sporadic MPNST cell line (PTEN, CDKN2A, TP53 loss)
+
+  - id: neurofibromin-function
+    query: neurofibromin tumor suppressor function
+    type: topical
+    source: agent-generated
+    notes: "Neurofibromin (NF1 protein) biology. Broad pool; head leads with review/mechanism papers on neurofibromin as a tumor suppressor."
+    expected_pool: 36
+    relevant:
+      - PMID:11237520   # Neurofibromin, a tumor suppressor in the nervous system
+      - PMID:16180234   # Tumorigenic properties of neurofibromin-deficient Schwann cells
+      - PMID:25486365   # C-terminal domains of neurofibromin and yeast Ira homologs
+      - PMID:31466283   # Affinity purification of NF1 protein-protein interactors
+
+  - id: nf1-melanoma
+    query: nf1 loss melanoma
+    type: topical
+    source: agent-generated
+    notes: "NF1 as a melanoma driver (a major theme of this corpus). Head leads with the landmark NF1-melanoma papers."
+    expected_pool: 16
+    relevant:
+      - PMID:24576830   # Loss of NF1 in cutaneous melanoma -> RAS activation + MEK dependence
+      - PMID:23171796   # Elucidating distinct roles for NF1 in melanomagenesis
+      - PMID:26214590   # Exome sequencing: recurrent NF1/RASopathy mutations in sun-exposed melanomas
+      - PMID:22810304   # Neurofibromin gene dosage effects on melanocyte development
+
+  # ---- therapies / drugs ----
+  - id: mek-inhibitor
+    query: mek inhibitor neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "MEK inhibition, the leading NF1 therapeutic strategy (selumetinib). Head favors NF1/neurofibroma MEKi preclinical papers over the melanoma/thyroid MEKi papers that also match."
+    expected_pool: 15
+    relevant:
+      - PMID:25907661   # Preclinical PD-0325901 MEK inhibitor in an NF1 mouse model
+      - PMID:16239399   # MEK/ERK kinase inhibitor in NF1 malignant (early MEKi paper)
+      - PMID:33203698   # RTK activation drives acquired resistance to MEK inhibitors
+      - PMID:27494873   # Combinatorial BMP2 + MEK-ERK targeting in NF1-associated tumor
+
+  - id: selumetinib
+    query: selumetinib
+    type: topical
+    source: agent-generated
+    notes: "Bare drug-name query (selumetinib / AZD6244), the FDA-approved NF1 PN drug. Small clean pool. FALSE FRIEND EXCLUDED: PMID:24002593 (squamous lung cancer) matches 'selumetinib' in a generic drug list, not an NF context — dropped from head."
+    expected_pool: 6
+    relevant:
+      - PMID:29055717   # 3D PN culture models tested with selumetinib
+      - PMID:32102484   # Combined AKT + mTOR inhibition in NF1-associated tumors (selumetinib arm)
+      - PMID:27494873   # BMP2 + MEK-ERK (selumetinib) targeting in NF1
+
+  - id: mtor-inhibitor-nf1
+    query: mtor inhibitor nf1 tumor
+    type: topical
+    source: agent-generated
+    notes: "mTOR/TORC1 signaling in NF1 malignancy. FALSE FRIENDS EXCLUDED: many pan-cancer cell-line-panel papers mention mTOR generically; head keeps only NF1-context mechanism/therapy papers."
+    expected_pool: 20
+    relevant:
+      - PMID:18164202   # TORC1 is essential for NF1-associated malignancies
+      - PMID:20124472   # NF1 tumor suppressor controls cell growth by regulating mTOR
+      - PMID:32102484   # Combined AKT + mTOR inhibition in NF1-associated tumors
+      - PMID:33235998   # Combination MEK + mTOR inhibitor therapy in glioblastoma models
+
+  - id: shp2-inhibitor
+    query: shp2 inhibitor nf1
+    type: topical
+    source: agent-generated
+    notes: "SHP2 (PTPN11) inhibition, an emerging RAS-pathway strategy in NF1. Very small pool (3); head leads with the NF1-MPNST SHP2+MEK combination paper. Note 39793045 is stored as a bare pmid (no 'PMID:' prefix)."
+    expected_pool: 3
+    relevant:
+      - PMID:33032988   # Combined SHP2 + MEK inhibition in NF1-deficient MPNST
+      - "39793045"      # Hydroxychloroquine prevents resistance to SHP2 inhibition in NF1-mutant cancers
+      - PMID:38000020   # CDK4/6 inhibition enhances SHP2 inhibitor efficacy
+
+  - id: tyrosine-kinase-inhibitor-pn
+    query: tyrosine kinase inhibitor plexiform neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "Small-molecule TKIs (imatinib/sorafenib/sunitinib) tested in PN/NF1 models. Head leads with the preclinical PN TKI trials."
+    expected_pool: 5
+    relevant:
+      - PMID:32459399   # Imatinib mesylate reduces plexiform neurofibroma burden
+      - PMID:26375012   # Sunitinib malate in plexiform neurofibroma
+      - PMID:21319287   # Sorafenib + RAD001 in the Nf(flox/flox);DhhCre mouse model
+
+  # ---- model systems ----
+  - id: nf1-mouse-model
+    query: nf1 knockout mouse model tumor
+    type: topical
+    source: agent-generated
+    notes: "Genetically engineered NF1 mouse models of tumorigenesis. Head favors the canonical conditional/cre NF1 tumor models."
+    expected_pool: 20
+    relevant:
+      - PMID:25446898   # Cells of origin in embryonic nerve roots for NF1 plexiform neurofibroma
+      - PMID:18242511   # Plexiform + dermal neurofibromas from NF1 loss in dermis
+      - PMID:30348677   # Spatiotemporal NF1 loss in Schwann lineage -> tumor types
+      - PMID:32816910   # Cdkn2a loss in a neurofibroma model -> stepwise progression
+
+  - id: zebrafish-nf1
+    query: zebrafish nf1 model
+    type: topical
+    source: agent-generated
+    notes: "Zebrafish NF1 models. Small pool. FALSE FRIEND: PMID:31444410 (topoisomerase/mTOR synergy) only mentions zebrafish tangentially — kept out of head."
+    expected_pool: 5
+    relevant:
+      - PMID:22773753   # Zebrafish nf1 genes have redundant functions in tumorigenesis
+      - PMID:25176649   # cAMP + ras signaling modulation improves behavioral defects (zebrafish)
+      - PMID:27477693   # PDGFRA + NF1/p53 loss accelerates MPNST (zebrafish model)
+
+  - id: ipsc-neurofibroma
+    query: ipsc derived neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "iPSC-based NF1 disease modeling. Head leads with iPSC-derived neurofibroma tumor models and NF1 patient iPSC line generation. CORRECTED 2026-07-10: PMID:34343671's live title/abstract is an induced-pluripotent-stem-cell model of OVARIAN cancer -- unrelated to NF1, apparently a mismatched PMID in the draft. Replaced with PMID:32243842 (human iPSC-derived neurons/cerebral organoids modeling germline NF1 mutations), which is on-topic and live-linked via nf:Development."
+    expected_pool: 9
+    relevant:
+      - PMID:35172160   # iPSC-derived human neurofibroma-like tumors in mice
+      - PMID:33108355   # Humanized neurofibroma model from iPSCs
+      - PMID:33091851   # Generation of four iPSC lines from NF1 patients
+      - PMID:32243842   # Human iPSC-derived neurons and cerebral organoids establish differential effects of germline NF1 gene mutations
+
+  - id: patient-derived-xenograft-nerve-sheath
+    query: patient derived xenograft nerve sheath tumor
+    type: topical
+    source: agent-generated
+    notes: "PDX / orthotopic models of nerve sheath tumors. FALSE FRIENDS EXCLUDED: generic breast/colorectal PDX papers matched 'xenograft' but are off-domain; head keeps nerve-sheath/NF1 models."
+    expected_pool: 10
+    relevant:
+      - PMID:32099531   # Patient-derived cancer models of MPNST
+      - PMID:17876295   # Orthotopic xenograft model of intraneural NF1 MPNST
+      - PMID:32561749   # Clinically + genomically annotated nerve sheath tumor biospecimen repository
+      - PMID:30936125   # DUSP1/6 inhibition suppresses MPNST (PDX)
+
+  # ---- assays / -omics ----
+  - id: crispr-screen-nf1
+    query: crispr screen nf1
+    type: topical
+    source: agent-generated
+    notes: "CRISPR/Cas9 screens + editing in NF1 biology. FALSE FRIENDS EXCLUDED: pan-cancer CRISPR panel papers (neuroblastoma, colorectal) trimmed; head keeps NF1-context screens/editing."
+    expected_pool: 11
+    relevant:
+      - PMID:33808166   # Transposon + CRISPR/Cas9 screening implicates dysregulation in NF1
+      - PMID:28809766   # CRISPR/Cas9 editing of NF1 identifies CRMP2 target
+      - PMID:28174230   # CRISPR/Cas9-coupled proteomics of neurofibromin interactors
+
+  - id: mpnst-proteomics
+    query: mpnst proteomics phosphoproteomics
+    type: topical
+    source: agent-generated
+    notes: "Proteomics/phosphoproteomics of nerve sheath tumors. FALSE FRIENDS EXCLUDED: the corpus has many generic cell-line-panel proteomics papers (NCI-60, colorectal, HEK293) — head keeps only Schwann/MPNST/neurofibromin-focused ones."
+    expected_pool: 24
+    relevant:
+      - PMID:34648240   # Secretome analysis of MPNST-derived human Schwann cells
+      - PMID:28174230   # CRISPR-coupled proteomics of neurofibromin interactors
+      - PMID:33203698   # RTK activation / MEKi resistance (proteomic profiling, MPNST)
+
+  - id: rnaseq-schwann
+    query: rna-seq schwann cell tumor
+    type: topical
+    source: agent-generated
+    notes: "Transcriptomic profiling in nerve sheath / neurofibroma. FALSE FRIENDS EXCLUDED: many pan-cancer transcriptome-panel papers match 'transcriptom'; head keeps NF/nerve-sheath-context studies."
+    expected_pool: 15
+    relevant:
+      - PMID:26585233   # RNA-seq of tumor-associated microglia in optic glioma
+      - PMID:35172160   # iPSC-derived neurofibroma tumors (transcriptomic heterogeneity)
+      - PMID:16510576   # Molecular comparison of Schwann cells to MPNST
+
+  - id: exome-sequencing-nf1
+    query: exome sequencing nf1 mutation
+    type: topical
+    source: agent-generated
+    notes: "Exome/genome sequencing identifying NF1/RASopathy variants. FALSE FRIENDS EXCLUDED: NCI-60/HEK293 exome resource papers are off-domain; head keeps NF1-variant-discovery studies."
+    expected_pool: 15
+    relevant:
+      - PMID:26214590   # Exome sequencing: recurrent NF1/RASopathy mutations in sun-exposed melanomas
+      - PMID:29893754   # Pharmacological + genomic (exome) profiling of NF1 PN Schwann cells
+      - PMID:33707600   # Genomic characterization of a sporadic MPNST
+
+  # ---- clinical / phenotype ----
+  - id: learning-cognition-nf1
+    query: nf1 learning memory deficit
+    type: topical
+    source: agent-generated
+    notes: "NF1 cognitive/learning phenotype — a major non-tumor clinical feature. Head leads with the classic Nf1 learning-deficit mouse work and the lovastatin rescue."
+    expected_pool: 10
+    relevant:
+      - PMID:11279521   # Learning deficits in Nf1+/- mice
+      - PMID:16271875   # Lovastatin reverses learning/attention deficits in NF1 mouse
+      - PMID:17241271   # Restored plasticity in NF1 mouse via HMG-CoA reductase inhibition
+      - PMID:19118178   # Spred1 required for synaptic plasticity + hippocampal learning
+
+  - id: nf1-pain
+    query: nf1 neurofibromatosis pain crmp2
+    type: topical
+    source: agent-generated
+    notes: "NF1-related pain and the CRMP2-neurofibromin axis. Small clean pool; all three are directly on-topic."
+    expected_pool: 3
+    relevant:
+      - PMID:29655575   # CRMP2-neurofibromin interface drives NF1-related pain
+      - PMID:28809766   # CRISPR/Cas9 NF1 editing identifies CRMP2 therapeutic target
+      - PMID:28767512   # Role of the CRMP2-neurofibromin complex on pain behaviors
+
+  # ---- broader cancer cell-line cluster (secondary corpus) ----
+  - id: melanoma-cell-line-panel
+    query: melanoma cell line panel mutation
+    type: topical
+    source: agent-generated
+    notes: "Human melanoma cell-line panels + their driver mutations (BRAF/NRAS/NF1) — a large secondary theme. FALSE FRIENDS EXCLUDED: canine melanoma line papers trimmed from head (kept in pool)."
+    expected_pool: 12
+    relevant:
+      - PMID:23658559   # Responses of human melanoma cell lines to MEK and BRAF inhibitors
+      - PMID:32567790   # Genomic characterization of the NZM melanoma cell line panel
+      - PMID:9354451    # CDKN2A/p16 inactivated in most melanoma cell lines
+      - PMID:10766161   # NRAS and PTEN/MMAC1 reciprocity in cutaneous melanoma lines
+
+  - id: pancreatic-kras
+    query: pancreatic cancer kras cell line
+    type: topical
+    source: agent-generated
+    notes: "Pancreatic ductal adenocarcinoma cell lines + KRAS — part of the pan-cancer resource corpus. Head favors PDAC line characterization + KRAS-response papers."
+    expected_pool: 16
+    relevant:
+      - PMID:25167228   # KRAS subtype + copy number predict pancreatic line response
+      - PMID:12692724   # Characterization of pancreatic ductal carcinoma cell lines
+      - PMID:11787853   # Genetic profile of 22 pancreatic carcinoma cell lines (K-ras, p53)
+      - PMID:29444439   # Differential effector engagement by oncogenic KRAS
+
+  # ---- known-item sanity checks ----
+  - id: ki-nf1-melanoma-title
+    query: Loss of NF1 in cutaneous melanoma is associated with RAS activation and MEK dependence
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact full title of a single landmark paper (Cancer Research 2014). Confirms the harness resolves an exact-title lookup; does not discriminate ranking strategies."
+    relevant:
+      - PMID:24576830   # Loss of NF1 in cutaneous melanoma is associated with RAS activation and MEK dependence
+
+  - id: ki-nerve-sheath-biospecimen-title
+    query: clinically and genomically annotated nerve sheath tumor biospecimen repository
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact title of the NF nerve-sheath biospecimen repository paper (Scientific Data 2020). Point lookup; harness sanity, not a discriminating case."
+    relevant:
+      - PMID:32561749   # A clinically and genomically annotated nerve sheath tumor biospecimen repository

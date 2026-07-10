@@ -1,0 +1,369 @@
+# Golden relevance set for the nf-publications SearchIndex (publication-grained).
+#
+# Each case maps a user query to the doi(s) that a *perfect* search SHOULD return,
+# ordered best-first. This is ground truth for the benchmark, derived from the SOURCE
+# table (syn16857542), NOT from what the current search happens to return.
+#
+# id_field is `doi`: the stored DOI string, matched verbatim by the runner. NOTE the
+# source data stores DOIs inconsistently — some bare (`10.xxxx/...`), some prefixed
+# (`https://doi.org/10.xxxx`). The values below are the EXACT stored strings so they
+# resolve in the index. A handful of rows have malformed/duplicated DOIs (e.g. "eabo5442",
+# "720", "S1534-..."); those are avoided in the heads where a clean sibling exists.
+#
+# type:  known-item = one defensible right answer (an exact paper the user re-finds).
+#        topical    = discovery; several papers are legitimately relevant.
+
+index:      syn75081631
+index_name: nf-publications
+version:    2026.07.06
+k:          10
+id_field:   doi
+
+cases:
+  # ---------------------------------------------------------------------------
+  # Agent-generated (generate-goldens skill), nf-publications syn75081631, 2026-07-03.
+  # Relevant sets derived from the SOURCE table (syn16857542) data — manifestation /
+  # diseaseFocus controlled-vocab columns (HAS/=) and LIKE over the free-text title
+  # (there is no abstract column on this table). SME-simulated discovery queries + ideal
+  # ranked heads. DRAFT — review before trusting.
+  # ---------------------------------------------------------------------------
+
+  # ---- tumor types (manifestation column) ----
+  - id: plexiform-neurofibroma
+    query: plexiform neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "manifestation HAS ('Plexiform Neurofibroma'); the largest tumor-type pool. Head favors canonical PN characterization / model / therapy papers."
+    expected_pool: 65
+    relevant:
+      - "10.1038/sdata.2018.106"          # Pharmacological and genomic profiling of NF1 plexiform neurofibromas
+      - "10.1172/jci.insight.120402"      # A porcine model of NF1 that mimics the human disease
+      - "10.1016/j.expneurol.2017.10.012" # Development of 3D culture models of plexiform neurofibroma
+      - "10.1172/JCI139807"               # Humanized neurofibroma model from iPSCs
+
+  - id: mpnst
+    query: mpnst
+    type: topical
+    source: agent-generated
+    notes: "Malignant peripheral nerve sheath tumor. manifestation HAS ('MPNST'). Head favors targeted-therapy and model papers."
+    expected_pool: 53
+    relevant:
+      - "10.1158/1078-0432.CCR-18-3224"   # Targeted Inhibition of DUSP1/DUSP6 in MPNST
+      - "10.1158/1078-0432.CCR-18-2437"   # Overcoming BET Inhibitor Resistance in MPNST
+      - "10.3390/genes11050477"           # New Model Systems and Targeted Therapies for MPNST
+      - "10.1016/j.ccell.2018.01.005"     # Lats1/2-TAZ/YAP drives malignant transformation
+
+  - id: cutaneous-neurofibroma
+    query: cutaneous neurofibroma
+    type: topical
+    source: agent-generated
+    notes: "cutaneous NF (cNF). manifestation HAS ('Cutaneous Neurofibroma'). Head favors resource / origin / matrisome papers specific to cNF."
+    expected_pool: 43
+    relevant:
+      - "10.1158/2159-8290.cd-18-0156"    # Cellular Origin, Tumor Progression of Cutaneous Neurofibromas
+      - "10.1038/sdata.2017.45"           # High-throughput molecular data resource for cutaneous neurofibromas
+      - "10.1186/s40478-020-01103-4"      # Human cutaneous neurofibroma matrisome by single-cell RNA-seq
+      - "10.1186/s13023-018-0772-z"       # Cutaneous neurofibromas in NF1: quantitative natural history
+
+  - id: schwannoma
+    query: schwannoma nf2
+    type: topical
+    source: agent-generated
+    notes: "manifestation HAS ('Schwannoma'); qualified with nf2 (schwannomas are the NF2 hallmark). Head favors NF2-schwannoma therapeutic / landscape papers."
+    expected_pool: 11
+    relevant:
+      - "10.1093/neuonc/noy046"           # EPH receptor signaling in NF2-deficient tumors
+      - "10.1007/s00401-020-02230-x"      # Epigenomic/genomic/transcriptomic landscape of schwannomatosis
+      - "10.1158/1535-7163.MCT-17-0417"   # c-Met and Src Inhibitors in schwannoma
+      - "10.1371/journal.pone.0197350"    # Systems-biology drug discovery for the rare tumor (NF2)
+
+  - id: optic-pathway-glioma
+    query: optic pathway glioma
+    type: topical
+    source: agent-generated
+    notes: "manifestation HAS ('Optic Pathway Glioma'). Small pool (5). Excludes the malformed-DOI row 'S1534-5807(21)00634-1' from the head in favor of clean DOIs."
+    expected_pool: 5
+    relevant:
+      - "10.1038/s41436-020-0873-7"       # Late morbidity/mortality in adult survivors of childhood glioma
+      - "10.1093/noajnl/vdaa037"          # Age and NF1 status on white matter integrity (optic)
+      - "10.1016/j.omtm.2021.03.004"      # miPSC/mESC-derived Retinal Ganglion Cell transplantation
+
+  - id: low-grade-glioma
+    query: nf1 low grade glioma
+    type: topical
+    source: agent-generated
+    notes: "manifestation HAS ('Low Grade Glioma'). Head favors molecular-landscape and drug-discovery LGG papers."
+    expected_pool: 8
+    relevant:
+      - "10.1038/s41591-018-0263-8"       # Molecular landscape of glioma in NF1 patients
+      - "10.1007/s00401-021-02276-5"      # Integrated molecular/clinical analysis of low-grade gliomas in children
+      - "10.3389/fonc.2016.00259"         # Challenges in Drug Discovery for NF1-Associated LGG
+
+  - id: meningioma
+    query: meningioma
+    type: topical
+    source: agent-generated
+    notes: "manifestation HAS ('Meningioma'); NF2-associated. Small pool (7)."
+    expected_pool: 7
+    relevant:
+      - "10.1074/jbc.RA120.014960"        # mTOR kinase inhibition disrupts NRG1-ERBB3 signaling
+      - "10.1093/brain/awac342"           # YAP/TAZ-driven TEAD activity in NF2-null tumors
+      - "10.1093/neuonc/noy046"           # EPH receptor signaling in NF2-deficient tumors
+
+  - id: atypical-neurofibroma-annubp
+    query: atypical neurofibroma annubp
+    type: topical
+    source: agent-generated
+    notes: "Atypical neurofibroma / ANNUBP (premalignant lesion). title LIKE '%atypical%' OR manifestation HAS ('ANNUBP'). Small, well-scoped pool (3)."
+    expected_pool: 3
+    relevant:
+      - "10.1093/hmg/ddz095"              # Cdkn2a (Arf) loss drives NF1-associated atypical neurofibroma
+      - "10.1002/humu.23552"              # Intratumor heterogeneity in NF1 (atypical progression)
+
+  # ---- disease focus ----
+  - id: nf2
+    query: nf2
+    type: topical
+    source: agent-generated
+    notes: "diseaseFocus = 'Neurofibromatosis type 2'. Head favors NF2 mechanism / therapeutic papers; excludes the crossMoDA imaging-challenge row (2026, imaging data) as off-topic to NF2 biology."
+    expected_pool: 9
+    relevant:
+      - "10.1093/neuonc/noy046"           # EPH receptor signaling in NF2-deficient tumors
+      - "10.1093/brain/awac342"           # YAP/TAZ-driven TEAD activity in NF2-null tumors
+      - "10.1074/jbc.RA120.014960"        # mTOR kinase inhibition in NF2 (NRG1-ERBB3)
+      - "https://doi.org/10.1093/neuonc/noad037" # Proteasomal pathway inhibition as therapy for NF2
+
+  # ---- therapies / drugs ----
+  - id: selumetinib
+    query: selumetinib
+    type: topical
+    source: agent-generated
+    notes: "MEK1/2 inhibitor, the flagship approved NF1 PN drug. title LIKE '%selumetinib%'. Head favors the pivotal clinical trials, best-first."
+    expected_pool: 10
+    relevant:
+      - "https://doi.org/10.1056/nejmoa1912735" # Selumetinib in Children with Inoperable Plexiform Neurofibromas (SPRINT)
+      - "https://doi.org/10.1056/nejmoa1605943" # Activity of Selumetinib in NF1-Related Plexiform Neurofibromas (phase I)
+      - "https://doi.org/10.1093/neuonc/noad086" # Long-term safety and efficacy of selumetinib in children
+      - "10.1093/noajnl/vdab020"          # Selumetinib normalizes Ras/MAPK signaling
+
+  - id: mek-inhibitor
+    query: mek inhibitor
+    type: topical
+    source: agent-generated
+    notes: "MEK inhibitor class broadly (not only selumetinib). title LIKE '%MEK%'. Head favors preclinical mechanism/combination papers to complement the selumetinib case."
+    expected_pool: 13
+    relevant:
+      - "10.1158/0008-5472.CAN-20-1365"   # Combined Inhibition of SHP2 and MEK in NF1-deficient models
+      - "10.1158/0008-5472.CAN-20-1992"   # RTK activation mediates acquired resistance to MEK inhibition
+      - "10.1158/1078-0432.CCR-22-3722"   # MEK Inhibition Synergizes with TYK2 Inhibitors in NF1 MPNST
+      - "10.1158/0008-5472.CAN-17-3167"   # MET status potentiates sensitivity to MET and MEK inhibition
+
+  - id: mtor-pi3k
+    query: mtor pi3k inhibition
+    type: topical
+    source: agent-generated
+    notes: "mTOR / PI3K pathway targeting. title LIKE '%mTOR%' OR '%PI3K%'. Small, clean pool (2)."
+    expected_pool: 2
+    relevant:
+      - "10.1074/jbc.RA120.014960"        # mTOR kinase inhibition disrupts NRG1-ERBB3 signaling
+      - "10.7303/syn18460006.1"           # PI3K as a potential therapeutic target (schwannoma)
+
+  - id: nonsense-mutation-therapy
+    query: nf1 nonsense mutation readthrough
+    type: topical
+    source: agent-generated
+    notes: "Gene-based / nonsense-suppression / exon-skip / antisense therapies for NF1. title LIKE '%nonsense%' OR '%readthrough%' OR '%exon skip%' OR '%antisense%'. Well-scoped pool (5)."
+    expected_pool: 5
+    relevant:
+      - "10.1016/j.expneurol.2024.114914"  # Therapeutic nonsense suppression in a neurofibromatosis model
+      - "10.1016/j.omtn.2022.03.011"       # Targeted exon skipping of NF1 exon 17
+      - "https://doi.org/10.1038/s10038-022-01072-7" # Functional restoration of mouse Nf1 nonsense alleles
+      - "https://doi.org/10.3390/jpm11121320" # Antisense Morpholino restoration of NF1 function
+
+  - id: ras-mapk-signaling
+    query: ras mapk pathway
+    type: topical
+    source: agent-generated
+    notes: "Ras/MAPK signaling, the core NF1 pathway. title LIKE '%Ras%' OR '%MAPK%'. Excludes false friends: the RASopathy-autism symptom-profile and resting-state fMRI papers match 'Ras' only via 'RASopathies' but are behavioral, not pathway-biology; kept out of the head."
+    expected_pool: 16
+    relevant:
+      - "10.1093/noajnl/vdab020"          # Selumetinib normalizes Ras/MAPK signaling
+      - "10.2174/1389557515666151001154002" # How to Target Activated Ras Proteins
+      - "10.1101/2022.12.23.521754"       # Unbalancing cAMP and Ras/MAPK pathways as a therapeutic strategy
+      - "10.1101/199026"                  # Oncogenic RAS-MET signal interactions modulated by P53
+
+  # ---- model systems ----
+  - id: mouse-model
+    query: nf1 mouse model
+    type: topical
+    source: agent-generated
+    notes: "Murine models of NF1. title LIKE '%mouse%'. Excludes eLife dLight1 dopamine-imaging row as a behavioral-imaging outlier vs. tumor modeling; head favors tumor / genetic mouse models."
+    expected_pool: 8
+    relevant:
+      - "10.1093/noajnl/vdab129"          # Postnatal Nf1 and p53 loss mouse model recapitulates MPNST
+      - "10.1002/pbc.28372"               # Early imatinib reduces plexiform neurofibroma in a mouse model
+      - "10.1126/sciadv.adt9210"          # Glial-to-mesenchymal transition of tumor Schwann cells (mouse)
+
+  - id: porcine-minipig-model
+    query: minipig porcine model
+    type: topical
+    source: agent-generated
+    notes: "Large-animal (pig/minipig) NF1 models. title LIKE '%porcine%' OR '%minipig%' OR '%pig%'. Head restricted to genuine pig-model papers (excludes epigenomic/selumetinib rows that only matched the '%pig%' substring incidentally)."
+    expected_pool: 10
+    relevant:
+      - "10.1172/jci.insight.120402"      # A porcine model of NF1 that mimics the human disease
+      - "10.1038/s42003-018-0163-y"       # Genetically engineered minipigs model NF1 clinical features
+      - "10.1101/495358"                  # Sex-dependent pain and sleep in a porcine model of NF1
+      - "10.1097/j.pain.0000000000001648" # Nociception and QoL measures in a porcine model
+
+  - id: ipsc-model
+    query: ipsc derived neurofibroma model
+    type: topical
+    source: agent-generated
+    notes: "Induced pluripotent stem cell models. title LIKE '%iPSC%' OR '%pluripotent%'. Small pool (4); excludes the malformed-DOI '102198' neurofibromasphere row from the head."
+    expected_pool: 4
+    relevant:
+      - "10.1172/JCI139807"               # Humanized neurofibroma model from iPSCs
+      - "10.1016/j.celrep.2022.110385"    # Modeling iPSC-derived human neurofibroma-like tumors in mice
+      - "10.1016/j.omtm.2021.03.004"      # miPSC/mESC-derived Retinal Ganglion Cells
+
+  - id: schwann-cell-biology
+    query: schwann cell nf1
+    type: topical
+    source: agent-generated
+    notes: "Schwann cell origin / biology (the NF1 tumor cell type). title LIKE '%Schwann cell%'. Head favors origin/lineage and immortalized-line resource papers."
+    expected_pool: 13
+    relevant:
+      - "10.1158/2159-8290.CD-18-0151"    # Spatiotemporal Loss of NF1 in Schwann Cell Lineage
+      - "10.1038/labinvest.2016.88"       # Immortalization of human normal and NF1 neurofibroma Schwann cells
+      - "10.1038/srep43315"               # Inflammatory gene signature distinguishes neurofibroma Schwann cells
+      - "10.1016/j.ccell.2018.01.005"     # Lats1/2-TAZ/YAP programming of Schwann cells
+
+  # ---- -omics / assays ----
+  - id: single-cell-rnaseq
+    query: single cell rna sequencing
+    type: topical
+    source: agent-generated
+    notes: "scRNA-seq / snRNA-seq studies. title LIKE '%single-cell%' etc. Small clean pool; the duplicated malformed-DOI 'eabo5442' multiomics row is excluded from the head in favor of clean DOIs."
+    expected_pool: 3
+    relevant:
+      - "10.1186/s40478-020-01103-4"      # Cutaneous neurofibroma matrisome by single-cell RNA sequencing
+      - "https://doi.org/10.1186/s40478-024-01821-z" # snRNA-seq of human cutaneous neurofibromas +/- selumetinib
+
+  - id: whole-exome-sequencing
+    query: whole exome sequencing
+    type: topical
+    source: agent-generated
+    notes: "Genomic sequencing studies (exome / cfDNA WGS). title LIKE '%exome%' OR '%sequencing%' etc. Well-scoped pool (3)."
+    expected_pool: 3
+    relevant:
+      - "10.1093/noajnl/vdz026"           # Whole exome sequencing reveals maintained polyclonal nature
+      - "10.1371/journal.pmed.1003734"    # Cell-free DNA ultra-low-pass WGS to distinguish malignant transformation
+
+  - id: proteomics
+    query: proteomics mass spectrometry
+    type: topical
+    source: agent-generated
+    notes: "Proteomic / mass-spec profiling. title LIKE '%proteom%' OR '%mass spec%'. Small pool (2); excludes the malformed-DOI '3883' Schwannoma-proteomics row from the head."
+    expected_pool: 2
+    relevant:
+      - "https://doi.org/10.1038/s41416-025-03055-9" # Mass spectrometric insights into human cutaneous neurofibroma protein composition
+
+  - id: high-throughput-drug-screen
+    query: high throughput drug screening preclinical
+    type: topical
+    source: agent-generated
+    notes: "Drug-screening / preclinical discovery platforms. title LIKE '%drug screen%' OR '%high-throughput%' OR '%drug discovery%' OR '%preclinical%'. Head favors screening-platform / resource papers."
+    expected_pool: 6
+    relevant:
+      - "10.1158/1535-7163.MCT-21-0947"   # High-Throughput Screening Platform Identifies Novel Combinations
+      - "10.1038/sdata.2017.45"           # High-throughput molecular data resource for cutaneous neurofibromas
+      - "10.1371/journal.pone.0197350"    # Systems-biology drug discovery for the rare tumor
+
+  # ---- clinical phenotypes / outcomes ----
+  - id: pain
+    query: nf1 pain
+    type: topical
+    source: agent-generated
+    notes: "Pain as an NF1 clinical burden. manifestation HAS ('Pain') plus title pain studies. Head favors mechanistic + measurement + intervention pain papers."
+    expected_pool: 4
+    relevant:
+      - "10.1007/s12035-019-1568-4"       # CRMP2 post-translational modifications drive pain pathophysiology
+      - "10.1101/495358"                  # Sex-dependent differences in pain and sleep (porcine model)
+      - "10.1016/j.jcbs.2021.10.003"      # Acceptance and commitment therapy for NF pain
+
+  - id: cognition-learning
+    query: cognitive learning impairment
+    type: topical
+    source: agent-generated
+    notes: "Neurocognitive / learning phenotypes in NF1. title LIKE '%cognit%' OR '%learning%'. IMPORTANT false friends excluded: 'Machine Learning of Allosteric Effects' and 'Machine learning in rare disease' match 'learning' but are computational methods, NOT cognition — kept out."
+    expected_pool: 4
+    relevant:
+      - "10.1038/s41593-024-01654-y"      # Nf1 mutation disrupts activity-dependent oligodendroglial plasticity and learning
+      - "10.1007/s10803-021-05043-3"      # Cognitive and electrophysiological correlates of working memory impairment
+      - "10.1016/j.ejpn.2020.07.014"      # Cognitive functioning and pain interference
+
+  - id: quality-of-life-pro
+    query: quality of life patient reported outcomes
+    type: topical
+    source: agent-generated
+    notes: "Patient-reported outcomes / QoL instruments. title LIKE '%quality of life%' OR '%patient-reported%' etc. Head favors PRO-measure development papers."
+    expected_pool: 10
+    relevant:
+      - "10.1002/mgg3.1530"               # Development of the PlexiQoL patient-reported outcome measure
+      - "10.1007/s11060-016-2351-2"       # Pediatric QoL inventory neurofibromatosis module
+      - "10.1016/j.jpeds.2018.10.019"     # PROMIS and QoL in NF1
+      - "10.1186/s41687-025-00877-2"      # PRO measures assessing tumor burden
+
+  - id: natural-history
+    query: longitudinal natural history tumor growth
+    type: topical
+    source: agent-generated
+    notes: "Longitudinal / natural-history tumor studies. title LIKE '%natural history%' OR '%longitudinal%'. Small clean pool; augmented with the 10-year internal neurofibroma growth follow-up paper (longitudinal growth)."
+    expected_pool: 3
+    relevant:
+      - "10.1093/neuonc/noaa053"          # Longitudinal evaluation of peripheral nerve sheath tumors
+      - "10.1186/s13023-018-0772-z"       # Cutaneous neurofibromas: quantitative natural history
+      - "10.1212/WNL.0000000000201535"    # Ten-Year Follow-up of Internal Neurofibroma Growth Behavior
+
+  - id: imaging-mri
+    query: mri imaging tumor segmentation
+    type: topical
+    source: agent-generated
+    notes: "Imaging / radiomics / MRI-based tumor measurement. title LIKE '%imaging%' OR '%MRI%' OR '%radiomic%'. Excludes the malformed-DOI whole-body / device rows ('e70020','e70087') from the head."
+    expected_pool: 6
+    relevant:
+      - "10.1109/JBHI.2021.3087735"       # DINs: Deep Interactive Networks for Neurofibroma Segmentation
+      - "10.1016/j.neurad.2018.05.006"    # Radiomic biomarkers informative of cancerous transformation
+      - "10.1016/j.jid.2023.03.1681"      # Current and Emerging Imaging Techniques for NF1
+
+  - id: tyrosine-kinase-inhibitor
+    query: tyrosine kinase inhibitor imatinib
+    type: topical
+    source: agent-generated
+    notes: "TKI therapies for NF1 tumors (imatinib, sunitinib, cabozantinib, RTK targeting). title LIKE '%imatinib%'/'%sunitinib%'/'%tyrosine kinase%'/'%cabozantinib%'. Head favors clinical/preclinical TKI papers."
+    expected_pool: 5
+    relevant:
+      - "10.1038/s41591-020-01193-6"      # Cabozantinib for NF1-related plexiform neurofibromas
+      - "10.1002/pbc.28372"               # Early imatinib mesylate reduces plexiform neurofibroma
+      - "10.1002/pbc.25763"               # Preclinical evidence for Sunitinib Malate
+      - "10.1158/0008-5472.CAN-20-1992"   # RTK activation mediates acquired resistance to MEK inhibition
+
+  # ---- known-item sanity checks ----
+  - id: known-nejm-selumetinib-sprint
+    query: selumetinib in children with inoperable plexiform neurofibromas
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact title of the pivotal NEJM SPRINT trial. One defensible right answer; confirms the harness works, does not discriminate strategies."
+    expected_pool: 1
+    relevant:
+      - "https://doi.org/10.1056/nejmoa1912735" # Selumetinib in Children with Inoperable Plexiform Neurofibromas
+
+  - id: known-humanized-ipsc-neurofibroma
+    query: humanized neurofibroma model from induced pluripotent stem cells
+    type: known-item
+    source: agent-generated
+    notes: "SANITY CHECK — exact-title lookup of a specific known paper (JCI 2021)."
+    expected_pool: 1
+    relevant:
+      - "10.1172/JCI139807"               # Humanized neurofibroma model from induced pluripotent stem cells
