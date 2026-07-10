@@ -10,7 +10,7 @@
 #
 index:      syn75081630
 index_name: nf-datasets
-version:    2026.07.06
+version:    2026.07.10
 k:          10
 id_field:   id
 
@@ -27,8 +27,8 @@ cases:
     query: rna-seq gene expression
     type: topical
     source: agent-generated
-    notes: "Bulk RNA-seq / gene-expression datasets (measurementTechnique HAS 'RNA-seq'; 33 rows, scRNA-seq excluded). Head favors clearly-labeled bulk expression sets across cell lines, MPNST, biospecimen cohorts, and organoids."
-    expected_pool: 33
+    notes: "Bulk RNA-seq / gene-expression datasets (measurementTechnique HAS 'RNA-seq'; 34 rows live, scRNA-seq excluded). Head favors clearly-labeled bulk expression sets across cell lines, MPNST, biospecimen cohorts, and organoids."
+    expected_pool: 34
     relevant:
       - syn66339969   # MPNST Cell Line RNA-seq
       - syn53133024   # Bulk RNA-sequencing of Johns Hopkins NF1 Biospecimen Repository cohort
@@ -115,8 +115,8 @@ cases:
     query: combination drug screen synergy
     type: topical
     source: agent-generated
-    notes: "Combination (as opposed to single-agent) drug screens. Grounded on titles/measurementTechnique naming combination or matrix screens. 6x6/10x10 are the canonical dose-matrix combination screens."
-    expected_pool: 4
+    notes: "Combination (as opposed to single-agent) drug screens. Grounded on titles/measurementTechnique naming combination or matrix screens (3 rows live; corrected from a documented pool of 4 that mixed in dataType:'drug combination screen' rows — Cell Viability Celigo Assays, LZTR1 viability assay — that are not actually combination-screen-titled/typed). 6x6/10x10 are the canonical dose-matrix combination screens."
+    expected_pool: 3
     relevant:
       - syn51917001   # 10x10 Combination Screens of pNF Cell Lines
       - syn51917244   # 6x6 Combination Screens of pNF Cell Lines
@@ -184,11 +184,12 @@ cases:
     query: immunohistochemistry ihc imaging
     type: topical
     source: agent-generated
-    notes: "Histology / immuno-imaging datasets (IHC/ICC/immunofluorescence; grounded on titles + measurementTechnique immunohistochemistry/immunofluorescence). Excludes zebrafish EdU-proliferation images (functional assay, not histology) and radiology MRI (separate case)."
-    expected_pool: 6
+    notes: "Histology / immuno-imaging datasets (IHC/ICC/immunofluorescence; grounded on titles + measurementTechnique immunohistochemistry/immunofluorescence/histology). Excludes zebrafish EdU-proliferation/functional-imaging rows and the NF1 iPSC co-culture row now also tagged 'immunofluorescence' (functional assay, not histology) and radiology MRI (separate case). Added a live histology dataset not in the original draft (syn65468212)."
+    expected_pool: 5
     relevant:
       - syn64954916   # Immunohistochemistry Data for MPNST Immune Microenvironment Study
       - syn64954925   # IHC Quantification Data for NF1 MPNST Mouse Models
+      - syn65468212   # Histopathology - Human PN, ANNUBP and MPNST Specimens
       - syn64954909   # IHC Data
       - syn64954871   # Immunocytochemistry Imaging of MPNST Cells
 
@@ -196,22 +197,23 @@ cases:
     query: mri imaging vestibular schwannoma
     type: topical
     source: agent-generated
-    notes: "Radiology MRI datasets, all from the NF2 / vestibular-schwannoma crossMoDA & TCIA collections (grounded on title). Radiotherapy-planning set included as an adjacent imaging modality, ranked last."
-    expected_pool: 3
+    notes: "Radiology MRI datasets, all from the NF2 / vestibular-schwannoma crossMoDA & TCIA collections (grounded on title/measurementTechnique 'conventional MRI'). The old crossMoDA MC-RC id (syn74287640) no longer resolves; replaced with the two live crossMoDA Dataset entities (syn72001370, syn72001371). Radiotherapy-planning set included as an adjacent imaging modality, ranked last."
+    expected_pool: 4
     relevant:
       - syn74457818   # MRI -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
-      - syn74287640   # MRI - Vestibular Schwannoma crossMoDA challenge (TCIA Vestibular-Schwannoma-MC-RC)
+      - syn72001370   # Cross-Modality Domain Adaptation Challenge (crossMoDA)
+      - syn72001371   # Cross-Modality Domain Adaptation Challenge 2022 (crossMoDA)
       - syn74457821   # Radiotherapy Planning -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
 
   - id: chip-seq
     query: chip-seq
     type: topical
     source: agent-generated
-    notes: "ChIP-seq datasets (grounded on title 'ChIP-seq'; 2 rows). Exhaustive."
+    notes: "ChIP-seq datasets (grounded on title 'ChIP-seq'; exhaustive."
     expected_pool: 2
     relevant:
-      - syn74315344   # ChIP-seq BRD4 - NF2-null schwannoma cell lines (ENA PRJNA704960)
       - syn74309551   # GEO_GSE120686 ChIP-seq HuR-ELAVL1 MPNST tumor samples
+      - syn74315344   # BRD4/NF2-null schwannoma ChIP-seq dataset
 
   - id: elisa-antibody
     query: elisa antibody assay
@@ -268,8 +270,8 @@ cases:
     query: schwannomatosis
     type: topical
     source: agent-generated
-    notes: "Schwannomatosis datasets — grounded on the Synodos Schwannomatosis / Schwannomatosis series titles (diseaseFocus Schwannomatosis-NOS + Synodos schwannomatosis study). Head favors the RNA-seq + methylation Schwannomatosis series."
-    expected_pool: 6
+    notes: "Schwannomatosis datasets — grounded on the Synodos Schwannomatosis / Schwannomatosis series titles (diseaseFocus Schwannomatosis-NOS + Synodos schwannomatosis study; 7 rows live, incl. Deep Variant Tumor Calls not in the original head). Head favors the RNA-seq + methylation Schwannomatosis series."
+    expected_pool: 7
     relevant:
       - syn64954727   # Schwannomatosis RNA-seq Raw Data (fastq)
       - syn63540453   # Schwannomatosis RNA-seq Quantification Data (Salmon sf)
@@ -281,13 +283,13 @@ cases:
     query: vestibular schwannoma nf2
     type: topical
     source: agent-generated
-    notes: "NF2 / vestibular-schwannoma datasets (grounded on title 'Vestibular Schwannoma' + diseaseFocus NF2-related). Spans raw sequencing, single-cell, and TCIA/crossMoDA MRI collections."
-    expected_pool: 6
+    notes: "NF2 / vestibular-schwannoma datasets (grounded on title 'Vestibular Schwannoma' + diseaseFocus NF2-related; 8 rows live). Spans raw sequencing, single-cell, and TCIA/crossMoDA MRI collections. The old crossMoDA id (syn74287640) no longer resolves; replaced with the live crossMoDA 2022 Dataset entity (syn72001371)."
+    expected_pool: 8
     relevant:
       - syn72001379   # Raw Sequencing Data for Vestibular Schwannoma
       - syn72001380   # Single-cell multi-omic analysis of vestibular schwannoma (Seurat objects)
       - syn74457818   # MRI -- Vestibular Schwannoma (TCIA Vestibular-Schwannoma-SEG)
-      - syn74287640   # MRI - Vestibular Schwannoma crossMoDA challenge
+      - syn72001371   # Cross-Modality Domain Adaptation Challenge 2022 (crossMoDA)
       - syn72001377   # Automated Whole Cochlear T2 Signal and Hearing Loss in Observed Vestibular Schwannoma
 
   - id: low-grade-glioma
@@ -320,8 +322,8 @@ cases:
     query: nf1 mouse model
     type: topical
     source: agent-generated
-    notes: "Mouse (Mus musculus) datasets (species HAS 'Mus musculus'; ~21 rows). Head favors datasets clearly framed on mouse/PDX models."
-    expected_pool: 21
+    notes: "Mouse (Mus musculus) datasets (species HAS 'Mus musculus' or 'Mus musculus (humanized)'; 17 rows live). Head favors datasets clearly framed on mouse/PDX models."
+    expected_pool: 17
     relevant:
       - syn29783617   # Aligned Whole Genome Sequencing Data for NF1-MPNST PDX Models
       - syn74278251   # RNA-seq, Plexiform Neurofibroma, Trigeminal Nerve, Mus musculus (GEO GSE213786)

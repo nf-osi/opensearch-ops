@@ -15,7 +15,7 @@
 
 index:      syn75081633
 index_name: nf-studies
-version:    2026.07.06
+version:    2026.07.10
 k:          10
 id_field:   studyId
 
@@ -37,8 +37,8 @@ cases:
     query: mpnst rna-seq gene expression
     type: topical
     source: agent-generated
-    notes: "MPNST studies with gene-expression/RNA-seq data. Source: manifestation HAS ('MPNST') AND dataType HAS ('geneExpression'), pool 14; head favors MPNST-centric titles over the biospecimen repository."
-    expected_pool: 14
+    notes: "MPNST studies with gene-expression/RNA-seq data. Source: manifestation HAS ('MPNST') AND dataType HAS ('geneExpression'), pool 15; head favors MPNST-centric titles over the biospecimen repository."
+    expected_pool: 15
     relevant:
       - syn32128792   # Genomic landscape of malignant peripheral nerve sheath tumor (MPNST)
       - syn11681835   # Novel therapeutic development of NF1-associated malignant peripheral nerve sheath tumor (MPNST)
@@ -176,13 +176,13 @@ cases:
     query: scrnaseq nf1 tumor
     type: topical
     source: agent-generated
-    notes: "Single-cell / scRNA-seq studies of NF tumors. Source: studyName/summary LIKE single cell / single-cell; head favors titles that are explicitly single-cell."
+    notes: "Single-cell / scRNA-seq studies of NF tumors. Source: studyName/summary LIKE single cell / single-cell; head favors titles that are explicitly single-cell. syn11374353 and syn27261848 only mention 'single cell' tangentially in the description (culture/suspension technique, not the study's method) and were swapped out for stronger explicit matches."
     expected_pool: 20
     relevant:
       - syn25999950   # Single cell sequencing of glioma in NF1 patients
-      - syn74288246   # Deciphering cellular and molecular signatures of malignant progression in NF1 using single-cell transcriptomics
-      - syn11374353   # Identification of pathways triggered by Schwann cell-fibroblast interactions driving cutaneous neurofibroma growth
-      - syn27261848   # Targeting endothelial cell to macrophage communication in NF1 tumors
+      - syn74278763   # Human cutaneous neurofibroma matrisome revealed by single-cell RNA sequencing
+      - syn74288246   # Deciphering cellular and molecular signatures of malignant progression in Neurofibromatosis type 1 using single-cell transcriptomic analysis
+      - syn68805918   # Genomics-assisted early detection, diagnosis and management of NF1-related tumors
 
   - id: ipsc-models
     query: ipsc derived schwann cell model
@@ -313,13 +313,13 @@ cases:
     query: ntap malignant peripheral nerve sheath tumor
     type: topical
     source: agent-generated
-    notes: "NTAP-funded MPNST studies. Source: fundingAgency HAS ('NTAP') AND manifestation HAS ('MPNST'); head favors clearly MPNST-focused NTAP titles."
-    expected_pool: 33
+    notes: "NTAP-funded MPNST studies. Source: fundingAgency HAS ('NTAP') AND manifestation HAS ('MPNST'), pool 16 (live); head favors clearly MPNST-focused NTAP titles. syn21984813 no longer carries the NTAP funder tag live (now NFRI/NIH-NCI) and was replaced."
+    expected_pool: 16
     relevant:
       - syn11681835   # Novel therapeutic development of NF1-associated MPNST
       - syn11638893   # Development of a Preclinical NF1-MPNST Platform Suitable for Precision Oncology
-      - syn21984813   # Predictive Modeling Utilizing a Preclinical NF1-MPNST Platform
       - syn25999248   # Targeting the Let7-HMGA2 axis in MPNST Prevention
+      - syn39800678   # Uncovering the Molecular Alterations that Drive Malignant Transformation in NF1-associated Peripheral Nerve Sheath Tumors
 
   - id: cdmrp-funded
     query: dod cdmrp mpnst precision medicine

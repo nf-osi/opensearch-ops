@@ -1,6 +1,6 @@
 index:      syn75081644
 index_name: nf-publications-v2
-version:    2026.07.03
+version:    2026.07.10
 k:          10
 id_field:   pmid
 # id_field rationale: the source table (syn51735450) has 1892 rows but only ~655 distinct
@@ -131,12 +131,12 @@ cases:
     query: pten loss schwann cell tumor
     type: topical
     source: agent-generated
-    notes: "PTEN cooperation with NF1 in Schwann cells. FALSE FRIENDS EXCLUDED: the melanoma PTEN/MMAC1 lines papers (different tissue/context) trimmed from head; they remain in the pool."
+    notes: "PTEN cooperation with NF1 in Schwann cells. FALSE FRIENDS EXCLUDED: the melanoma PTEN/MMAC1 lines papers (different tissue/context) trimmed from head; they remain in the pool. CORRECTED 2026-07-10: PMID:21725359 (live title 'Concurrent loss of the PTEN and RB1 tumor suppressors attenuates RAF dependence in melanomas harboring (V600E)BRAF') IS the excluded melanoma false friend, not a Schwann-cell paper -- it had been miscategorized into the head. Replaced with PMID:33707600, a sporadic MPNST cell line paper reporting PTEN mutation alongside CDKN2A/TP53 loss, live-linked via nf:Development."
     expected_pool: 8
     relevant:
       - PMID:22700876   # PTEN and NF1 inactivation in Schwann cells -> severe phenotype
       - PMID:23319880   # Conditional Pten inactivation + EGFR overexpression in Schwann cells
-      - PMID:21725359   # Concurrent PTEN + RB1 loss attenuates RAF dependence
+      - PMID:33707600   # Establishment + genomic characterization of a sporadic MPNST cell line (PTEN, CDKN2A, TP53 loss)
 
   - id: neurofibromin-function
     query: neurofibromin tumor suppressor function
@@ -248,13 +248,13 @@ cases:
     query: ipsc derived neurofibroma
     type: topical
     source: agent-generated
-    notes: "iPSC-based NF1 disease modeling. Head leads with iPSC-derived neurofibroma tumor models and NF1 patient iPSC line generation."
+    notes: "iPSC-based NF1 disease modeling. Head leads with iPSC-derived neurofibroma tumor models and NF1 patient iPSC line generation. CORRECTED 2026-07-10: PMID:34343671's live title/abstract is an induced-pluripotent-stem-cell model of OVARIAN cancer -- unrelated to NF1, apparently a mismatched PMID in the draft. Replaced with PMID:32243842 (human iPSC-derived neurons/cerebral organoids modeling germline NF1 mutations), which is on-topic and live-linked via nf:Development."
     expected_pool: 9
     relevant:
       - PMID:35172160   # iPSC-derived human neurofibroma-like tumors in mice
       - PMID:33108355   # Humanized neurofibroma model from iPSCs
       - PMID:33091851   # Generation of four iPSC lines from NF1 patients
-      - PMID:34343671   # iPSC model for NF1 (in vitro characterisation)
+      - PMID:32243842   # Human iPSC-derived neurons and cerebral organoids establish differential effects of germline NF1 gene mutations
 
   - id: patient-derived-xenograft-nerve-sheath
     query: patient derived xenograft nerve sheath tumor
