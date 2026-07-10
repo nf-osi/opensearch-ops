@@ -355,6 +355,7 @@ cases:
     type: known-item
     source: agent-generated
     notes: "SANITY CHECK — exact title of the pivotal NEJM SPRINT trial. One defensible right answer; confirms the harness works, does not discriminate strategies."
+    expected_pool: 1
     relevant:
       - "https://doi.org/10.1056/nejmoa1912735" # Selumetinib in Children with Inoperable Plexiform Neurofibromas
 
@@ -363,5 +364,6 @@ cases:
     type: known-item
     source: agent-generated
     notes: "SANITY CHECK — exact-title lookup of a specific known paper (JCI 2021)."
+    expected_pool: 1
     relevant:
       - "10.1172/JCI139807"               # Humanized neurofibroma model from induced pluripotent stem cells

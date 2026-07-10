@@ -1,0 +1,10 @@
+# Fields the benchmark runner matches queries against for nf-publications-v2.
+# The unboosted variant of each field is derived automatically by run.py.
+# No `keywords`/tag column exists on this table (source syn51735450); the topical
+# signal lives in the free-text title + abstract, so those carry the weight.
+fields:
+  - publicationTitle^5   # the strongest topical signal; concise, curated
+  - abstract^2           # broad concept coverage; where most matches actually live
+  - authors^2            # supports author / consortium name lookups
+  - journal              # weak topical signal (venue), no boost
+  - citation            # full formatted citation; catches names + title tokens, no boost

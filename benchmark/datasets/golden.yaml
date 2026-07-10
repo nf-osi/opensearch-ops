@@ -365,6 +365,7 @@ cases:
     type: known-item
     source: agent-generated
     notes: "SANITY CHECK — exact dataset title. One defensible answer; confirms the harness matches an exact title, does not discriminate strategies."
+    expected_pool: 1
     relevant:
       - syn51914478   # Synodos NF2 Drug Screen - 2017 Release
 
@@ -373,5 +374,6 @@ cases:
     type: known-item
     source: agent-generated
     notes: "SANITY CHECK — exact dataset title. One defensible answer; confirms exact-title retrieval."
+    expected_pool: 1
     relevant:
       - syn68376356   # cNF Spatial Transcriptomics
