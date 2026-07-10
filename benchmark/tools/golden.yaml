@@ -121,8 +121,8 @@ cases:
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
-    recall_gap_current: false   # Hit@20 rule: 1/5 in top 20 (icNF98.4c, fuzzy at rank 12) counts as a hit — but recall is weak
-    notes: "SME-curated; expected_pool omitted (source listed 0). Legacy (MySQL) found none. Current OpenSearch surfaces only 1/5 in the top 20 (icNF98.4c, a fuzzy match at rank 12) and 2/5 not at all — by the Hit@20 rule this isn't a strict current gap, but recall is weak; a 'cnf' synonym for the cNF cell lines would still materially help."
+    recall_gap_current: false   # verified 2026-07-07 (post-synonym-fix): 4/5 in top 20 — only 2/5 in top 10
+    notes: "SME-curated; expected_pool omitted (source listed 0). Legacy (MySQL) found none. 2026-07-07: 'cnf' synonym confirmed working — 4/5 now in top 20, but only 2/5 in top 10 (swamped by other cNF/icNF-named siblings, same crowding pattern as mpnst/pnf; boost tuning doesn't fix it — see those notes)."
     relevant:
       - 46da7a41-c654-426e-bfb7-361caf4d3c4c   # icNF98.4c (Cell Line)
       - 5a466cdc-5eaa-45a5-87b1-ba9cac6d7d21   # 28cNF (Cell Line)
@@ -223,7 +223,6 @@ cases:
     expected_pool: 27
     entity_types: [Cell Line]
     recall_gap_current: false
-    notes: "SME-curated; re-verified live 2026-07-10: 27 Cell Lines match by name or by manifestation='Malignant Peripheral Nerve Sheath Tumor' (down from the SME's ~43 estimate); these are the ideal head."
     relevant:
       - 7db6b49f-7eec-4b47-bbdc-675a8a464735   # MPNST 724 (Cell Line)
       - 1b604846-d41c-4969-a79a-9660c04e585c   # NCC-MPNST3-X2-C1 (Cell Line)
@@ -334,8 +333,8 @@ cases:
     expected_pool: 2
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
-    recall_gap_current: true   # verified live (top 20): 0/2 in top 20 (only fuzzy at ranks 79/83) — needs 'pnf' synonym
-    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none; current OpenSearch surfaces 0/2 in the top 20 (only fuzzy matches at ranks 79/83) — needs 'pnf' added as a synonym for plexiform neurofibroma."
+    recall_gap_current: false   # verified 2026-07-07 (post-synonym-fix): 2/2 in top 20, ranks 5-6 — no longer a recall gap
+    notes: "SME-curated; kept top 2 of 5 (tail were near-name false friends). Legacy found none. 2026-07-07: 'pnf' synonym confirmed working — both now rank 5-6 (top 10), swamped by 6 other '#PNF_...' Spanish National Cell Bank iPSC lines (correctly Cutaneous Neurofibroma per their own description — 'PNF' here is that cohort's naming convention, not our 'Plexiform NF' abbreviation; a coincidental collision, not a data mislabel) plus 3 genuinely-plexiform 'JH-2-0xx (pNF)' lines. Boost tuning tested and made this WORSE (shared 'neurofibroma' token amplifies swamping) — not a boost-tuning fix; same pattern as mpnst/cnf."
     relevant:
       - 1cc872fc-6a95-4722-a598-bf60bb124b82   # 3PNF_SiPSsv_MM_11 (Cell Line)
       - 7deb7765-38aa-4d8a-a3cb-bd4aefeb3a86   # 3PNF_FiPSsv_PM_2 (Cell Line)
@@ -481,7 +480,7 @@ cases:
     expected_pool: 238
     entity_types: [Cell Line]
     recall_gap_current: true
-    notes: "Disease/cancer discovery (NF1 is recurrently mutated in melanoma). Ground truth = cellLineManifestation HAS ('Melanoma','Cutaneous Melanoma') (source table, 238 rows). RECALL GAP: bare 'melanoma' ranks these #1, but the realistic 'melanoma cell line' query buries ALL of them past rank 20 — the generic 'cell line' tokens swamp the manifestation match. Head is a representative few."
+    notes: "Disease/cancer discovery (NF1 is recurrently mutated in melanoma). Ground truth = cellLineManifestation HAS ('Melanoma','Cutaneous Melanoma') (source table, 238 rows). RECALL GAP: bare 'melanoma' ranks these #1, but the realistic 'melanoma cell line' query buries ALL of them past rank 20 — the generic 'cell line' tokens swamp the manifestation match. Head is a representative few. Confirmed 2026-07-07: unaffected by the cellLineCategory/resourceType KEYWORD-analyzer fix — different root cause (generic-token dilution, not field analyzer)."
     relevant:
       - 9ce4f191-b7ce-437d-8cef-f6de332040e0   # MUG-Mel1 (Cell Line)
       - 9c8c2065-4781-4275-88bc-c300d6fce45a   # SK-MEL-109 (Cell Line)
@@ -665,8 +664,8 @@ cases:
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
     expected_pool: 3
     entity_types: [Cell Line]
-    recall_gap_current: false   # verified live 2026-06-22: 3/3 head in top 20 (ranks 8-11)
-    notes: "Eval CL-002. Ground truth = cellLineCategory='Hybridoma' (source table, 3 rows; CPTC-NF1 hybridomas)."
+    recall_gap_current: false   # verified live 2026-07-07 (post-KEYWORD-analyzer fix): 3/3 in top 20, rank #1 on multi_match_cross (was ranks 8-11)
+    notes: "Eval CL-002. Ground truth = cellLineCategory='Hybridoma' (source table, 3 rows; CPTC-NF1 hybridomas). Briefly broke entirely (0 hits) under a KEYWORD analyzer on cellLineCategory — case-sensitive exact-match only; fixed 2026-07-07 by falling through to the default STANDARD analyzer instead."
     relevant:
       - 65d07476-2469-4679-85b2-e2ca67f3b01b   # CPTC-NF1-1 (Cell Line)
       - f410431d-7571-4302-8870-eb115b71d0ce   # CPTC-NF1-2 (Cell Line)
@@ -695,8 +694,8 @@ cases:
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
     expected_pool: 12
     entity_types: [Cell Line]
-    recall_gap_current: false   # verified live 2026-06-22: 4/5 head in top 20 (ranks 7-16)
-    notes: "Eval CL-006 (human lung lines for pulmonary toxicity). No column captures 'pulmonary toxicity'; reframed to the grounded manifestation. Ground truth = cellLineManifestation HAS ('Lung Adenocarcinoma') (source table, 12 rows; NCI-H series and engineered A549 NF1 KO)."
+    recall_gap_current: false   # verified live 2026-07-07 (post-KEYWORD-analyzer fix): improved to rank 3 on multi_match_cross (was rank 10)
+    notes: "Eval CL-006 (human lung lines for pulmonary toxicity). No column captures 'pulmonary toxicity'; reframed to the grounded manifestation. Ground truth = cellLineManifestation HAS ('Lung Adenocarcinoma') (source table, 12 rows; NCI-H series and engineered A549 NF1 KO). Improved 2026-07-07 by the cellLineCategory/resourceType KEYWORD-analyzer fix."
     relevant:
       - a14754e6-1c26-4224-9ef9-a1abfd1538eb   # NCI-H1373 (Cell Line)
       - 177c35b5-d859-4bf2-870b-9311ef059159   # NCI-H2030 (Cell Line)

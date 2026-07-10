@@ -1,0 +1,22 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_hackathons_columns",
+  "description": "Per-column analyzer assignments for the nf-hackathons SearchIndex (syn75081639, source syn25585549). Roles: IDENTIFIER for id-like fields (Synapse entity ids, Synapse/DOI links, related-study ids — preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time); KEYWORD for clean categorical/facet fields (exact match, incl. list-valued facets). Every other column (name, acknowledgementStatements, wiki pointers, etag) falls through to the config defaultAnalyzer (STANDARD). Columns absent from the index are silently skipped at build time.",
+  "overrides": [
+    { "columnName": "id", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "onSynapse", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "doi", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "relatedStudies", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+
+    { "columnName": "summary", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "diseaseFocus", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "manifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+
+    { "columnName": "studyStatus", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "initiative", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "studyLeads", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "institutions", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "fundingAgency", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "event", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+  ]
+}

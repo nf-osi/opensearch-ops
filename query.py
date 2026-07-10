@@ -17,19 +17,22 @@ Usage:
 import json, sys, time, urllib.request, urllib.error
 
 BASE = "https://repo-prod.prod.sagebase.org/repo/v1"
+STAGING_BASE = "https://repo-staging.prod.sagebase.org/repo/v1"
 NF_TOOLS = "syn75081636"  # nf-tools SearchIndex
 
-def _call(ep, method="GET", body=None, token=None):
+def _call(ep, method="GET", body=None, token=None, base=None):
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    req = urllib.request.Request(f"{BASE}/{ep}", data=data, method=method, headers=headers)
+    req = urllib.request.Request(f"{base or BASE}/{ep}", data=data, method=method, headers=headers)
     try:
         resp = urllib.request.urlopen(req)
-        return resp.status, json.load(resp)
+        raw = resp.read()
+        return resp.status, (json.loads(raw) if raw else {})
     except urllib.error.HTTPError as e:
-        return e.code, json.loads(e.read().decode())
+        raw = e.read()
+        return e.code, (json.loads(raw) if raw else {})
 
 def search(search_index_id, search_query,
            response_parts=("HITS", "TOTAL_HITS", "SELECT_COLUMNS"),

@@ -1,0 +1,28 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_studies_columns",
+  "description": "Per-column analyzer assignments for the nf-studies SearchIndex (syn75081633, source syn52694652). Roles: IDENTIFIER for id-like fields (Synapse entity ids, DOIs, clinical trial ids — preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time); KEYWORD for clean categorical/facet fields (exact match, incl. list-valued facets). Every other column (name, studyName, dates, access/acknowledgement text) falls through to the config defaultAnalyzer (STANDARD), which tokenizes and lowercases without stemming. Columns absent from the index are silently skipped at build time.",
+  "overrides": [
+    { "columnName": "studyId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "id", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "relatedStudies", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "studyFileviewId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "nextPhaseProject", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "previousPhaseProject", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "grantDOI", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "clinicalTrialID", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+
+    { "columnName": "summary", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "manifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "diseaseFocus", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+
+    { "columnName": "initiative", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "studyLeads", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "institutions", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "studyStatus", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "dataStatus", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "fundingAgency", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "dataType", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "alternateDataRepository", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+  ]
+}

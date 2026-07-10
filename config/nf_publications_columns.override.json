@@ -1,0 +1,20 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_publications_columns",
+  "description": "Per-column analyzer assignments for the nf-publications SearchIndex (syn75081631, source syn16857542). Roles: IDENTIFIER for id-like fields (DOIs, PubMed ids, related-study ids — preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time), including the publication title itself; KEYWORD for clean categorical/facet fields (exact match, incl. list-valued facets). The year column falls through to the config defaultAnalyzer (STANDARD); numeric/date fields don't need text analysis. Columns absent from the index are silently skipped at build time.",
+  "overrides": [
+    { "columnName": "doi", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "pmid", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+    { "columnName": "studyId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
+
+    { "columnName": "title", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "diseaseFocus", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "manifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+
+    { "columnName": "journal", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "author", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "fundingAgency", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "studyName", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
+    { "columnName": "publicationType", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+  ]
+}

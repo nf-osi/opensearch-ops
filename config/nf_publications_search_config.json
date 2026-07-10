@@ -1,0 +1,9 @@
+{
+  "organizationName": "org.synapse.nf",
+  "name": "nf_publications_search_config",
+  "description": "Search configuration for the nf-publications SearchIndex, syn75081631. Default analyzer is the built-in STANDARD (tokenize + lowercase, no stemming); per-column overrides (org.synapse.nf-nf_publications_columns) route id fields to IDENTIFIER, discovery free-text (title, diseaseFocus, manifestation) to the nf_scientific_synonyms analyzer, and clean categorical/facet fields to KEYWORD. Bind only to syn75081631.",
+  "defaultAnalyzer": { "$ref": "org.sagebionetworks-STANDARD" },
+  "columnAnalyzerOverrides": [
+    { "$ref": "org.synapse.nf-nf_publications_columns" }
+  ]
+}
