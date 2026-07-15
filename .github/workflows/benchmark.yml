@@ -41,8 +41,9 @@ jobs:
         run: python3 benchmark/run.py tools --label baseline
 
       - name: Build site
-        # Always runs, even if the benchmark step failed. Aggregates every
-        # benchmark/<table>/results/*.json into the site.
+        # Always runs, even if the benchmark step failed. Copies the web/ app and
+        # generates site/data/<table>.json (golden cases + boosts + any precomputed
+        # baseline from results/) for the interactive Synapse Portal Search Lab.
         run: python3 build_site.py --out site
 
       - uses: actions/upload-pages-artifact@v3

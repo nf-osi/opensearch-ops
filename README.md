@@ -251,6 +251,56 @@ python3 benchmark/run.py tools --label boost-v2 --strategy multi_match_boosted  
 field boosts) is documented with code line references in
 [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
+## Interactive app (Synapse Portal Search Lab)
+
+[`web/`](web/) is a friendly **self-serve** version of the harness for business owners / SMEs that's a
+static, dependency-free browser app (no build tooling, no backend). It calls the public
+Synapse search API directly and has two modes:
+
+- **Search playground** (entry-level) — type a query and compare two ranking *recipes* (strategies)
+  side by side, with per-field boost sliders. Intuitive way to show how a tuning change reorders real
+  results.
+- **Benchmark scoreboard** (advanced) — reference a golden set × selected recipes live in the browser, 
+  get same MRR / Recall / Hit table as `run.py`, with per-case drill-in.
+
+**Works against any SearchIndex, any portal.** while nf-tools is the default, the index
+picker is **populated by listing every SearchIndex in the collection project**
+(`syn74909065`) via `entity/children` — any portal's index is one click away. When a
+non-curated index is chosen, the app discovers its columns live (`SELECT_COLUMNS`) and
+**auto-generates a field-boost config** from column type + name heuristics
+([`web/boostgen.js`](web/boostgen.js)).
+Curated tables (those with a `golden.yaml`) ship hand-tuned boosts and enable the
+scoreboard; any other index runs in playground-only mode (no golden set → no benchmark).
+The query recipes are identical for every index.
+
+This is a visual **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
+engineer/CI path, the site is the non-engineer path. The recipes and scoring are JS ports
+of [`strategies.py`](benchmark/strategies.py) and [`run.py`](benchmark/run.py); the golden
+cases and field boosts are **generated** from the same YAML at build time (so they never
+drift). The standing drift guard for the ported *logic* is a parity check: the live
+scoreboard's per-strategy MRR/Recall/Hit must match `python3 benchmark/run.py tools` within
+rounding.
+
+> [!NOTE]
+> Workbench optimizes **query-time** levers only (recipe, field boosts, fuzziness) and
+> reflects the index's *current* production config. Index-time config (analyzers,
+> synonyms in [`config/`](config/)) needs a Sage-admin index rebuild and isn't adjustable
+> client-side.
+
+### Usage
+
+[`build_site.py`](build_site.py) assembles the site into `site/` (gitignored) — it copies
+`web/` and emits `site/data/<table>.json` (golden cases + boosts + an optional precomputed
+baseline scoreboard from `results/`). CI ([`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml))
+runs `run.py` then `build_site.py` and publishes `site/` to GitHub Pages.
+
+```bash
+pip install pyyaml
+python3 benchmark/run.py tools --label baseline   # optional: precomputed fast-default scoreboard
+python3 build_site.py                              # -> site/
+python3 -m http.server -d site                     # open http://localhost:8000
+```
+
 ## Rechecking SearchIndex object inventory
 
 No auth token needed — these objects are PUBLIC, so `entity/children` and

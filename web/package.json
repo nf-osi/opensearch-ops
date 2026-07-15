@@ -1,0 +1,7 @@
+{
+  "name": "synapse-portal-search-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Static browser app to try and benchmark NF tool search. Built into site/ by ../build_site.py."
+}

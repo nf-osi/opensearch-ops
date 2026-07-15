@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synapse Portal Search Lab — try & benchmark search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,900&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="wrap">
+    <h1><span class="eyebrow">Synapse&nbsp;Portal</span> Search&nbsp;Lab</h1>
+    <p class="lede">
+      Try searches against any Synapse <strong>SearchIndex</strong>, compare ranking recipes
+      side by side, and score them against a golden set — all in your browser.
+    </p>
+  </div>
+</header>
+
+<div class="instrument wrap">
+  <label class="inst-field">
+    <span>SearchIndex</span>
+    <select id="indexPick" aria-label="Choose a SearchIndex"></select>
+  </label>
+  <span class="inst-custom" id="customWrap" hidden>
+    <input id="customId" type="text" placeholder="paste a SearchIndex synID — e.g. syn75081633" aria-label="SearchIndex synID">
+    <button type="button" id="loadCustom" class="mini-go">Load</button>
+  </span>
+  <span class="inst-status" id="indexStatus">loading…</span>
+</div>
+
+<nav class="tabs wrap" role="tablist">
+  <button class="tab is-active" role="tab" data-tab="playground" aria-selected="true">Search&nbsp;playground</button>
+  <button class="tab" role="tab" data-tab="benchmark" aria-selected="false">Benchmark&nbsp;scoreboard</button>
+</nav>
+
+<div class="layout wrap">
+<main class="content">
+
+  <!-- ============================ PLAYGROUND ============================ -->
+  <section id="playground" class="panel-tab is-active" role="tabpanel">
+    <form id="searchForm" class="searchbar" autocomplete="off">
+      <input id="q" type="search" placeholder="Type a search query…" aria-label="Search query">
+      <button type="submit" class="go">Search</button>
+    </form>
+
+    <div id="compareSummary" class="compare-summary" hidden></div>
+
+    <div class="compare">
+      <div class="col" data-col="A"></div>
+      <div class="col" data-col="B"></div>
+    </div>
+    <p class="compare-hint" id="compareHint">
+      Pick a recipe for each side and search to compare them head-to-head. The
+      <span class="delta-key up">▲</span>/<span class="delta-key down">▼</span> badges show how far each
+      tool moved versus the other side.
+    </p>
+  </section>
+
+  <!-- ============================ BENCHMARK ============================ -->
+  <section id="benchmark" class="panel-tab" role="tabpanel" hidden>
+    <div class="bench-intro">
+      <h2>How good is each recipe, really?</h2>
+      <p>
+        We keep a <strong>golden set</strong> of realistic searches where we already know which
+        tool(s) the user wants. This runs every selected recipe over all of them and scores where
+        the right answers landed. Higher MRR / Recall / Hit is better; lower speed (ms) is better.
+      </p>
+    </div>
+
+    <div id="benchNotice" class="bench-notice" hidden></div>
+
+    <div class="bench-controls">
+      <fieldset id="stratPicker" class="strat-picker">
+        <legend>Recipes to score</legend>
+      </fieldset>
+      <div class="bench-actions">
+        <button id="runBench" class="go">Run benchmark</button>
+        <span id="benchEst" class="bench-est"></span>
+      </div>
+    </div>
+
+    <div id="benchProgress" class="progress" hidden>
+      <div class="progress-bar"><span id="progressFill"></span></div>
+      <p id="progressText" class="progress-text"></p>
+    </div>
+
+    <div id="benchResult"></div>
+  </section>
+
+</main>
+
+<aside class="sidebar">
+  <div class="boost-card">
+    <div class="boost-head">
+      <span class="boost-title">Custom Field Boosts</span>
+      <button type="button" class="boost-toggle" id="boostToggle" aria-label="Collapse custom field boosts" aria-expanded="true" title="Collapse">»</button>
+    </div>
+    <p class="adv-note">
+      How much a match in each field counts — a higher number floats matches in that field to the
+      top. Applies to the <em>boosted</em> recipes (Boosted&nbsp;by&nbsp;name, Cross&nbsp;fields,
+      Typo-tolerant, As-you-type) in <strong>both</strong> the playground and a live benchmark run;
+      the equal-weight recipes ignore them and “Default&nbsp;site&nbsp;search” always searches every
+      field. Index-side settings (analyzers, synonyms) need an admin rebuild and aren’t adjustable here.
+    </p>
+    <details class="type-note">
+      <summary>
+        <svg class="disclosure-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        Which column types can be boosted?
+      </summary>
+      <p>
+        Only free-text columns are eligible match targets: <code>STRING</code>,
+        <code>STRING_LIST</code>, <code>LARGETEXT</code>, <code>MEDIUMTEXT</code>. Everything
+        else — <code>ENTITYID</code>, <code>DATE</code>, <code>INTEGER</code>, <code>DOUBLE</code>,
+        <code>BOOLEAN</code>, <code>FILEHANDLEID</code>, <code>USERID</code>, and their
+        <code>*_LIST</code> variants — isn’t text to match against, so it's left out automatically.
+        This only applies to auto-discovered indexes; curated tables ship a hand-picked field list.
+      </p>
+    </details>
+    <div id="boostEditor" class="boost-editor"></div>
+    <div class="adv-row">
+      <label>Results / recipe <input id="sizeInput" type="number" min="1" max="50" value="10"></label>
+      <button type="button" id="resetBoosts" class="link-btn">Reset all to 1</button>
+    </div>
+  </div>
+  <button type="button" class="boost-rail" id="boostExpand" aria-label="Show custom field boosts" title="Show custom field boosts">Custom Field Boosts</button>
+</aside>
+</div>
+
+<footer class="foot wrap">
+  <p>
+    Queries hit the public Synapse <code>repo-prod</code> search API anonymously and reflect the
+    index’s <em>current</em> production config. Recipes &amp; scoring mirror
+    <code>benchmark/run.py</code>; the golden set is <code>benchmark/tools/golden.yaml</code>.
+    <span id="genStamp"></span>
+  </p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
