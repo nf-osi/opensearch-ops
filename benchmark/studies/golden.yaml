@@ -15,7 +15,7 @@
 
 index:      syn75081633
 index_name: nf-studies
-version:    2026.07.10
+version:    2026.07.20
 k:          10
 id_field:   studyId
 
@@ -111,17 +111,19 @@ cases:
       - syn53183744   # To understand the role of Apelin mediated angiogenesis in NF2 associated tumors
       - syn2343195    # Synodos NF2
 
-  - id: jmml
-    query: juvenile myelomonocytic leukemia jmml
+  - id: ntap-mri
+    query: ntap mri
     type: topical
     source: agent-generated
-    notes: "JMML studies. Source: manifestation HAS ('JMML'), pool 4. syn21452685 (NFTC-UCSF) is a broad consortium project tagged JMML; kept last as weakest of the four."
-    expected_pool: 4
+    notes: "NTAP-funded MRI/imaging studies. PORTALS-3975. Source: fundingAgency HAS ('NTAP') AND (studyName/summary LIKE '%MRI%'/'%imaging%'/'%magnetic resonance%'), pool 6. syn17100988 leads: NTAP-funded and explicitly built around MRS/fMRI/BOLD/MRI methods."
+    expected_pool: 6
     relevant:
-      - syn51133946   # DHART SPORE Project 3 - Clinical Trial (ADVL1521) of MEK Inhibitor Trametinib in JMML
-      - syn51133957   # DHART SPORE Project 3 Phase 2 - Clinical Trial of MEK Inhibitor Trametinib in JMML
-      - syn74306229   # Cellular immunotherapy targeting CLL1 for juvenile myelomonocytic leukemia
-      - syn21452685   # Neurofibromatosis Therapeutic Consortium - University of California, San Francisco
+      - syn17100988   # The role of GABA in the working memory impairments in Neurofibromatosis Type 1
+      - syn17098100   # Imaging predictors of malignant peripheral nerve sheath tumors
+      - syn25999239   # Towards clinical translation of imaging studies in neurofibromatosis type 1
+      - syn4939894    # Imaging Biomarkers of Neurofibromatosis Type 1-Associated Optic Pathway Glioma
+      - syn29867701   # Multi-parametric Imaging Biomarker Development to Predict Malignant Conversion in Patients with Neurofibromatosis Type 1
+      - syn26957643   # High-Resolution Ultrasonography and Optical Frequency Domain Imaging for Measurement and Characterization of Cutaneous Neurofibromas in Patients with NF1
 
   - id: low-grade-glioma
     query: nf1 low grade glioma

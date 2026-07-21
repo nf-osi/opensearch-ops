@@ -26,8 +26,9 @@ display comments.
 ## Domain themes covered
 
 - **Manifestation / tumor types:** MPNST, plexiform NF, cutaneous NF, schwannoma, optic glioma,
-  low-grade glioma, meningioma, JMML, atypical neurofibroma.
-- **Assays / data types & methods:** drug screen, RNA-seq / gene expression, imaging,
+  low-grade glioma, meningioma, atypical neurofibroma. (JMML has no dedicated case; its studies
+  still surface via `dhart-spore` and `mek-inhibitor`.)
+- **Assays / data types & methods:** drug screen, RNA-seq / gene expression, imaging/MRI,
   proteomics, single-cell, iPSC, organoid, CRISPR/base-prime editing, ASO / exon-skipping /
   nonsense suppression, cfDNA liquid biopsy, plasma WGS.
 - **Funding programs / consortia:** NTAP, CDMRP (DoD), Young Investigator Award, Synodos,
@@ -36,8 +37,9 @@ display comments.
 
 ## Notable judgment calls
 
-- **JMML:** `syn21452685` (NFTC-UCSF, a broad consortium project tagged JMML) kept last as the
-  weakest of four.
+- **ntap-mri (PORTALS-3975):** replaced the former `jmml` case. Pool is NTAP-funded studies whose
+  studyName/summary mentions MRI/imaging/magnetic resonance. `syn17100988` leads because it's
+  NTAP-funded and built explicitly around MRS/fMRI/BOLD/MRI methods.
 - **Synodos:** two rows (`syn25999950`, `syn51117783`) are Synodos-initiative studies with
   non-Synodos titles — excluded from the head in favor of the five explicitly "Synodos …"
   titled studies.
