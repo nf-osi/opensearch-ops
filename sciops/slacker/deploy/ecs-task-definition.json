@@ -1,0 +1,35 @@
+{
+  "family": "search-sciops-bot",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<ACCOUNT_ID>:role/search-sciops-bot-execution-role",
+  "containerDefinitions": [
+    {
+      "name": "search-sciops-bot",
+      "image": "<ACCOUNT_ID>.dkr.ecr.<REGION>.amazonaws.com/search-sciops-bot:latest",
+      "essential": true,
+      "stopTimeout": 120,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/search-sciops-bot",
+          "awslogs-region": "<REGION>",
+          "awslogs-stream-prefix": "search-sciops-bot"
+        }
+      },
+      "secrets": [
+        { "name": "SLACK_BOT_TOKEN", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:search-sciops-bot/slack-bot-token" },
+        { "name": "SLACK_APP_TOKEN", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:search-sciops-bot/slack-app-token" },
+        { "name": "ANTHROPIC_API_KEY", "valueFrom": "arn:aws:secretsmanager:<REGION>:<ACCOUNT_ID>:secret:search-sciops-bot/anthropic-api-key" }
+      ],
+      "environment": [
+        { "name": "ORCHESTRATOR_ENV_ID", "value": "<ORCHESTRATOR_ENV_ID>" },
+        { "name": "ORCHESTRATOR_AGENT_ID", "value": "<ORCHESTRATOR_AGENT_ID>" },
+        { "name": "ORCHESTRATOR_AGENT_VERSION", "value": "<ORCHESTRATOR_AGENT_VERSION>" },
+        { "name": "ORCHESTRATOR_SCRIPT_FILE_IDS", "value": "<ORCHESTRATOR_SCRIPT_FILE_IDS json, single line>" }
+      ]
+    }
+  ]
+}
