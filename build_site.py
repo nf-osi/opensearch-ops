@@ -29,14 +29,17 @@ def parse_boost(field):
     return name, (int(w) if w else 1)
 
 
-def load_fields(table_dir):
-    """The table's match list with per-field boosts (benchmark/<table>/fields.yaml),
-    falling back to ['*'] (all fields, no boosts) — same contract as run.py."""
+def load_field_config(table_dir):
+    """(fields, query_spec) from benchmark/<table>/fields.yaml — same contract as run.py's
+    load_field_config. `fields` is the match list with per-field boosts, falling back to ['*']
+    (all fields, no boosts). `query_spec` is the optional `query:` block (the tuned query
+    shape); the site ships it so the browser lab can offer the same `tuned` recipe run.py does,
+    instead of applying tuned boosts to a differently-shaped query."""
     path = os.path.join(table_dir, "fields.yaml")
-    if os.path.exists(path):
-        cfg = yaml.safe_load(open(path)) or {}
-        return cfg.get("fields") or ["*"]
-    return ["*"]
+    if not os.path.exists(path):
+        return ["*"], None
+    cfg = yaml.safe_load(open(path)) or {}
+    return (cfg.get("fields") or ["*"]), (cfg.get("query") or None)
 
 
 def find_precomputed(table_dir):
@@ -65,12 +68,16 @@ def build_table_data(golden_path):
     cases = [{"id": c["id"], "query": c["query"], "type": c.get("type"),
               "relevant": c.get("relevant", []), "notes": c.get("notes")}
              for c in golden.get("cases", [])]
+    fields, query_spec = load_field_config(table_dir)
     return {
         "index": golden["index"],
         "index_name": golden.get("index_name"),
         "k": golden.get("k", 10),
         "id_field": golden.get("id_field", "resourceId"),
-        "fields": load_fields(table_dir),
+        "fields": fields,
+        # omitted entirely for untuned tables, so app.js's `data.query || null` clears any
+        # previously-registered recipe rather than carrying it across a table switch
+        **({"query": query_spec} if query_spec else {}),
         "cases": cases,
         "precomputed": find_precomputed(table_dir),
         "generated_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
