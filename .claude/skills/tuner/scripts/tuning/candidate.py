@@ -155,17 +155,42 @@ def normalize(candidate, allowed_fields, max_boost=10.0, phrase_unsafe=()):
     return c
 
 
-def seed_candidates(fields, phrase_unsafe=()):
+def from_query_block(spec, fields, name="deployed_config"):
+    """A fields.yaml `query:` block + its `fields:` boosts -> a candidate dict.
+
+    The inverse of `query_block()`, so a config this harness previously recommended and someone
+    then deployed comes back in as something it can score. Without it, re-tuning an
+    already-tuned table silently measures the winner against generic seeds only, and the one
+    number that matters — did we beat what is actually running? — is missing from the
+    leaderboard."""
+    c = {"name": name, "query_type": spec.get("query_type", "multi_match"),
+         "fields": dict(fields)}
+    if c["query_type"] == "multi_match":
+        c["multi_match_type"] = spec.get("multi_match_type") or "best_fields"
+    for key in ("fuzziness", "tie_breaker", "minimum_should_match"):
+        if spec.get(key) is not None:
+            c[key] = spec[key]
+    pb = spec.get("phrase_boost")
+    if pb and pb.get("fields"):
+        c["phrase_boost"] = {"fields": list(pb["fields"]), "boost": float(pb.get("boost", 2))}
+    return c
+
+
+def seed_candidates(fields, phrase_unsafe=(), deployed=None):
     """The current hand-authored strategies as preset candidates, built from this table's
     {field: boost} map (mirrors benchmark/strategies.py). `frontend_default` intentionally
     ignores `fields` (bare multi_match over all fields, fuzziness AUTO — the production
     baseline). The equal-weight presets flatten boosts to 1.
 
+    `deployed` is the table's fields.yaml `query:` block, if it has one. It becomes an extra
+    `deployed_config` seed so the leaderboard shows what is actually running today, not just
+    the generic shapes — the comparison a maintainer deciding whether to re-deploy needs.
+
     `phrase_unsafe` (keyword-mapped columns) is excluded from the phrase_prefix seed, which
     the index would otherwise reject with a 500. That seed is dropped entirely if no
     analyzed-text field survives — better a leaderboard missing one preset than an `init` that
     dies partway through after minutes of live queries. IMPORTANT: seed 0 must stay
-    `frontend_default`; verify_full() indexes it positionally."""
+    `frontend_default` (see `frontend_default_seed`)."""
     flat = {k: 1.0 for k in fields}
     phrase_fields = {k: v for k, v in fields.items() if k not in set(phrase_unsafe)}
     seeds = [
@@ -184,7 +209,22 @@ def seed_candidates(fields, phrase_unsafe=()):
     if phrase_fields:
         seeds.append({"name": "phrase_prefix", "query_type": "multi_match",
                       "multi_match_type": "phrase_prefix", "fields": phrase_fields})
+    if deployed:
+        seeds.append(from_query_block(deployed, fields))
     return seeds
+
+
+DEPLOYED_SEED_NAME = "deployed_config"
+
+
+def frontend_default_seed(fields):
+    """The `frontend_default` preset on its own — the production baseline every comparison is
+    made against. A named accessor rather than `seed_candidates(...)[0]`, so adding or
+    reordering seeds can't silently repoint the baseline at some other query."""
+    for s in seed_candidates(fields):
+        if s["name"] == "frontend_default":
+            return s
+    raise AssertionError("frontend_default seed missing")
 
 
 # Starting boost per inferred role, calibrated against the hand-curated fields.yaml files in

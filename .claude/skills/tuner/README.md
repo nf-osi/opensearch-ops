@@ -95,7 +95,21 @@ field probe (cached) ─► diagnostics ─► AGENT proposes candidates (query 
 
 1. **Seeds** — the current hand-authored strategies (`benchmark/strategies.py`) become preset
    candidates and are scored live for a baseline, built from the table's `fields.yaml` boosts
-   — or, if none exists, from a field list bootstrapped by profiling the index.
+   — or, if none exists, from a field list bootstrapped by profiling the index. If the
+   fields.yaml also carries a `query:` block (a config someone already applied), that exact
+   config joins the board as the **`deployed_config`** seed, and the report gains a second
+   headline: *did this run beat what's actually running?* — the question that decides whether
+   re-deploying is worth it, which "beat the stock frontend query" doesn't answer.
+1b. **Analyzer reachability** (`index_profile.analyzer_reachability`) — two live queries per
+   field ask whether a *lowercase* query can match it at all. Columns the index's
+   SearchConfiguration routed to the KEYWORD analyzer match their whole value exactly and
+   case-sensitively (`fundingAgency:NTAP` → 101 hits, `fundingAgency:ntap` → 0), which is
+   invisible to the column type and looks merely uninformative in the probe. Verdicts land in
+   `round_context.json` as `field_reachability` / `unreachable_fields` / `reachability_note`.
+   They are **flagged, not dropped**: such a field is dead for lowercase queries but still
+   matches a user who types the stored casing, so the note is read against the golden set's own
+   queries — if every one is lowercase, it says so plainly and the agent should stop proposing
+   those fields.
 2. **Field probe** — each match field is run as its own single-field query per golden case,
    once, and cached to `<out>/<table>/probe.json`. This powers two things:
    - **Diagnostics** the agent reads — for each case (worst-first), which fields each ideal doc
@@ -237,7 +251,18 @@ smell. So each pinned boost is re-scored at half its value (free, off the probe)
 - **score drops** → the ranking genuinely hinges on that one field. Real, but brittle — widen the
   golden set before trusting it.
 
-Non-decomposable candidates are skipped rather than charged the extra live queries.
+Non-decomposable candidates are skipped **per round** rather than charged the extra live
+queries — but at `finalize` the *winner* gets the check paid for with live queries if it never
+had a free one (capped at `MAX_LIVE_SATURATION_FIELDS`, with any skipped field named). The
+final report is the one a maintainer acts on; it shouldn't be quieter about brittleness than
+the per-round output was.
+
+**Near-ties.** `finalize` also reports any config within `NEAR_TIE_EPS` (0.005) of the winner
+that uses **fewer knobs** — `near_ties` in `leaderboard.json`, a callout in `report.md`. On a
+few dozen cases nDCG moves in steps of ~0.01, so a winner can edge out a plainer config by an
+amount that is pure noise and still be reported as *the* recommendation (a `phrase_boost` worth
++0.0003 is how that shows up in practice). The board is not reordered — the measured number
+stands — but the reviewer gets told they can take the simpler config for free.
 - `state.json` / `round_context.json` — the agent-driven path's working state (the full golden,
   cached profile, board) and the per-round context the agent reads. Transient, not deliverables.
 

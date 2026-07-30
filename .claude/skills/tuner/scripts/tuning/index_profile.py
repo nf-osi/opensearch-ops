@@ -23,6 +23,7 @@ the *source table*, which is the actual oracle; use it directly when you need th
 """
 import collections
 import json
+import re
 
 from client import KEYWORD_TYPES, hit_dict, is_text_searchable, search
 
@@ -110,6 +111,102 @@ def _role(s, ctype=None, col=None):
     if s["fill"] >= 0.5 and s["avg_len"] <= 64 and nd > 12:
         return "name?"        # high-variety short strings → name/title candidate
     return ""
+
+
+# --- analyzer reachability -----------------------------------------------------------------
+#
+# A column's Synapse TYPE says which query shapes won't 500 (see client.py). It says nothing
+# about which ANALYZER the index's SearchConfiguration routed the column through, and that
+# decides whether a real user query can match it at all. Columns mapped to KEYWORD match their
+# whole value exactly and CASE-SENSITIVELY: on nf-studies, `fundingAgency:NTAP` returns 101 hits
+# and `fundingAgency:ntap` returns 0, though both are STRING_LIST and both look perfectly
+# searchable to every other check in this harness.
+#
+# This is worth measuring rather than assuming, because it is invisible everywhere else: the
+# field probe scores such a column 0.0 on every lowercase case, which reads as "this field is
+# uninformative" rather than "this field is unreachable", and the optimizer duly spends its
+# sweep weighting a column that can never contribute.
+
+# A probe value needs an uppercase character (else lowercasing it is a no-op and the test says
+# nothing) and should be short: a KEYWORD column matches the WHOLE value, so a paragraph is both
+# unlikely to round-trip and expensive to send.
+_CASE_PROBE_MAXLEN = 80
+
+
+def _case_probe_value(values):
+    """The shortest sampled value carrying an uppercase letter, or None if none qualifies."""
+    usable = [v for v in values
+              if v and len(v) <= _CASE_PROBE_MAXLEN and v != v.lower()]
+    return min(usable, key=len) if usable else None
+
+
+def _case_probe_token(values):
+    """Fallback for prose columns, whose values all blow the length cap: a single uppercase-
+    bearing word drawn from them.
+
+    Weaker but sound in the one direction that matters. A token can only match if the column is
+    tokenized, so on a KEYWORD column (whole-value match) the stored-casing query returns 0 and
+    the caller reports "unknown" — never a false "analyzed". Acronyms are the common case here
+    and exactly what users type: without this, `summary` on nf-studies goes unclassified purely
+    for being long."""
+    for v in values:
+        for tok in re.split(r"[^A-Za-z0-9]+", v or ""):
+            if 3 <= len(tok) <= 30 and tok != tok.lower() and not tok.isdigit():
+                return tok
+    return None
+
+
+def _field_hits(index, field, text, poll_s):
+    res = search(index, {"query": {"multi_match": {"query": text, "fields": [field]}}, "size": 1},
+                 response_parts=["TOTAL_HITS"], poll_s=poll_s)
+    return res.get("totalHits") or 0
+
+
+def analyzer_reachability(index, fields, n=100, poll_s=0.2):
+    """Which of `fields` a LOWERCASE free-text query can actually match.
+
+    For each field, take a sampled value containing an uppercase letter and query that field for
+    it twice — once as stored, once lowercased:
+
+      "analyzed"        stored hits > 0 and lowercased hits > 0 — a normal lowercasing analyzer;
+                        the field behaves the way the rest of the harness assumes.
+      "case_sensitive"  stored hits > 0 but lowercased hits == 0 — KEYWORD-mapped. Reachable
+                        only by a query that reproduces the stored casing exactly.
+      "unknown"         no sampled value carried an uppercase letter, or the stored value didn't
+                        match its own field. Not a verdict — callers must leave these alone.
+
+    Returns {field: verdict}. Costs one sampling query plus two per testable field.
+
+    Note what "case_sensitive" does and doesn't license. Such a field is dead weight for
+    lowercase queries but still matches a user who types the stored casing (`Synodos NF2`,
+    an RRID), so callers should FLAG it, not drop it — unlike a non-text column, which the
+    index rejects outright. Whether it's dead for a given run depends on that run's golden
+    queries; see tune.py's `_reachability_note`.
+    """
+    res = search(index, {"query": {"match_all": {}}, "size": n},
+                 response_parts=["HITS"], poll_s=poll_s)
+    docs = [hit_dict(h) for h in res.get("hits", [])]
+    out = {}
+    for f in fields:
+        vals = []
+        for d in docs:
+            vals.extend(values_of(d.get(f)))
+        uniq = list(dict.fromkeys(vals))
+        probe_val = _case_probe_value(uniq) or _case_probe_token(uniq)
+        if probe_val is None:
+            out[f] = "unknown"
+            continue
+        try:
+            stored = _field_hits(index, f, probe_val, poll_s)
+            if not stored:
+                out[f] = "unknown"          # value didn't match its own field — don't guess
+                continue
+            lowered = _field_hits(index, f, probe_val.lower(), poll_s)
+        except Exception:
+            out[f] = "unknown"              # a probe failure is not evidence of anything
+            continue
+        out[f] = "analyzed" if lowered else "case_sensitive"
+    return out
 
 
 def profile(index, n=100, poll_s=0.2):

@@ -141,7 +141,7 @@ SATURATION_EPS = 1e-3
 FLAT_EPS = 2e-3
 
 
-def saturation(candidate, score_fn, max_boost=10.0, factor=0.5):
+def saturation(candidate, score_fn, max_boost=10.0, factor=0.5, only=None):
     """Which of `candidate`'s boosts are pinned at the ceiling, and does the score care?
 
     Ranking depends only on the RATIOS between boosts — scaling them all by a constant leaves
@@ -158,11 +158,18 @@ def saturation(candidate, score_fn, max_boost=10.0, factor=0.5):
       flat=False  the score drops → the ranking genuinely hinges on this one field. Real, but
                   brittle: check it against more cases before trusting it.
 
+    `only` optionally restricts which pinned fields are re-scored — for a caller paying live
+    queries per check and capping the spend. It narrows what gets measured, never what gets
+    scored: the candidate itself is passed through untouched, so each probe still measures the
+    real config with one boost halved.
+
     Returns [] when nothing is pinned. Each entry:
       {field, boost, halved, score, halved_score, delta, flat}
     """
     fields = candidate.get("fields") or {}
     pinned = [f for f, b in fields.items() if b >= max_boost - SATURATION_EPS]
+    if only is not None:
+        pinned = [f for f in pinned if f in set(only)]
     if not pinned:
         return []
     base_score = score_fn(candidate)

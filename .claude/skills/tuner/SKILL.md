@@ -140,7 +140,19 @@ optimizes the decomposable seeds' boosts — all before you're needed. It writes
 - `profile`: what the index/table is about
 - `golden_summary`
 - `allowed_fields`
+- `field_reachability` + `unreachable_fields` + `reachability_note`: **read this before
+  proposing anything.** Per field, whether a *lowercase* query can match it at all
+  (`analyzed` / `case_sensitive` / `unknown`). A `case_sensitive` field is KEYWORD-analyzed —
+  it matches its whole value exactly, so `fundingAgency:NTAP` hits and `fundingAgency:ntap`
+  doesn't. Those fields are left in `allowed_fields` on purpose (a user typing `Synodos NF2`
+  still reaches them), but if `reachability_note` says every golden query is lowercase, then
+  boosting them is provably wasted and you should leave them out of your candidates. Content
+  that's only reachable that way needs an analyzer/config change, which is out of scope here —
+  say so in your summary rather than burning rounds on it.
 - `current_default_boosts`
+- `deployed_query`: the table's already-applied `query:` block, if it has one. When present it
+  is also scored as the `deployed_config` seed, so the leaderboard answers "did we beat what's
+  actually running?" — quote that comparison alongside the vs-frontend one.
 - `fields_bootstrapped`: true if there was no existing `fields.yaml` and this field list came from profiling instead
 - `leaderboard`: best candidates so far 
 - `diagnostics`: per-case, worst-first under the current best config; which fields the ideal docs match or miss
@@ -236,9 +248,21 @@ comparison against the default frontend query**:
   golden set**, even if you tuned on a `--max-cases` slice — finalize re-scored it there. If
   you did use a slice, add one clause noting tuning explored an N/total slice (the headline
   itself is still the full-set number).
+- **If `leaderboard.json` has `near_ties`, say so in the same breath as the headline.** Those
+  are configs that scored within the noise floor of the winner using *fewer* knobs. Name the
+  simplest one and recommend it over the nominal winner unless something argues otherwise —
+  a +0.001 edge bought with a `phrase_boost` is not a real gain, and every knob is one more
+  thing for a maintainer to deploy and keep working.
+- **If a `deployed_config` was scored** (the table already had a `query:` block), give its
+  comparison too — beating `frontend_default` is table stakes; beating what's already running
+  is what justifies asking anyone to re-deploy. If the run didn't beat it, lead with that.
 - What changed structurally (query type, which fields gained/lost boost, and whether the
   winner came from a candidate *you proposed* vs. an *optimized seed* — `report.md`'s
   `source` column says which).
+- **Any saturated boost** (`winner_saturation` in `leaderboard.json`, a callout in
+  `report.md`): a field pinned at the 10.0 ceiling whose halving costs real score means the
+  ranking hinges on one field and is brittle on a small golden set. Mention it — it's a caveat
+  on the recommendation, not a detail.
 - 2-3 notable per-case swings from `report.md`'s per-case table, if any stand out.
 - Which source you used for the table's golden data, and whether `fields.yaml` came from 
   an existing strategy or was bootstrapped by profiling the index (`report.md` has an opening callout when

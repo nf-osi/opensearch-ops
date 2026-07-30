@@ -53,7 +53,7 @@ import candidate as C                              # noqa: E402
 from client import KEYWORD_TYPES, column_types, is_text_searchable   # noqa: E402
 from evaluate import (evaluate, objective_value, live_ranker,      # noqa: E402
                       OBJECTIVES, OBJ_CASE_KEY)
-from index_profile import profile as profile_index  # noqa: E402
+from index_profile import analyzer_reachability, profile as profile_index  # noqa: E402
 from probe import (probe, diagnose, is_local_rerankable, profile_brief,   # noqa: E402
                    SAVE_EVERY)
 from optimize import optimize_boosts, probe_score_fn, saturation   # noqa: E402
@@ -132,29 +132,35 @@ def load_table(table, poll=0.15):
     through. A hand-written fields.yaml naming one is just as fatal as a bootstrapped list, so
     the check applies to both.
 
-    Returns (golden, boosts, bootstrapped, types) — `bootstrapped` is True when the field list
-    was inferred rather than read from an existing fields.yaml; `types` is {column: columnType}
-    for the live index (empty if it has no `index` set yet)."""
+    Returns (golden, boosts, bootstrapped, types, deployed) — `bootstrapped` is True when the
+    field list was inferred rather than read from an existing fields.yaml; `types` is
+    {column: columnType} for the live index (empty if it has no `index` set yet); `deployed` is
+    the fields.yaml `query:` block (the full query shape someone has already applied for this
+    table) or None, which `_seed_and_probe` turns into a `deployed_config` seed."""
     gpath = os.path.join(BENCH, table, "golden.yaml")
     fpath = os.path.join(BENCH, table, "fields.yaml")
     if not os.path.exists(gpath):
         sys.exit(f"golden not found: {gpath}")
     golden = yaml.safe_load(open(gpath))
-    boosts = {}
+    boosts, deployed = {}, None
     if os.path.exists(fpath):
         fields_cfg = yaml.safe_load(open(fpath)) or {}
         boosts = C.from_fields_yaml(fields_cfg.get("fields") or ["*"])
+        deployed = fields_cfg.get("query") or None
+        if deployed and not isinstance(deployed, dict):
+            sys.exit(f"benchmark/{table}/fields.yaml `query:` must be a mapping, got "
+                     f"{type(deployed).__name__}")
 
     index = golden.get("index")
     if boosts:
         if not index:
-            return golden, boosts, False, {}
+            return golden, boosts, False, {}, deployed
         types = column_types(index, poll_s=poll)
         boosts = _drop_unsearchable(boosts, types, f"benchmark/{table}/fields.yaml")
         if not boosts:
             sys.exit(f"every field in benchmark/{table}/fields.yaml is a non-text column — "
                      f"nothing left to search. Fix the field list.")
-        return golden, boosts, False, types
+        return golden, boosts, False, types, deployed
 
     if not index:
         sys.exit(f"no fields.yaml for {table}, and golden.yaml has no `index` set yet — can't "
@@ -167,7 +173,7 @@ def load_table(table, poll=0.15):
         sys.exit(f"couldn't infer any searchable fields from {index}'s schema (no name/category/"
                  f"text columns found) — provide an explicit benchmark/{table}/fields.yaml.")
     print(f"  bootstrapped {len(boosts)} fields: {sorted(boosts)}")
-    return golden, boosts, True, prof.get("types") or {}
+    return golden, boosts, True, prof.get("types") or {}, deployed
 
 
 def _drop_unsearchable(boosts, types, source):
@@ -182,6 +188,35 @@ def _drop_unsearchable(boosts, types, source):
           f"these is rejected by the index: " +
           ", ".join(f"{f} ({t})" for f, t in sorted(bad.items())))
     return {f: b for f, b in boosts.items() if f not in bad}
+
+
+def _reachability_note(reach, golden):
+    """Turn `index_profile.analyzer_reachability()` verdicts into something the agent can act on.
+
+    A `case_sensitive` field is only *dead* if this golden set never types the stored casing, so
+    the verdict alone isn't the finding — it has to be read against the actual queries. Returns
+    (note, unreachable_fields); `note` is None when there's nothing to say.
+
+    Deliberately NOT a drop. `_drop_unsearchable` removes fields because querying them 500s;
+    here the query succeeds and simply scores 0, and the same field still earns its place for a
+    user who types `Synodos NF2` or an RRID. Flagging keeps the agent (and the report) honest
+    without discarding a field on the strength of one heuristic."""
+    ks = sorted(f for f, v in (reach or {}).items() if v == "case_sensitive")
+    if not ks:
+        return None, []
+    queries = [c.get("query", "") for c in golden.get("cases", [])]
+    mixed = [q for q in queries if q != q.lower()]
+    if mixed:
+        note = (f"{len(ks)} field(s) are KEYWORD-analyzed (exact, case-sensitive): "
+                f"{', '.join(ks)}. A lowercase query can never match them; "
+                f"{len(mixed)}/{len(queries)} golden queries carry uppercase and still could. "
+                f"Weight them only if those specific cases need it.")
+    else:
+        note = (f"{len(ks)} field(s) are KEYWORD-analyzed (exact, case-sensitive): "
+                f"{', '.join(ks)}. EVERY golden query here is lowercase, so these fields "
+                f"cannot contribute to any case — exclude them from candidates; a boost on "
+                f"them is wasted. Reaching this content needs an analyzer change, not tuning.")
+    return note, ks
 
 
 def phrase_unsafe_fields(types):
@@ -293,6 +328,105 @@ def _saturation_if_free(cand, golden, pm, objective, k):
     return saturation(cand, probe_score_fn(golden, pm, objective, k))
 
 
+# Cap on pinned boosts re-scored with LIVE queries at finalize. Each costs one more `cases`-
+# query evaluation, and the diagnostic value is concentrated in the top few; anything dropped is
+# named in the printed note rather than silently skipped.
+MAX_LIVE_SATURATION_FIELDS = 3
+
+
+def _saturation_live(cand, known_score, golden, index, id_field, k, poll, workers, objective):
+    """`optimize.saturation()` for a NON-decomposable winner, paid for with live queries.
+
+    Per round this check is skipped for such candidates (each pinned field is another `cases`
+    queries, too steep to spend on a diagnostic every round). At finalize that trade flips: the
+    winner is the one config anyone will act on, and a pinned boost is the clearest signal it
+    fits the golden set rather than the data. Skipping it here meant the FINAL report was
+    quieter about brittleness than the per-round output had been — the winner would carry a
+    boost at the ceiling with no callout, precisely where it mattered most.
+
+    `known_score` is the winner's already-measured objective, handed to `saturation()` as the
+    base so it doesn't re-query a config that was just scored."""
+    fields = cand.get("fields") or {}
+    pinned = sorted(f for f, b in fields.items() if b >= 10.0 - 1e-3)
+    if not pinned:
+        return []
+    checked, dropped = pinned[:MAX_LIVE_SATURATION_FIELDS], pinned[MAX_LIVE_SATURATION_FIELDS:]
+    print(f"\nre-scoring {len(checked)} saturated boost(s) live ({', '.join(checked)}) — the "
+          f"winner isn't probe-scorable, so this costs {len(checked)} × {len(golden['cases'])} "
+          f"queries ...", flush=True)
+    if dropped:
+        print(f"  (not checking {', '.join(dropped)} — capped at "
+              f"{MAX_LIVE_SATURATION_FIELDS} fields)")
+
+    base_sig = json.dumps(sorted(fields.items()), sort_keys=True)
+
+    def score_fn(c):
+        if json.dumps(sorted((c.get("fields") or {}).items()), sort_keys=True) == base_sig:
+            return known_score          # the winner itself — already measured, don't re-query
+        ev = evaluate(live_ranker(index, c, id_field, poll), golden, k, workers)
+        return objective_value(ev["agg"], objective)
+
+    # `only` caps which fields are CHECKED; the candidate is passed whole, so every probe still
+    # scores the real config with one boost halved rather than a config missing fields.
+    sat = saturation(cand, score_fn, only=checked)
+    for s in sat:
+        s["measured"] = "live"
+    return sat
+
+
+# Objective gap under which two configs are indistinguishable on a golden set of a few dozen
+# cases. nDCG moves in steps of ~0.01 there, so anything below this is noise, not a preference.
+NEAR_TIE_EPS = 5e-3
+
+
+def _knob_count(cand):
+    """How many optional query knobs a candidate uses — the axis along which two configs
+    scoring the same are NOT equally good. Each knob is a thing to deploy, explain, and keep
+    working; a config that needs none is cheaper to own."""
+    return sum(1 for key in ("fuzziness", "tie_breaker", "minimum_should_match", "phrase_boost")
+               if cand.get(key) not in (None, {}, []))
+
+
+def _simpler(a, b):
+    """Is `a` unambiguously simpler than `b` — no worse on knobs AND no worse on field count,
+    better on at least one?
+
+    Pareto rather than knobs-first on purpose. Ranking the axes would let a knob-free config
+    searching all 17 columns (7 of them KEYWORD-analyzed and unreachable) count as "simpler"
+    than a 3-field config with one tie_breaker, and recommending that as the easier thing to own
+    would be backwards. If neither dominates, the two are just different, and a near-tie is not
+    grounds for preferring either."""
+    ka, kb = _knob_count(a), _knob_count(b)
+    fa, fb = len(a.get("fields") or {}), len(b.get("fields") or {})
+    return ka <= kb and fa <= fb and (ka < kb or fa < fb)
+
+
+def near_ties(board):
+    """Configs scoring within NEAR_TIE_EPS of the winner that are structurally SIMPLER than it.
+
+    The leaderboard is sorted by objective alone, so a winner can edge out a plainer config by
+    an amount well inside the noise and still be reported as "the recommendation" — which is how
+    a phrase_boost worth +0.0003 ends up in a deployed config. Surfacing the tie lets the
+    reviewer take the simpler one knowingly; it deliberately does NOT reorder the board, because
+    the measured number is still the measured number.
+
+    Returns [{name, objective, delta, knobs, config}], best-scoring first."""
+    ranked = board.ranked()
+    if len(ranked) < 2:
+        return []
+    win = ranked[0]
+    out = []
+    for e in ranked[1:]:
+        d = e["objective"] - win["objective"]
+        if abs(d) > NEAR_TIE_EPS:
+            break                      # ranked desc: once outside the band, all the rest are
+        if _simpler(e["candidate"], win["candidate"]):
+            out.append({"name": e["name"], "objective": round(e["objective"], 4),
+                        "delta": round(d, 4), "knobs": _knob_count(e["candidate"]),
+                        "config": lite(e["candidate"])})
+    return out
+
+
 def _print_saturation(sat):
     """One line per pinned boost. Worth surfacing during the round, not just at finalize: it's
     the clearest available signal that a config is fitting the golden set rather than the data."""
@@ -340,7 +474,8 @@ def _process_candidates(raw_candidates, board, golden, pm, objective, k, allowed
 
 
 def _seed_and_probe(table, golden, boosts, objective, k, poll, workers, outdir,
-                    bootstrapped=False, types=None, resume=None, on_progress=None):
+                    bootstrapped=False, types=None, resume=None, on_progress=None,
+                    deployed=None):
     """Round 0: probe fields, evaluate seeds live, optimize decomposable seeds. Returns
     (board, pm, index, id_field, baseline_ev) — baseline_ev is `frontend_default`'s
     own {agg, per_case} evaluation, captured directly (not looked up in the board afterward)
@@ -396,7 +531,10 @@ def _seed_and_probe(table, golden, boosts, objective, k, poll, workers, outdir,
                progress=probe_progress)
 
     phrase_unsafe = phrase_unsafe_fields(types)
-    seeds = C.seed_candidates(boosts, phrase_unsafe=phrase_unsafe)
+    seeds = C.seed_candidates(boosts, phrase_unsafe=phrase_unsafe, deployed=deployed)
+    if deployed:
+        print("  (including this table's already-deployed fields.yaml `query:` block as the "
+              "`deployed_config` seed — the config a winner has to beat to be worth applying)")
     if phrase_unsafe & set(boosts):
         print(f"  (excluding keyword-mapped field(s) from phrase queries: "
               f"{sorted(phrase_unsafe & set(boosts))})")
@@ -453,7 +591,7 @@ def verify_full(objective, golden_full, board, index, id_field, k, boosts, poll,
     print(f"\nverifying winner + baseline on the full {n_total}-case golden set "
           f"(rounds tuned on {n_used}) ...")
     winner_full = confirm_full(board.best()["candidate"])
-    baseline_full = confirm_full(C.seed_candidates(boosts)[0])   # seed 0 == frontend_default
+    baseline_full = confirm_full(C.frontend_default_seed(boosts))
     # frontend_default carries no field list, so no phrase_unsafe filtering is needed here.
     return {
         "n_cases_used": n_used, "n_cases_total": n_total,
@@ -466,9 +604,14 @@ def verify_full(objective, golden_full, board, index, id_field, k, boosts, poll,
 
 
 def write_outputs(table, objective, golden, board, outdir, index, id_field, k, baseline_ev,
-                  bootstrapped=False, verification=None):
+                  bootstrapped=False, verification=None, reach_note=None):
     best = board.best()
     ranked = board.ranked()
+    ties = near_ties(board)
+    # The already-deployed config, if this table's fields.yaml carried a `query:` block. "Did we
+    # beat what's actually running?" is a different question from "did we beat the stock
+    # frontend query", and it's the one that decides whether re-deploying is worth it.
+    deployed_entry = next((e for e in ranked if e["name"] == C.DEPLOYED_SEED_NAME), None)
 
     # Slice-aware scoring: when --max-cases was used, the board holds SLICE scores and
     # `verification` holds the authoritative full-set re-scores of the winner + baseline.
@@ -497,8 +640,12 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
         "baseline_agg": base_agg,
         "fields_bootstrapped": bootstrapped,
         # boosts the optimizer left pinned at its ceiling, each with whether halving it changes
-        # the score. Empty list = none pinned; absent detail = candidate wasn't free to re-score.
+        # the score. Empty list = none pinned.
         "winner_saturation": best.get("saturation") or [],
+        # simpler configs the winner beat by less than the noise floor — see near_ties()
+        "near_ties": ties,
+        # the already-deployed config's score, when the table had a fields.yaml `query:` block
+        "deployed_objective": deployed_entry["objective"] if deployed_entry else None,
     }, open(os.path.join(outdir, "leaderboard.json"), "w"), indent=2)
 
     # tuned_fields.yaml (the winning config, drop-in for benchmark/<table>/fields.yaml)
@@ -536,7 +683,8 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
     open(os.path.join(outdir, "tuned_fields.yaml"), "w").write("\n".join(fy) + "\n")
 
     # report.md (experiment log — separate from RESULTS.md)
-    md = report_md(objective, golden, board, k, baseline_ev, bootstrapped, verification)
+    md = report_md(objective, golden, board, k, baseline_ev, bootstrapped, verification,
+                   ties=ties, deployed_entry=deployed_entry, reach_note=reach_note)
     open(os.path.join(outdir, "report.md"), "w").write(md)
 
     scored_note = (f"  (full {verification['n_cases_total']}-case set; rounds tuned on "
@@ -563,13 +711,26 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
     else:
         print("WARNING: could not compute a vs-default-frontend-query comparison "
               "(frontend_default was never evaluated).")
+    if deployed_entry is not None:
+        dd = best["objective"] - deployed_entry["objective"]
+        if best["name"] == C.DEPLOYED_SEED_NAME or dd <= 1e-6:
+            print(f"vs the config already deployed for this table: no improvement "
+                  f"({objective}={deployed_entry['objective']:.4f}) — leave it as it is.")
+        else:
+            print(f"vs the config already deployed for this table: {objective} "
+                  f"{deployed_entry['objective']:.4f} -> {best['objective']:.4f} ({dd:+.4f})")
+    for t in ties:
+        print(f"near-tie: {t['name']} scores {t['delta']:+.4f} vs the winner ({t['objective']:.4f}) "
+              f"with {t['knobs']} knob(s) vs {_knob_count(best['candidate'])} — inside the noise "
+              f"floor, so prefer the simpler config unless you have a reason not to.")
     print(f"\nwrote {outdir}/" + "{leaderboard.json, tuned_fields.yaml, report.md}")
     print("apply:  cp %s/tuned_fields.yaml benchmark/%s/fields.yaml  &&  "
           "python3 benchmark/run.py %s --strategy tuned --label tuned"
           % (outdir, table, table))
 
 
-def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, verification=None):
+def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, verification=None,
+              ties=(), deployed_entry=None, reach_note=None):
     obj = objective
     ranked = board.ranked()
     best = ranked[0]
@@ -620,6 +781,10 @@ def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, veri
                      f"{d['halved_score']:.3f} | {verdict} |")
         L.append("")
 
+    if reach_note:
+        L.append("> **Analyzer reachability.** " + reach_note)
+        L.append("")
+
     if bootstrapped:
         L.append("> No `fields.yaml` existed for this table — the field list explored below "
                  "was bootstrapped by profiling the live index (names/categories/free text; "
@@ -643,6 +808,32 @@ def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, veri
                  f"{'+' if delta >= 0 else ''}{delta:.3f} over the default frontend query**{full} "
                  f"(`frontend_default`): {baseline_obj:.3f} → {win_obj:.3f}.")
     L.append("")
+
+    # Second headline when the table already has a config deployed: beating the stock frontend
+    # query is table stakes, beating what's actually running is what justifies a re-deploy.
+    if deployed_entry is not None:
+        dep_obj = deployed_entry["objective"]
+        dd = best["objective"] - dep_obj
+        if best["name"] == C.DEPLOYED_SEED_NAME or dd <= 1e-6:
+            L += [f"**No improvement over the config already deployed** for this table "
+                  f"(`deployed_config`, {obj}={dep_obj:.3f}) — nothing found here is worth "
+                  f"re-deploying.", ""]
+        else:
+            L += [f"Against the config **already deployed** for this table (`deployed_config`, "
+                  f"read from its `fields.yaml` `query:` block): {obj} {dep_obj:.3f} → "
+                  f"{best['objective']:.3f} ({dd:+.3f}).", ""]
+
+    if ties:
+        L.append("> **Near-tie — a simpler config scores the same.** The winner is reported as "
+                 "measured, but these came within the noise floor of a few dozen cases "
+                 f"(±{NEAR_TIE_EPS:g} {obj}) using fewer knobs. Each knob is one more thing to "
+                 "deploy, explain and keep working, so prefer the simpler config unless you "
+                 "have a specific reason not to:")
+        L.append("")
+        L += [f"| config | {obj} | Δ vs winner | knobs |", "| --- | --- | --- | --- |"]
+        for t in ties:
+            L.append(f"| {t['name']} | {t['objective']:.4f} | {t['delta']:+.4f} | {t['knobs']} |")
+        L.append("")
 
     lb_scope = (f"slice of {n_used}/{n_total} cases" if verification
                 else f"{n_total} golden cases")
@@ -702,16 +893,18 @@ def _load_state(outdir):
     return json.load(open(path))
 
 
-def _init_key(table, golden, boosts, objective, k):
+def _init_key(table, golden, boosts, objective, k, deployed=None):
     """Fingerprint of everything that would invalidate a partially-completed round 0.
 
     Scores are only reusable if the table, field list, objective, cutoff, and the exact case
     set they were measured against are all unchanged — change any of them and the persisted
     numbers describe a different experiment. Hashing the queries (not just their count) also
-    catches an edited golden.yaml."""
+    catches an edited golden.yaml, and hashing the deployed `query:` block catches someone
+    applying a new config between runs (which changes what `deployed_config` even means)."""
     h = hashlib.sha256()
     h.update(f"{table}|{objective}|{k}".encode())
     h.update("|".join(sorted(boosts)).encode())
+    h.update(json.dumps(deployed or {}, sort_keys=True).encode())
     for c in golden["cases"]:
         h.update(f"{c['id']}={c['query']}".encode())
     return h.hexdigest()[:16]
@@ -739,7 +932,14 @@ def _write_round_context(outdir, profile_brief_dict, gsum, allowed, boosts, boar
         "profile": profile_brief_dict,
         "golden_summary": gsum,
         "allowed_fields": allowed,
+        # Per-field analyzer verdict: "analyzed" | "case_sensitive" | "unknown". A
+        # `case_sensitive` field is KEYWORD-mapped, so a lowercase query scores 0 on it no
+        # matter its boost — read `reachability_note` before weighting one.
+        "field_reachability": state.get("reachability") or {},
+        "unreachable_fields": state.get("unreachable") or [],
+        "reachability_note": state.get("reachability_note"),
         "current_default_boosts": boosts,
+        "deployed_query": state.get("deployed"),
         "fields_bootstrapped": state.get("bootstrapped", False),
         "leaderboard": board.summary(),
         "diagnostics": diagnostics,
@@ -761,7 +961,7 @@ def _write_round_context(outdir, profile_brief_dict, gsum, allowed, boosts, boar
 
 
 def cmd_init(args):
-    golden_full, boosts, bootstrapped, types = load_table(args.table, args.poll)
+    golden_full, boosts, bootstrapped, types, deployed = load_table(args.table, args.poll)
     n_total = len(golden_full["cases"])
     # Tune against the (optional) --max-cases slice for speed, but keep the FULL golden in state:
     # the final winner is re-verified on all cases at finalize, never on the slice alone.
@@ -777,7 +977,7 @@ def cmd_init(args):
 
     # Resume a round 0 that was killed or timed out partway: reuse the seed scores already
     # persisted, as long as they were produced for the SAME setup. --fresh forces a clean start.
-    key = _init_key(args.table, golden, boosts, args.objective, k)
+    key = _init_key(args.table, golden, boosts, args.objective, k, deployed)
     resume = None
     if not args.fresh:
         prior = _load_state_if(outdir, key)
@@ -797,9 +997,26 @@ def cmd_init(args):
     def save_partial(bd, base_ev):
         _save_state(outdir, {**partial, "board_entries": bd.entries, "baseline_ev": base_ev})
 
+    # Which fields a real (lowercase) query can even reach. Runs BEFORE the seeds because it
+    # reshapes what everything after it should do: a KEYWORD-analyzed column scores 0.0 on every
+    # lowercase case and looks merely uninformative in the probe, so without this the optimizer
+    # spends its sweep weighting columns that cannot contribute and the agent proposes them
+    # again each round. ~2 live queries per field.
+    index_id = golden_full.get("index")
+    reach, reach_note, unreachable = {}, None, []
+    if index_id:
+        print(f"\nchecking analyzer reachability of {len(boosts)} fields "
+              f"(is a lowercase query able to match them?) ...", flush=True)
+        reach = analyzer_reachability(index_id, sorted(boosts), poll_s=args.poll)
+        reach_note, unreachable = _reachability_note(reach, golden)
+        if reach_note:
+            print(f"  NOTE: {reach_note}")
+        else:
+            print("  all fields are analyzed (lowercase-matchable)")
+
     board, pm, index, id_field, baseline_ev = _seed_and_probe(
         args.table, golden, boosts, args.objective, k, args.poll, args.workers, outdir,
-        bootstrapped, types=types, resume=resume, on_progress=save_partial)
+        bootstrapped, types=types, resume=resume, on_progress=save_partial, deployed=deployed)
     allowed = sorted(boosts)
 
     print("\nprofiling index for the proposal step ...")
@@ -818,6 +1035,9 @@ def cmd_init(args):
         "max_cases": args.max_cases, "n_cases_total": n_total,
         "board_entries": board.entries, "baseline_ev": baseline_ev,
         "profile": prof, "golden_summary": gsum,
+        # cached so add-candidates can repeat the guidance each round without re-querying
+        "reachability": reach, "reachability_note": reach_note, "unreachable": unreachable,
+        "deployed": deployed,
         "round": 0, "best_obj": board.best()["objective"], "stale": 0,
     }
     _save_state(outdir, state)
@@ -910,9 +1130,25 @@ def cmd_finalize(args):
     # write_outputs uses `golden` only for the index name/id and the leaderboard case-count
     # label; the slice it was scored on is what the leaderboard reflects, so pass the slice.
     golden_slice = sliced_golden(golden_full, state.get("max_cases"))
+
+    # A non-decomposable winner never got the free probe-based saturation check during its
+    # round, so the brittleness callout would be missing from the final report unless we pay for
+    # it live here — see _saturation_live.
+    best = board.best()
+    if best and not best.get("saturation") and not is_local_rerankable(best["candidate"]):
+        sat = _saturation_live(best["candidate"], best["objective"], golden_slice,
+                               state["index"], state["id_field"], state["k"], state["poll"],
+                               state["workers"], state["objective"])
+        if sat:
+            best["saturation"] = sat
+            _print_saturation(sat)
+            state["board_entries"] = board.entries
+            _save_state(outdir, state)
+
     write_outputs(state["table"], state["objective"], golden_slice, board,
                   outdir, state["index"], state["id_field"], state["k"],
-                  state.get("baseline_ev"), state.get("bootstrapped", False), verification)
+                  state.get("baseline_ev"), state.get("bootstrapped", False), verification,
+                  reach_note=state.get("reachability_note"))
 
 
 def main():
