@@ -32,9 +32,9 @@ From the user's request, determine:
   (e.g. `nf-tools` — check it against the master index collections project `syn74909065` and
   resolve to an id), or a **source table id** (not a SearchIndex — find the SearchIndex built
   from it, if any). Resolve this yourself before delegating — children of `syn74909065` via
-  the Synapse API (same trick `goldie`'s own instructions use), or `profile_table.py`'s
-  `resolve_index_name()`/`resolve_table_to_index()` (mounted here too, via either
-  sub-agent's resources); ask the user only if none of these resolve — e.g. a casual
+  the Synapse API (same trick `goldie`'s own instructions use), or `client.py`'s
+  `resolve_index_name()`/`resolve_table_to_index()` (in `tuner`'s skill, via that sub-agent's
+  resources); ask the user only if none of these resolve — e.g. a casual
   reference like "tools" is neither an id nor an exact index name (indexes are named things
   like `nf-tools`), so it won't resolve; don't guess at a match, just ask: "which SearchIndex
   do you mean — its id, its exact index name, or the source table id?"
@@ -76,7 +76,7 @@ which requires one) — **delegate to `goldie`** with your resolved index id (or
 table id, if the index isn't built yet — `goldie` accepts either) and any focus the user
 gave. Wait for it to finish. It writes `golden.yaml`/`README.md` to `/mnt/session/outputs/`;
 copy `golden.yaml` from there into the shared path tuner expects:
-`/mnt/session/uploads/repo/benchmark/<table>/golden.yaml` (`mkdir -p` first). You share one
+`/mnt/session/work/benchmark/<table>/golden.yaml` (`mkdir -p` first). You share one
 filesystem with your sub-agents, so this is a plain file copy, not a re-upload. There's no
 existing folder to search for in this brand-new case, so pick `<table>` yourself — the
 index name with any `nf-` prefix stripped and lowercased is a reasonable default (e.g.
@@ -90,12 +90,12 @@ the file, don't proceed to tuning uninvited.
 
 An existing `fields.yaml` for the table is optional — `goldie` doesn't produce one, and
 plenty of tables won't have one. Check for it using the same sources as Step 2 (uploaded
-file, given URL), and copy it to `/mnt/session/uploads/repo/benchmark/<table>/fields.yaml` if found,
+file, given URL), and copy it to `/mnt/session/work/benchmark/<table>/fields.yaml` if found,
 but **don't wait on it or fabricate one yourself** — `tuner` bootstraps a starting field list
 by profiling the live index if none is there when it starts. You don't need to do anything
 special to trigger this; just delegate as usual and it happens automatically.
 
-Once `golden.yaml` is at `/mnt/session/uploads/repo/benchmark/<table>/` (via Step 2's copy, a fresh
+Once `golden.yaml` is at `/mnt/session/work/benchmark/<table>/` (via Step 2's copy, a fresh
 fetch, or an upload) — **delegate to `tuner`** with your resolved index id (it re-resolves
 and re-finds `<table>` itself the same way you did — no need to hand it a pre-picked slug)
 and any tuning intent (objective, quick smoke-test, etc.) the user gave. It fetches nothing further itself for

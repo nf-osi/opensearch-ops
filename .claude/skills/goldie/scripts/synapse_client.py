@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Minimal Synapse repo-prod client — vendored so this skill is self-contained.
+"""Minimal Synapse repo-prod client — the primitives goldie's other scripts import as a
+sibling (profile_index.py, profile_table.py, validate_golden.py):
 
-Provides the primitives the skill's other scripts need, with NO dependency on the
-repo's query.py (the skill folder can be copied elsewhere and still run):
   _call(ep, ...)          -> low-level authenticated HTTP against the repo-prod API
   search(index, dsl, ...) -> run a raw OpenSearch DSL query on a SearchIndex (async poll)
   hit_dict(hit)           -> flatten a SearchHit's fields into {column: value}
@@ -11,8 +10,8 @@ The deployed repo-prod SearchIndex API accepts a *raw OpenSearch query DSL* obje
 `searchQuery` (e.g. {"query": {...}, "size": N, "from": N}). Auth is not required for public
 indexes; pass token=... for a non-public one.
 
-CLI (read raw records for feel — replaces the old `python3 query.py ...`):
-  python3 sciops/agents/goldie/synapse_client.py '{"query":{"match_all":{}},"size":20}' <INDEX_ID>
+CLI (read raw records for feel):
+  python3 .claude/skills/goldie/scripts/synapse_client.py '{"query":{"match_all":{}},"size":20}' <INDEX_ID>
 """
 import json, sys, time, urllib.request, urllib.error
 

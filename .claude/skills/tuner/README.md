@@ -14,63 +14,44 @@ anonymously, so it works on any public SearchIndex.
 ## Prerequisites
 
 - A benchmark table at `benchmark/<table>/` with a `golden.yaml` (see the `goldie` agent —
-  `sciops/agents/goldie/`). An explicit `fields.yaml` (today's hand-tuned strategy, if any) is
+  `.claude/skills/goldie/`). An explicit `fields.yaml` (today's hand-tuned strategy, if any) is
   optional — the per-field probe can't run over a bare `*`, so if no `fields.yaml` exists,
   `load_table()` bootstraps a starting `{field: boost}` map by profiling the live index
   (names/categories/free text; identifiers excluded) instead of requiring one be provided.
-- For the agentic loop via `run` (below): Anthropic API credentials (`ANTHROPIC_API_KEY` /
-  `ANTHROPIC_AUTH_TOKEN`, or `ant auth login`). `run --no-agent`, and the `init`/
-  `add-candidates`/`finalize` path, need neither (see "Two ways to drive the agentic step").
+- Nothing else: no Anthropic API credentials are involved anywhere in this harness (see
+  "Driving the agentic step").
 
 ## Usage
 
+### Driving the agentic step
+
+The "agent proposes candidates" step (below) is driven by the *calling* agent —
+`sciops/agents/tuner/` (the Managed Agent behind the Slack bot), or Claude Code running the
+`tuner` skill locally. No API key touches this harness at all: the caller — already an LLM,
+running under the platform's own credentials — reads `<out>/<table>/round_context.json`
+(profile, leaderboard, diagnostics, and the exact candidate JSON schema), authors
+`candidates.json` itself, and drives the rounds:
+
 ```bash
-# Full loop: Claude proposes query types + field sets, the optimizer tunes boosts, all scored
-# against the golden set; writes a leaderboard, a report, and a drop-in fields.yaml.
-python3 sciops/tuning/tune.py run tools --rounds 3 --candidates-per-round 6 --objective ndcg
-
-# Offline: no API key — just numerically optimize the current fields.yaml boosts.
-python3 sciops/tuning/tune.py run tools --no-agent
-
-# Fast smoke test: first 6 cases only.
-python3 sciops/tuning/tune.py run tools --no-agent --max-cases 6
+python3 .claude/skills/tuner/scripts/tuning/tune.py init tools --objective ndcg
+# agent reads tuner-runs/tools/round_context.json, writes candidates.json matching
+# its "candidate_schema" key
+python3 .claude/skills/tuner/scripts/tuning/tune.py add-candidates tools candidates.json
+# repeat add-candidates for more rounds (round_context.json refreshes each time, including
+# a stale_rounds counter + recommendation) — up to MAX_ROUNDS=8; add-candidates refuses a
+# round past that (finalize instead), and truncates any batch over
+# MAX_CANDIDATES_PER_ROUND=10 candidates rather than rejecting it outright. Then:
+python3 .claude/skills/tuner/scripts/tuning/tune.py finalize tools
 ```
 
-Options: `--objective {ndcg|mrr|recall|hit1|hitk}` (default `ndcg`), `--k`, `--model`
-(default `claude-opus-5`), `--rounds` (default 3, hard-capped at `MAX_ROUNDS`=8),
-`--candidates-per-round` (default 6, hard-capped at `MAX_CANDIDATES_PER_ROUND`=10),
-`--max-cases N` (smoke test on a slice), `--workers` (default 8), `--poll`. Values above
-either cap are silently clamped with a printed note, not rejected.
-
-### Two ways to drive the agentic step
-
-The "agent proposes candidates" step (below) has two independent implementations sharing the
-same evaluate/probe/optimize code:
-
-- **`run`** — one-shot, for a human at a terminal with their own `ANTHROPIC_API_KEY`. Calls
-  `propose.py`, which makes its own direct Anthropic API call.
-- **`init` / `add-candidates` / `finalize`** — for `sciops/agents/tuner/` (the Managed Agent behind
-  the Slack bot). No API key touches this harness at all: the *calling* agent — already an
-  LLM, running under the platform's own credentials — reads `sciops/tuning/<table>/round_context.json`
-  (profile, leaderboard, diagnostics, and the exact candidate JSON schema), authors
-  `candidates.json` itself, and drives the rounds:
-
-  ```bash
-  python3 sciops/tuning/tune.py init tools --objective ndcg
-  # agent reads sciops/tuning/tools/round_context.json, writes candidates.json matching
-  # its "candidate_schema" key
-  python3 sciops/tuning/tune.py add-candidates tools candidates.json
-  # repeat add-candidates for more rounds (round_context.json refreshes each time, including
-  # a stale_rounds counter + recommendation) — up to MAX_ROUNDS=8; add-candidates refuses a
-  # round past that (finalize instead), and truncates any batch over
-  # MAX_CANDIDATES_PER_ROUND=10 candidates rather than rejecting it outright. Then:
-  python3 sciops/tuning/tune.py finalize tools
-  ```
+`init` options: `--objective {ndcg|mrr|recall|hit1|hitk}` (default `ndcg`), `--k`,
+`--max-cases N` (smoke test on a slice), `--workers` (default 8), `--poll`. All three
+subcommands take `--bench DIR` / `--out DIR`; see "Where artifacts go" below.
 
 **Query volume, cost, and how long it takes.** Runtime is dominated almost entirely by live
 query latency — every score is an async Synapse job (~1–3s each), run `--workers` at a time.
 Cost therefore tracks the *number of live queries*, which is predictable: the field probe is
-`cases × fields` queries (one-time, then cached to `sciops/tuning/<table>/probe.json`), plus a
+`cases × fields` queries (one-time, then cached to `<out>/<table>/probe.json`), plus a
 live confirm (`cases` queries) per candidate, plus the final full-set verification (`2 × cases`).
 The expensive variable is how many **non-decomposable** candidates a round contains (see the
 next section) — each adds up to `LIVE_EVAL_BUDGET × cases` queries. Rough, observed ballparks
@@ -80,13 +61,27 @@ for `nf-tools` (48 cases, ~15 fields), ±50% given Synapse's variable job queue:
 | --- | --- |
 | smoke test (`--max-cases 6`, decomposable candidates) | a few minutes |
 | full 48-case run, decomposable candidates only, 2–3 rounds | ~20–40 min |
-| each non-decomposable candidate added | ~+5 min |
+| each non-decomposable candidate added | ~+5–15 min |
 | full-set finalize verification | ~3–8 min |
 
-**Checkpointing / resumability.** `add-candidates` persists the board after *every* candidate
-(atomic write to `state.json`), so if a round is killed or times out partway, the candidates
-already completed are kept — re-running `add-candidates` continues from them rather than
-repeating minutes of live queries. Use `--max-cases` for a quick smoke test before a full run.
+**Checkpointing / resumability.** Every phase that spends live queries is resumable, so a kill,
+a timeout, or a crash costs the last few queries rather than the run:
+
+| phase | checkpoint | on re-run |
+| --- | --- | --- |
+| probe (`init`) | `probe.json`, atomically, every 25 (case × field) pairs | skips cached pairs; prints `resuming probe: N/M` |
+| seeds (`init`) | `state.json` after each seed and each optimized seed | prints `(cached)` per seed, re-queries none |
+| candidates (`add-candidates`) | `state.json` after each candidate | continues from the persisted board |
+
+`init` runs the probe *first*, before any seed, because it's the single most expensive step and
+the one that caches — and because an unsearchable field then fails on query 1 rather than after
+seven seeds' worth of live queries.
+
+Re-running `init` resumes automatically when the setup is unchanged: the table, field list,
+objective, `k`, and the exact case set are fingerprinted into `state.json`'s `init_key`, and a
+mismatch starts clean rather than mixing scores from two different experiments. `--fresh` forces
+that. Once `add-candidates` rounds exist, `init` refuses to run rather than clobbering them.
+Use `--max-cases` for a quick smoke test before a full run.
 
 ## How it works
 
@@ -102,7 +97,7 @@ field probe (cached) ─► diagnostics ─► AGENT proposes candidates (query 
    candidates and are scored live for a baseline, built from the table's `fields.yaml` boosts
    — or, if none exists, from a field list bootstrapped by profiling the index.
 2. **Field probe** — each match field is run as its own single-field query per golden case,
-   once, and cached to `sciops/tuning/<table>/probe.json`. This powers two things:
+   once, and cached to `<out>/<table>/probe.json`. This powers two things:
    - **Diagnostics** the agent reads — for each case (worst-first), which fields each ideal doc
      matches or misses, and the non-relevant *distractors* still outranking the best ideal doc
      with the field each wins on. These are computed through the **current leaderboard
@@ -111,22 +106,24 @@ field probe (cached) ─► diagnostics ─► AGENT proposes candidates (query 
    - A **local re-ranker** — for `best_fields`/`most_fields` the combined score is just
      `max`/`sum` of boosted per-field scores, so the optimizer can score *any* boost vector by
      recombining cached scores, with **zero** new live queries.
-3. **Agent proposals** (Claude) — from the profile + leaderboard + diagnostics, propose new
-   candidate *structures* (query type, field selection, starting boosts) with rationale.
-   Structured output guarantees valid candidates.
+3. **Agent proposals** — the calling agent reads `round_context.json` (profile + leaderboard +
+   diagnostics) and writes new candidate *structures* (query type, field selection, starting
+   boosts) with rationale to `candidates.json`, matching the `candidate_schema` the context
+   carries; `add-candidates` validates and normalizes every one before it's tried.
 4. **Numeric optimizer** — coordinate ascent + random restarts over each candidate's boosts.
    Free via the probe for decomposable candidates. Non-decomposable ones (cross_fields, phrase,
    fuzzy, etc.) are warm-started from a free probe sweep over the same fields, then refined with
    live queries under a hard eval budget (`optimize.LIVE_EVAL_BUDGET`) so cost stays bounded.
 5. **Live confirm** — every optimized candidate is re-scored with a real `multi_match` against
-   the index, so the leaderboard numbers are ground truth (see the caveat below). Rounds
-   early-stop when the objective stops improving.
+   the index, so the leaderboard numbers are ground truth (see the caveat below). When a round
+   doesn't improve the objective, `round_context.json` bumps `stale_rounds` and recommends
+   finalizing rather than proposing again.
 6. **Full-set winner verification** — when `--max-cases` restricts tuning to a slice, the
-   leaderboard holds *slice* scores. At finalize (and at the end of `run`) the winner **and**
+   leaderboard holds *slice* scores. At finalize the winner **and**
    `frontend_default` are re-scored live on the *full* golden set, and that becomes the
    authoritative headline; `report.md`/`leaderboard.json` flag the slice (`scored_on_slice`,
    `n_cases_used`/`n_cases_total`). With no slice, tuning already covered every case and this
-   step is skipped. A recommendation is never reported on a subset of the golden set.
+   step is skipped. A recommendation must never reported on a subset of the golden set.
 
 ### Decomposable vs non-decomposable candidates
 
@@ -192,19 +189,24 @@ That's why winners are re-confirmed, and why you should re-run the benchmark aft
 
 **Caveats / limitations:**
 - **Query-time only.** It never changes the index, analyzers, or `SearchConfiguration` — no
-  synonym/stemming/tokenizer tuning (that's the separate privileged rebuild loop). If a case
+  synonym/stemming/tokenizer tuning (that's a separate leverage path). If a case
   fails because the *analyzer* drops the match entirely, no boost vector can fix it.
-- **Only as good as the golden set.** It optimizes exactly what the golden encodes; gaps or
-  biases in the relevant sets propagate straight into the "winner." Build goldens from the source
-  table, not the search index (see `goldie`).
+- **Only as good as the golden set** It optimizes exactly what the golden encodes; gaps or
+  biases in the relevant sets propagate straight into the "winner."
 - **Non-decomposable candidates are slower and less exhaustively tuned** — bounded and
   warm-started now, but still a budgeted live search, not the free full sweep (see above).
 - **The probe is an approximation** for driving the search (the probe caveat above) — mitigated
   by always re-confirming live, never trusted as the final number.
-- **Objective ≠ production.** nDCG/MRR on the golden set is a proxy; always re-run
-  `benchmark/run.py` after applying a winner, and treat `tuned_fields.yaml` as a reviewed draft.
 
-## Outputs (`sciops/tuning/<table>/`)
+## Where artifacts go
+
+Every subcommand takes `--bench DIR` (READS `<DIR>/<table>/{golden,fields}.yaml`) and
+`--out DIR` (WRITES `<DIR>/<table>/`). Both default to the directory you invoke from:
+`./benchmark/` and `./tuner-runs/`. No directory in this repo is reserved for run artifacts —
+`tuner-runs/` is gitignored working state, and the Managed Agent is handed a writable sandbox
+path instead.
+
+## Outputs (`<out>/<table>/`)
 
 - `leaderboard.json` — every distinct candidate tried, ranked by the objective, with full
   configs, plus `fields_bootstrapped` (true if no `fields.yaml` existed for this table and the
@@ -218,19 +220,62 @@ That's why winners are re-confirmed, and why you should re-run the benchmark aft
   remains best — followed by the leaderboard table (slice scores, clearly labelled), the winning
   config, and the full-set per-case winner-vs-baseline deltas. (This is the experiment artifact;
   the stakeholder-facing `benchmark/<table>/RESULTS.md` is separate and unchanged.)
-- `tuned_fields.yaml` — the winner's boosts, formatted as a drop-in `fields.yaml`; the header
-  notes the winning query type and the full-set objective score it was verified at.
+- `tuned_fields.yaml` — the winning config, formatted as a drop-in `fields.yaml`: the boosts
+  under `fields:` and the query shape under `query:` (see "Applying a winner"), so applying it
+  reproduces the scored config rather than approximating it. The header notes the winning
+  query type and the full-set objective score it was verified at.
 - `probe.json` — cached probe matrix (delete to force a re-probe).
+
+**Saturated boosts.** When the optimizer leaves a boost at its 10.0 ceiling, `report.md` opens
+with a callout and `leaderboard.json` carries `winner_saturation`. Read it carefully: ranking
+depends only on the *ratios* between boosts (scaling them all leaves the order identical), so a
+pinned boost is **not** a truncated search — the same ratio is reachable by lowering the other
+fields. It means that field dominates by ~10:1, which on a few dozen cases is an overfitting
+smell. So each pinned boost is re-scored at half its value (free, off the probe):
+
+- **no change** → the value is arbitrary within a plateau; prefer the smaller, less extreme config.
+- **score drops** → the ranking genuinely hinges on that one field. Real, but brittle — widen the
+  golden set before trusting it.
+
+Non-decomposable candidates are skipped rather than charged the extra live queries.
 - `state.json` / `round_context.json` — the agent-driven path's working state (the full golden,
   cached profile, board) and the per-round context the agent reads. Transient, not deliverables.
 
 ## Applying a winner
 
 ```bash
-cp sciops/tuning/tools/tuned_fields.yaml benchmark/tools/fields.yaml   # review first
-python3 benchmark/run.py tools --label tuned                    # confirm on the live index
+cp tuner-runs/tools/tuned_fields.yaml benchmark/tools/fields.yaml       # review first
+python3 benchmark/run.py tools --strategy tuned --label tuned           # confirm live
 ```
 
-If the winning **query type** differs from the current strategy (noted in `report.md` /
-`tuned_fields.yaml` header), also add/adjust the matching strategy in `benchmark/strategies.py`
-before re-running.
+`tuned_fields.yaml` is a complete `fields.yaml`, carrying **both halves** of the winner:
+
+```yaml
+fields:                     # which columns, and their boosts
+  - "manifestation^10"
+  - "studyName^6"
+  - "summary^3.5"
+
+query:                      # the query SHAPE the boosts were tuned for
+  query_type: multi_match
+  multi_match_type: best_fields
+  tie_breaker: 0.5
+  phrase_boost:
+    fields: [studyName, summary]
+    boost: 4.0
+```
+
+The `query:` block is optional and its keys are exactly `candidate.py`'s candidate schema.
+`run.py` compiles it — through `candidate.build_dsl()`, the same function that scored the
+winner — and registers it as the **`tuned`** strategy for that table. Tables without a block
+(the untuned default) are unaffected and keep only the fixed strategies.
+
+This exists because the fixed strategies in `benchmark/strategies.py` take no knobs, so a
+winner using `tie_breaker`, `minimum_should_match`, or `phrase_boost` previously had nothing
+that reproduced it: you could apply its boosts, but re-running scored a *different query* than
+the one recommended. Boosts stay in `fields:` and are never duplicated inside the block, so
+there is one field list per table rather than two that can disagree.
+
+`web/strategies.js` mirrors the compiler for the browser Search Lab (`build_site.py` ships the
+block in each table's data JSON), so the lab offers the same `tuned` recipe rather than
+applying tuned boosts to a stock query shape.

@@ -6,18 +6,17 @@ the agent already recorded in .env in place (client.beta.agents.update — bumps
 same agent_id, same environment) rather than minting a new one. Pass --new the first time
 (no .env yet) or whenever you deliberately want a fresh agent_id/environment instead.
 
-Wraps SKILL.md (this agent's instructions) + the sciops/tuning/ harness as an
+Wraps the `tuner` Agent Skill (SKILL.md + the harness, published by sciops/publish_skill.py) as an
 Anthropic Managed Agent (`client.beta.agents`) running in a persistent
 sandboxed `environment` (`client.beta.environments`), per the pattern in
 https://platform.claude.com/cookbook/managed-agents-slack-data-bot .
 
 Self-contained, like `goldie`, AND no nested credential: this agent IS the
-proposal step (reads `sciops/tuning/<table>/round_context.json`, authors
-`candidates.json` itself using its own reasoning) — the harness's
-`sciops/tuning/propose.py`, which makes its own separate Anthropic API call, is
-deliberately NOT uploaded here; it's for local human-CLI use only
-(`tune.py run`, see sciops/tuning/README.md). No ANTHROPIC_API_KEY ever needs to
-exist in this sandbox.
+proposal step (reads `<OUT_DIR>/<table>/round_context.json`, authors
+`candidates.json` itself using its own reasoning). The harness makes no
+Anthropic API call of its own — it only has `init`/`add-candidates`/`finalize`,
+all driven by the calling agent (see .claude/skills/tuner/README.md) — so no
+ANTHROPIC_API_KEY ever needs to exist in this sandbox.
 
 The per-table `benchmark/<table>/golden.yaml` is NOT uploaded by slacker
 either, and this agent has no configured default repo to fetch it from
@@ -38,10 +37,10 @@ Usage:
                                        # .env doesn't have one yet (fetches <TABLE>'s golden
                                        # itself, bootstraps fields.yaml if it doesn't have one)
 
-Requires `anthropic>=0.91.0` with the managed-agents beta enabled on the API
-key. Saves TUNER_ENV_ID, TUNER_AGENT_ID, TUNER_AGENT_VERSION, and
-TUNER_SCRIPT_FILE_IDS (json map mount_path -> file_id) to .env for
-sciops/slacker/slack_bot.py.
+Requires `anthropic>=0.91.0` with the managed-agents beta enabled on the API key. Saves
+TUNER_ENV_ID, TUNER_AGENT_ID, TUNER_AGENT_VERSION to .env. TUNER_SCRIPT_FILE_IDS is gone —
+the harness ships as an Agent Skill (run `sciops/publish_skill.py tuner` first), so there are no
+session file mounts for the bot to propagate.
 """
 import argparse
 import json
@@ -54,53 +53,75 @@ from dotenv import dotenv_values, load_dotenv, set_key
 HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent.parent  # sciops/agents/tuner -> sciops/agents -> sciops -> repo root
 ENV_FILE = HERE / ".env"
-SKILL_MD_PATH = HERE / "SKILL.md"
 
-# Mirrors the real repo layout so the harness's own relative imports
-# (query.py, benchmark/run.py, sciops/tuning/*.py, sciops/agents/goldie/*.py)
-# resolve unchanged in the sandbox — relative to MOUNT_ROOT, that is.
-#
-# IMPORTANT: MOUNT_ROOT is the `mount_path` REQUESTED from the resources API — keep it as
-# "/mnt/session/repo" (unchanged). The platform does NOT honor mount_path literally: it
-# always nests the file under /mnt/session/uploads/ instead (confirmed empirically via a
-# real goldie run's session-events trace: requesting "/mnt/session/skill/x.py" made the
-# file land at "/mnt/session/uploads/skill/x.py"). We do NOT know the exact transformation
-# rule (e.g. whether requesting ".../uploads/repo/x.py" directly would double-nest to
-# ".../uploads/uploads/repo/x.py") — untested, so don't guess by changing this constant.
-# SKILL.md's own text (hardcoded, not templated from this constant) separately tells the
-# agent the real resolved location: /mnt/session/uploads/repo/... — see its own edits.
-MOUNT_ROOT = "/mnt/session/repo"
 OUTPUT_DIR = "/mnt/session/outputs"
+# The writable directories this deployment gives the harness — the skill bundle is mounted
+# read-only, so tune.py cannot write beside its own code. These are passed to it as
+# --bench/--out via the system prompt, NOT baked into SKILL.md, so the skill stays reusable.
+# BENCH_DIR is also where the orchestrator drops goldie's golden.yaml for the handoff, so it
+# must match agents/orchestrator/SKILL.md.
+BENCH_DIR = "/mnt/session/work/benchmark"
+OUT_DIR = "/mnt/session/work/runs"
 
-# (path relative to repo root) to upload once. profile_index.py/profile_table.py/
-# synapse_client.py are goldie's — `tune.py init`/`add-candidates` use profile_index.py to
-# profile the index for round_context.json, AND `load_table` uses it to bootstrap a
-# starting fields.yaml when a table doesn't have one yet. profile_table.py's
-# resolve_index_name()/resolve_table_to_index() resolve whatever identifier tuner was given
-# (index name / source table id) down to a SearchIndex before any of that (see SKILL.md's
-# Inputs section). sciops/tuning/propose.py is deliberately NOT included: it's the
-# local-human-CLI-only path with its own Anthropic API call.
-STATIC_FILES = [
-    "query.py",
-    "benchmark/run.py",
-    "sciops/tuning/candidate.py",
-    "sciops/tuning/evaluate.py",
-    "sciops/tuning/optimize.py",
-    "sciops/tuning/probe.py",
-    "sciops/tuning/tune.py",
-    "sciops/agents/goldie/profile_index.py",
-    "sciops/agents/goldie/profile_table.py",
-    "sciops/agents/goldie/synapse_client.py",
-]
+# (skill name, .env holding its ids, key prefix). tuner attaches only its own skill, and that
+# is the whole dependency: the harness carries its own Synapse client and index profiler, so
+# there is no second skill to attach and nothing vendored from one.
+SKILL_SOURCES = [("tuner", ENV_FILE, "TUNER")]   # must match publish_skill.SKILLS["tuner"].env_file
+
+
+def _load_skills() -> list:
+    """Read each required skill's published ids. Built by `sciops/publish_skill.py <name>`."""
+    skills = []
+    for name, env_file, prefix in SKILL_SOURCES:
+        values = dotenv_values(env_file)
+        required = [f"{prefix}_SKILL_ID", f"{prefix}_SKILL_VERSION", f"{prefix}_SKILL_DIR"]
+        missing = [k for k in required if not values.get(k)]
+        if missing:
+            raise SystemExit(
+                f"{env_file} missing {missing} — run `python3 sciops/publish_skill.py {name}` (from the"
+                f" repo root) first. The agent carries its harness as a Skill, not session mounts."
+            )
+        skills.append({"name": name, "id": values[f"{prefix}_SKILL_ID"],
+                       "version": values[f"{prefix}_SKILL_VERSION"],
+                       "directory": values[f"{prefix}_SKILL_DIR"]})
+    return skills
+
 
 MODEL = os.environ.get("TUNER_AGENT_MODEL", "claude-sonnet-5")
 
 
-def build_system_prompt() -> str:
-    skill_md = SKILL_MD_PATH.read_text()
-    if skill_md.startswith("---"):
-        _, _, skill_md = skill_md[3:].partition("---")
-    return skill_md.strip() + "\n"
+def build_system_prompt(skills: list) -> str:
+    """Short by design — SKILL.md ships inside the skill and loads on demand, so its procedure
+    costs context only once a tuning task actually starts.
+
+    Everything deployment-specific lives HERE, not in SKILL.md: the skill documents that the
+    harness takes --bench/--out and never writes beside its own code, and this prompt supplies
+    the concrete directories for this deployment. That keeps the skill reusable anywhere."""
+    tuner = {s["name"]: s for s in skills}["tuner"]
+    return f"""\
+You recommend better query-time search configurations for a benchmark table.
+
+Your full procedure lives in the `tuner` skill. Read `{tuner['directory']}/SKILL.md` before
+doing anything else and follow it exactly. The harness is at `{tuner['directory']}/scripts/`,
+mounted read-only. If that path doesn't resolve, locate it once with
+`find / -name tune.py -path '*{tuner['directory']}*' 2>/dev/null | head -1`.
+
+This deployment's directories — substitute these wherever the skill says `<BENCH_DIR>` or
+`<OUT_DIR>`, and pass them on every `tune.py` command:
+
+- `<BENCH_DIR>` = `{BENCH_DIR}` — where the golden set is read from. A coordinating agent may
+  have placed `<table>/golden.yaml` here already; you share its filesystem.
+- `<OUT_DIR>` = `{OUT_DIR}` — where run artifacts are written.
+
+Create them before the first command: `mkdir -p {BENCH_DIR} {OUT_DIR}`
+
+Other deployment notes:
+
+- Copy your three deliverables (`leaderboard.json`, `tuned_fields.yaml`, `report.md`) to
+  `{OUTPUT_DIR}/` — they are collected from there and posted back.
+- Your final message becomes what gets posted back to the Slack thread; always lead with the
+  headline metric change (see the skill's reporting section).
+"""
 
 
 def create_environment(client: Anthropic):
@@ -114,12 +135,16 @@ def create_environment(client: Anthropic):
     )
 
 
-def _agent_kwargs() -> dict:
+def _agent_kwargs(skills: list) -> dict:
     """Shared by create_agent/update_agent so the two paths can't drift apart."""
     return dict(
         name="opensearch-tuner",
         model=MODEL,
-        system=build_system_prompt(),
+        system=build_system_prompt(skills),
+        # Pinned versions, not "latest", so republishing a skill can't silently change a
+        # pinned agent's behaviour. Re-run this script to adopt new skill versions.
+        skills=[{"type": "custom", "skill_id": s["id"], "version": s["version"]}
+                for s in skills],
         tools=[
             {
                 "type": "agent_toolset_20260401",
@@ -136,40 +161,21 @@ def _agent_kwargs() -> dict:
     )
 
 
-def create_agent(client: Anthropic):
-    return client.beta.agents.create(**_agent_kwargs())
+def create_agent(client: Anthropic, skills: list):
+    return client.beta.agents.create(**_agent_kwargs(skills))
 
 
-def update_agent(client: Anthropic, agent_id: str, version: int):
-    return client.beta.agents.update(agent_id, version=version, **_agent_kwargs())
+def update_agent(client: Anthropic, agent_id: str, version: int, skills: list):
+    return client.beta.agents.update(agent_id, version=version, **_agent_kwargs(skills))
 
 
-def upload_scripts(client: Anthropic) -> dict:
-    """Returns {mount_path: file_id} for the static harness code (excludes
-    per-table golden/fields.yaml — the agent fetches those itself)."""
-    file_ids = {}
-    for rel_path in STATIC_FILES:
-        local_path = REPO_ROOT / rel_path
-        mount_path = f"{MOUNT_ROOT}/{rel_path}"
-        with local_path.open("rb") as f:
-            uploaded = client.beta.files.upload(file=(local_path.name, f, "text/x-python"))
-        file_ids[mount_path] = uploaded.id
-        print(f"Uploaded {rel_path} ({uploaded.size_bytes} bytes) as {uploaded.id} -> {mount_path}")
-    return file_ids
-
-
-def script_resources(file_ids: dict) -> list:
-    return [
-        {"type": "file", "file_id": fid, "mount_path": path}
-        for path, fid in file_ids.items()
-    ]
-
-
-def run_smoke_test(client: Anthropic, env_id: str, agent, file_ids: dict, table: str):
+def run_smoke_test(client: Anthropic, env_id: str, agent, table: str):
+    # No `resources=` — the harness arrives with the skill, which is part of the agent version.
+    # Note this smoke test provides no golden.yaml, so the agent is expected to say it needs a
+    # source (or fetch one it was given) rather than to complete a tuning run.
     session = client.beta.sessions.create(
         environment_id=env_id,
         agent={"type": "agent", "id": agent.id, "version": agent.version},
-        resources=script_resources(file_ids),
         title=f"Smoke test: {table}",
     )
     prompt = f"Tune search relevance for the `{table}` benchmark table. Use --max-cases 6 for speed."
@@ -205,7 +211,7 @@ def _run_smoke_test_against_existing(client: Anthropic, table: str):
     always mints a brand-new agent_id, even for a duplicate name). If nothing's recorded
     yet, run this script with no args first."""
     values = dotenv_values(ENV_FILE)
-    required = ["TUNER_ENV_ID", "TUNER_AGENT_ID", "TUNER_AGENT_VERSION", "TUNER_SCRIPT_FILE_IDS"]
+    required = ["TUNER_ENV_ID", "TUNER_AGENT_ID", "TUNER_AGENT_VERSION"]
     missing = [k for k in required if not values.get(k)]
     if missing:
         raise SystemExit(f"{ENV_FILE} missing {missing} — run `python3 agent_setup.py` "
@@ -214,8 +220,7 @@ def _run_smoke_test_against_existing(client: Anthropic, table: str):
         values["TUNER_AGENT_ID"], version=int(values["TUNER_AGENT_VERSION"]),
         betas=["managed-agents-2026-04-01"],
     )
-    file_ids = json.loads(values["TUNER_SCRIPT_FILE_IDS"])
-    run_smoke_test(client, values["TUNER_ENV_ID"], agent, file_ids, table)
+    run_smoke_test(client, values["TUNER_ENV_ID"], agent, table)
 
 
 def main():
@@ -240,12 +245,15 @@ def main():
         existing.get(k) for k in ("TUNER_ENV_ID", "TUNER_AGENT_ID", "TUNER_AGENT_VERSION")
     )
 
-    file_ids = upload_scripts(client)
+
+    skills = _load_skills()
+    for s_ in skills:
+        print(f"Attaching skill {s_['name']}: {s_['id']} v{s_['version']} (dir {s_['directory']}/)")
 
     if has_existing:
         env_id = existing["TUNER_ENV_ID"]
         old_version = existing["TUNER_AGENT_VERSION"]
-        agent = update_agent(client, existing["TUNER_AGENT_ID"], int(old_version))
+        agent = update_agent(client, existing["TUNER_AGENT_ID"], int(old_version), skills)
         print(f"Updated agent {agent.id} v{old_version} -> v{agent.version} (environment {env_id} reused)")
     else:
         if args.new and existing.get("TUNER_AGENT_ID"):
@@ -253,15 +261,14 @@ def main():
                   f"as-is — archive it yourself once you've confirmed the new one works.")
         env = create_environment(client)
         print(f"Created environment {env.id}")
-        agent = create_agent(client)
+        agent = create_agent(client, skills)
         print(f"Created agent {agent.id} v{agent.version}")
         env_id = env.id
 
     set_key(str(ENV_FILE), "TUNER_ENV_ID", env_id)
     set_key(str(ENV_FILE), "TUNER_AGENT_ID", agent.id)
     set_key(str(ENV_FILE), "TUNER_AGENT_VERSION", str(agent.version))
-    set_key(str(ENV_FILE), "TUNER_SCRIPT_FILE_IDS", json.dumps(file_ids))
-    print(f"Saved TUNER_ENV_ID, TUNER_AGENT_ID, TUNER_AGENT_VERSION, TUNER_SCRIPT_FILE_IDS to {ENV_FILE}")
+    print(f"Saved TUNER_ENV_ID, TUNER_AGENT_ID, TUNER_AGENT_VERSION to {ENV_FILE}")
 
 
 if __name__ == "__main__":

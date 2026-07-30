@@ -2,41 +2,40 @@
 """Standalone automated search-relevance tuning harness.
 
 Given a benchmark table (its golden set under benchmark/<table>/), this recommends a better
-query-time config. An existing fields.yaml (today's hand-tuned strategy) is optional, not
-required — if none exists, one is bootstrapped by profiling the live index (see
+query-time config. An existing fields.yaml (today's hand-tuned strategy) is optional — 
+if none exists, one is bootstrapped by profiling the live index (see
 `load_table`), so there's always a real field list to explore, not just a bare `*`:
 
-  1. Evaluate the seed candidates (today's hand-authored strategies) live -> baseline leaderboard.
-  2. Probe every match field per case (cached) -> diagnostics + a free local re-ranker.
+  1. Probe every match field per case (cached) -> diagnostics + a free local re-ranker. First,
+     so the priciest step is on disk before anything else and a killed run resumes cheaply.
+  2. Evaluate the seed candidates (today's hand-authored strategies) live -> baseline leaderboard.
   3. Optimize the decomposable seeds' boosts numerically (zero live queries via the probe).
   4. Each round, new candidates (query types, field sets, starting boosts) get their boosts
      numerically tuned; every optimized candidate is CONFIRMED with a real live query.
-  5. Write the leaderboard, an experiment report, and the winning boosts as a drop-in fields.yaml.
+  5. Write the leaderboard, an experiment report, and the winning config (boosts + query
+     shape) as a drop-in fields.yaml.
 
 Query-time only: it never touches the live index, analyzers, or SearchConfiguration. Apply a
-winner by copying sciops/tuning/<table>/tuned_fields.yaml over benchmark/<table>/fields.yaml and
+winner by copying <out>/<table>/tuned_fields.yaml over benchmark/<table>/fields.yaml and
 re-running benchmark/run.py.
 
-Two ways to drive the agentic step (round 4 above) — same underlying evaluate/optimize code:
+The agentic step (round 4 above) is driven by the CALLING agent — it reads
+round_context.json, authors candidates.json itself (matching candidate.AGENT_CANDIDATE_SCHEMA),
+and drives the rounds via `init` / `add-candidates` / `finalize`. No nested Anthropic API call
+and no ANTHROPIC_API_KEY are involved anywhere in this harness:
 
-  `run` — one-shot, for a human at a terminal with their own ANTHROPIC_API_KEY. Calls
-  sciops/tuning/propose.py, which makes its own Anthropic API call.
+    python3 tune.py init <table> --bench <DIR> --out <DIR> [--objective ndcg] [--max-cases N]
+    # agent reads <out>/<table>/round_context.json, writes candidates.json
+    python3 tune.py add-candidates <table> candidates.json --bench <DIR> --out <DIR>
+    # repeat add-candidates for more rounds, then:
+    python3 tune.py finalize <table> --out <DIR>
 
-      python3 tune.py run <table> [--rounds 3] [--candidates-per-round 6]
-          [--objective ndcg|mrr|recall|hit1|hitk] [--k 10] [--model claude-opus-5]
-          [--poll 0.15] [--no-agent]
-
-  `init` / `add-candidates` / `finalize` — for a Managed Agent (sciops/agents/tuner/): the CALLING
-  agent (already an LLM, no extra credential needed) reads round_context.json, authors
-  candidates.json itself (matching candidate.AGENT_CANDIDATE_SCHEMA), and drives the rounds:
-
-      python3 tune.py init <table> [--objective ndcg] [--k 10] [--max-cases N]
-      # agent reads sciops/tuning/<table>/round_context.json, writes candidates.json
-      python3 tune.py add-candidates <table> candidates.json
-      # repeat add-candidates for more rounds, then:
-      python3 tune.py finalize <table>
+--bench/--out say where the golden set is read from and where artifacts are written. Omit
+them on a local checkout; pass them in a sandbox, where this code is mounted read-only and
+cannot write beside itself.
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -44,20 +43,62 @@ import time
 
 import yaml
 
+# Every module this harness needs is a sibling of this file — no repo tree to discover, no
+# scripts borrowed from another skill — so the same files run unchanged from a repo checkout
+# and from a read-only skill bundle.
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))     # sciops/tuning -> sciops -> repo root
 sys.path.insert(0, HERE)
-sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "benchmark"))
-sys.path.insert(0, os.path.join(ROOT, "sciops", "agents", "goldie"))
 
 import candidate as C                              # noqa: E402
+from client import KEYWORD_TYPES, column_types, is_text_searchable   # noqa: E402
 from evaluate import (evaluate, objective_value, live_ranker,      # noqa: E402
                       OBJECTIVES, OBJ_CASE_KEY)
-from probe import probe, diagnose, is_local_rerankable, profile_brief  # noqa: E402
-from optimize import optimize_boosts               # noqa: E402
+from index_profile import profile as profile_index  # noqa: E402
+from probe import (probe, diagnose, is_local_rerankable, profile_brief,   # noqa: E402
+                   SAVE_EVERY)
+from optimize import optimize_boosts, probe_score_fn, saturation   # noqa: E402
 
-BENCH = os.path.join(ROOT, "benchmark")
+# WHERE data is read from and written to, kept separate from where this code lives — the code
+# may sit in a READ-ONLY Agent Skill bundle, so it can never assume it can write beside itself.
+#
+#   BENCH  reads  <BENCH>/<table>/{golden,fields}.yaml
+#   RUNS   writes <RUNS>/<table>/{probe.json,state.json,round_context.json,leaderboard.json,
+#                                tuned_fields.yaml,report.md}
+#
+# RUNS artifacts are working files, not deliverables: a probe cache, resumable state, and the
+# three outputs the caller collects. They land in a plain ./tuner-runs/ beside wherever you
+# invoke from, and are gitignored — nothing in the repo tree is expected to hold them.
+#
+# resolve_paths() rebinds these per invocation from --bench/--out; these module-level values
+# are only a placeholder. Precedence: explicit flag > $TUNER_WORK_DIR > the working directory
+# the command was launched from (the repo root, on a local checkout).
+RUNS_DIRNAME = "tuner-runs"        # <cwd>/tuner-runs/<table>/ unless --out says otherwise
+
+BENCH = os.path.join(os.getcwd(), "benchmark")
+RUNS = os.path.join(os.getcwd(), RUNS_DIRNAME)
+
+
+def resolve_paths(args):
+    """Bind BENCH/RUNS for this invocation.
+
+    Prefer the explicit flags over $TUNER_WORK_DIR, especially in an agent sandbox: each bash
+    tool call can be a fresh shell, so an `export` may silently fail to carry over between
+    commands and the harness would quietly fall back to somewhere unwritable. A flag on the
+    command line cannot go missing that way.
+
+    The last resort is the CWD, not this file's location: the code may be installed anywhere
+    (a read-only bundle), so where it happens to sit says nothing about where the data is."""
+    global BENCH, RUNS
+    work = os.environ.get("TUNER_WORK_DIR") or os.getcwd()
+    bench, out = getattr(args, "bench", None), getattr(args, "out", None)
+    BENCH = os.path.abspath(bench) if bench else os.path.join(work, "benchmark")
+    RUNS = os.path.abspath(out) if out else os.path.join(work, RUNS_DIRNAME)
+
+
+def run_dir(table):
+    """Per-table output directory. Never inside this script's own directory — that is the
+    read-only skill bundle in a Managed Agent session."""
+    return os.path.join(RUNS, table)
 
 # Hard ceilings on the agentic loop. The agent-driven init/add-candidates path otherwise has
 # no built-in stopping point besides the agent's own judgment (round_context.json's
@@ -65,19 +106,35 @@ BENCH = os.path.join(ROOT, "benchmark")
 # queries (see README's "Query volume" note), so an unattended or confused agent could keep
 # proposing indefinitely. These are enforced by the harness itself, not just documented:
 # add-candidates refuses a round past MAX_ROUNDS, and truncates any batch bigger than
-# MAX_CANDIDATES_PER_ROUND. `run`'s --rounds/--candidates-per-round are clamped to the same
-# ceilings (see cmd_run).
+# MAX_CANDIDATES_PER_ROUND.
 MAX_ROUNDS = 8
 MAX_CANDIDATES_PER_ROUND = 10
+
+
+class _BlockDumper(yaml.SafeDumper):
+    """SafeDumper that indents list items under their key. Purely cosmetic — PyYAML's default
+    puts a nested sequence at the same column as its parent key, which is valid but reads badly
+    in tuned_fields.yaml, a file a human is expected to review before applying."""
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
 
 
 def load_table(table, poll=0.15):
     """Load golden.yaml + fields.yaml for a table. If fields.yaml doesn't exist (or is a bare
     `*`, i.e. no explicit fields list), there's no existing search strategy to compare
     against — bootstrap a starting {field: boost} map instead of requiring one be provided,
-    by profiling the live index (name/category/text columns; identifiers excluded). Returns
-    (golden, boosts, bootstrapped) — `bootstrapped` is True when the field list was inferred
-    rather than read from an existing fields.yaml."""
+    by profiling the live index (name/category/text columns; identifiers excluded).
+
+    Either way the field list is then checked against the index's real column types and any
+    field a free-text query cannot touch (DATE, INTEGER, …) is dropped with a printed note.
+    This is not tidiness: querying such a column 500s, which used to kill the whole run partway
+    through. A hand-written fields.yaml naming one is just as fatal as a bootstrapped list, so
+    the check applies to both.
+
+    Returns (golden, boosts, bootstrapped, types) — `bootstrapped` is True when the field list
+    was inferred rather than read from an existing fields.yaml; `types` is {column: columnType}
+    for the live index (empty if it has no `index` set yet)."""
     gpath = os.path.join(BENCH, table, "golden.yaml")
     fpath = os.path.join(BENCH, table, "fields.yaml")
     if not os.path.exists(gpath):
@@ -87,23 +144,51 @@ def load_table(table, poll=0.15):
     if os.path.exists(fpath):
         fields_cfg = yaml.safe_load(open(fpath)) or {}
         boosts = C.from_fields_yaml(fields_cfg.get("fields") or ["*"])
-    if boosts:
-        return golden, boosts, False
 
     index = golden.get("index")
+    if boosts:
+        if not index:
+            return golden, boosts, False, {}
+        types = column_types(index, poll_s=poll)
+        boosts = _drop_unsearchable(boosts, types, f"benchmark/{table}/fields.yaml")
+        if not boosts:
+            sys.exit(f"every field in benchmark/{table}/fields.yaml is a non-text column — "
+                     f"nothing left to search. Fix the field list.")
+        return golden, boosts, False, types
+
     if not index:
         sys.exit(f"no fields.yaml for {table}, and golden.yaml has no `index` set yet — can't "
                  f"profile a table that doesn't exist to bootstrap one. Add a fields.yaml, or "
                  f"set golden.yaml's `index` once the SearchIndex is built.")
-    import profile_index
     print(f"no fields.yaml for {table} — bootstrapping a starting field set by profiling {index} ...")
-    prof = profile_index.profile(index, 100, poll_s=poll)
+    prof = profile_index(index, 100, poll_s=poll)
     boosts = C.bootstrap_boosts(prof)
     if not boosts:
         sys.exit(f"couldn't infer any searchable fields from {index}'s schema (no name/category/"
                  f"text columns found) — provide an explicit benchmark/{table}/fields.yaml.")
     print(f"  bootstrapped {len(boosts)} fields: {sorted(boosts)}")
-    return golden, boosts, True
+    return golden, boosts, True, prof.get("types") or {}
+
+
+def _drop_unsearchable(boosts, types, source):
+    """Drop fields whose column type no free-text query can match, with a printed note naming
+    them. Unknown columns are kept — a name absent from `types` may be a real field the index
+    just didn't report, and letting the index reject it is better than silently ignoring it."""
+    bad = {f: types.get(f) for f in boosts
+           if f in types and not is_text_searchable(types[f])}
+    if not bad:
+        return boosts
+    print(f"  dropping {len(bad)} non-text field(s) from {source} — a free-text query against "
+          f"these is rejected by the index: " +
+          ", ".join(f"{f} ({t})" for f, t in sorted(bad.items())))
+    return {f: b for f, b in boosts.items() if f not in bad}
+
+
+def phrase_unsafe_fields(types):
+    """Keyword-mapped columns from a {column: columnType} map. A phrase / phrase_prefix query
+    against one of these is rejected by the index (they are searchable for term queries, so
+    they stay in the field list — only the phrase-shaped candidates must avoid them)."""
+    return {f for f, t in (types or {}).items() if t in KEYWORD_TYPES}
 
 
 def sliced_golden(golden, max_cases):
@@ -152,14 +237,25 @@ class Board:
                             "tie_breaker", "minimum_should_match", "phrase_boost")},
                           sort_keys=True)
 
-    def add(self, cand, ev, source):
+    def add(self, cand, ev, source, sat=None):
         sig = self._sig(cand)
         obj = objective_value(ev["agg"], self.objective)
         cur = self.entries.get(sig)
         if cur is None or obj > cur["objective"]:
             self.entries[sig] = {"name": cand["name"], "source": source, "objective": obj,
-                                 "agg": ev["agg"], "candidate": cand, "per_case": ev["per_case"]}
+                                 "agg": ev["agg"], "candidate": cand, "per_case": ev["per_case"],
+                                 # boosts left pinned at the optimizer's ceiling, if any — see
+                                 # optimize.saturation(). Computed only where it's free.
+                                 "saturation": sat or []}
         return obj
+
+    def has(self, cand):
+        """Already scored? Keyed by config signature, not name — so a resumed run skips the
+        real work rather than re-scoring an identical config under a different label."""
+        return self._sig(cand) in self.entries
+
+    def entry(self, cand):
+        return self.entries.get(self._sig(cand))
 
     def ranked(self):
         return sorted(self.entries.values(), key=lambda e: e["objective"], reverse=True)
@@ -176,7 +272,7 @@ class Board:
                 for e in self.ranked()[:top]]
 
 
-# --- shared by both the `run` and `init`/`add-candidates`/`finalize` paths -----------------
+# --- shared by `init` / `add-candidates` / `finalize` --------------------------------------
 
 def _diagnose_vs_winner(pm, golden, board, objective):
     """diagnose() through the lens of the current leaderboard winner — its field weighting for
@@ -187,10 +283,32 @@ def _diagnose_vs_winner(pm, golden, board, objective):
                     winner_per_case=best["per_case"] if best else None, objective=objective)
 
 
+def _saturation_if_free(cand, golden, pm, objective, k):
+    """optimize.saturation() for `cand`, but only when the probe can score it for free.
+
+    Non-decomposable candidates are skipped rather than charged: each extra config is another
+    `cases` live queries, and this is a diagnostic, not part of the recommendation."""
+    if not is_local_rerankable(cand):
+        return []
+    return saturation(cand, probe_score_fn(golden, pm, objective, k))
+
+
+def _print_saturation(sat):
+    """One line per pinned boost. Worth surfacing during the round, not just at finalize: it's
+    the clearest available signal that a config is fitting the golden set rather than the data."""
+    for s in sat:
+        if s["flat"]:
+            print(f"      note: {s['field']} pinned at {s['boost']} but halving it changes "
+                  f"nothing ({s['delta']:+.4f}) — the value is arbitrary, prefer the smaller one")
+        else:
+            print(f"      note: {s['field']} pinned at {s['boost']}; halving it costs "
+                  f"{s['delta']:+.4f} — ranking hinges on this one field (brittle on few cases)")
+
+
 def _process_candidates(raw_candidates, board, golden, pm, objective, k, allowed, round_num,
-                        confirm, live_score_fn, on_committed=None):
-    """Shared per-candidate pipeline for both drive paths: for each agent-schema candidate,
-    convert → normalize/validate → numerically optimize its boosts → confirm live → add to the
+                        confirm, live_score_fn, on_committed=None, phrase_unsafe=()):
+    """Per-candidate pipeline: for each agent-schema candidate, convert → normalize/validate →
+    numerically optimize its boosts → confirm live → add to the
     board under a round-tagged name. Skips (with a printed note) any candidate that normalizes
     to nothing usable. Returns the number of candidates that made it onto the board.
 
@@ -200,7 +318,7 @@ def _process_candidates(raw_candidates, board, golden, pm, objective, k, allowed
     added = 0
     for c in raw_candidates:
         try:
-            p = C.normalize(C.to_candidate(c), allowed)
+            p = C.normalize(C.to_candidate(c), allowed, phrase_unsafe=phrase_unsafe)
         except ValueError as e:
             print(f"  skip {c.get('name')}: {e}")
             continue
@@ -211,56 +329,106 @@ def _process_candidates(raw_candidates, board, golden, pm, objective, k, allowed
         print(f"  · {p['name']:26} optimizing [{path}] ...", flush=True)
         opt, _ = optimize_boosts(p, golden, pm, objective, k, allowed, live_score_fn=live_score_fn)
         opt = dict(opt); opt["name"] = f"{p['name']}@r{round_num}"
-        obj = board.add(opt, confirm(opt), "proposed")
+        sat = _saturation_if_free(opt, golden, pm, objective, k)
+        obj = board.add(opt, confirm(opt), "proposed", sat=sat)
         added += 1
         print(f"    {opt['name']:28} {objective}={obj:.4f}  {c.get('rationale', '')[:70]}")
+        _print_saturation(sat)
         if on_committed is not None:
             on_committed(board)
     return added
 
 
-def _seed_and_probe(table, golden, boosts, objective, k, poll, workers, outdir, bootstrapped=False):
-    """Round 0: evaluate seeds live, probe fields, optimize decomposable seeds. Returns
+def _seed_and_probe(table, golden, boosts, objective, k, poll, workers, outdir,
+                    bootstrapped=False, types=None, resume=None, on_progress=None):
+    """Round 0: probe fields, evaluate seeds live, optimize decomposable seeds. Returns
     (board, pm, index, id_field, baseline_ev) — baseline_ev is `frontend_default`'s
     own {agg, per_case} evaluation, captured directly (not looked up in the board afterward)
     so the vs-default comparison in the report is guaranteed even in the — currently
     theoretical, since no other seed/proposal shares its exact signature — case where some
     other candidate collapses onto the same leaderboard signature and displaces it.
-    `bootstrapped` just controls a header note — it doesn't change scoring."""
+    `bootstrapped` just controls a header note — it doesn't change scoring.
+
+    RESUMABLE. Round 0 is the longest unattended stretch in the harness (every seed is `cases`
+    live queries and the probe is `cases × fields`), so a crash or timeout partway used to
+    throw away all of it. Two mechanisms:
+
+      - the probe runs FIRST and writes its cache before any seed is scored, so the most
+        expensive single step is never repeated;
+      - `resume` is a previous run's {board_entries, baseline_ev}; any seed already on that
+        board is skipped, and `on_progress(board, baseline_ev)` is called after each seed so
+        the caller can persist incrementally.
+
+    Ordering the probe first also means an unsearchable field is caught before ~7 seeds' worth
+    of live queries, not after."""
     index = golden["index"]
     id_field = golden.get("id_field", "resourceId")
     allowed = sorted(boosts)
-    board = Board(objective)
+    board = Board(objective, entries=dict((resume or {}).get("board_entries") or {}))
+    baseline_ev = (resume or {}).get("baseline_ev")
 
     def confirm(cand):
         return evaluate(live_ranker(index, cand, id_field, poll), golden, k, workers)
+
+    def commit(cand, ev, source, sat=None):
+        obj = board.add(cand, ev, source, sat=sat)
+        if on_progress is not None:
+            on_progress(board, baseline_ev)
+        return obj
 
     fields_note = " (bootstrapped from index schema, no existing fields.yaml)" if bootstrapped else ""
     print(f"\ntuning {golden.get('index_name')} ({index})  table={table}  "
           f"objective={objective}  k={k}  {len(golden['cases'])} cases  "
           f"{len(allowed)} fields{fields_note}\n")
 
-    print("evaluating seed strategies live ...")
-    seeds = C.seed_candidates(boosts)
-    baseline_ev = None
+    # Probe first: it's the single most expensive step and the one that caches, so getting it
+    # on disk before anything else is what makes a killed init cheap to resume.
+    print(f"probing {len(allowed)} fields × {len(golden['cases'])} cases (cached) ...", flush=True)
+
+    def probe_progress(done, total):
+        # A silent multi-minute phase reads as a hang. Report on the same cadence the partial
+        # cache is flushed, so the number on screen matches what's actually recoverable.
+        if done % SAVE_EVERY == 0 or done == total:
+            print(f"  {done}/{total} queries", flush=True)
+
+    pm = probe(index, golden, allowed, id_field, poll,
+               cache_path=os.path.join(outdir, "probe.json"), workers=workers,
+               progress=probe_progress)
+
+    phrase_unsafe = phrase_unsafe_fields(types)
+    seeds = C.seed_candidates(boosts, phrase_unsafe=phrase_unsafe)
+    if phrase_unsafe & set(boosts):
+        print(f"  (excluding keyword-mapped field(s) from phrase queries: "
+              f"{sorted(phrase_unsafe & set(boosts))})")
+    n_done = sum(1 for s in seeds if board.has(s))
+    print(f"\nevaluating {len(seeds) - n_done} seed strategies live"
+          + (f" ({n_done} already scored — resuming)" if n_done else "") + " ...", flush=True)
     for s in seeds:
+        if board.has(s):
+            print(f"  {s['name']:22} (cached)")
+            if s["name"] == "frontend_default" and baseline_ev is None:
+                # board entries don't distinguish which seed produced them by name alone, but
+                # the signature does — recover the baseline from it rather than re-querying.
+                baseline_ev = board.entry(s)
+            continue
         ev = confirm(s)
         if s["name"] == "frontend_default":
             baseline_ev = ev
-        obj = board.add(s, ev, "seed")
-        print(f"  {s['name']:22} {objective}={obj:.4f}")
+        obj = commit(s, ev, "seed")
+        print(f"  {s['name']:22} {objective}={obj:.4f}", flush=True)
 
-    print("\nprobing fields (cached) ...")
-    pm = probe(index, golden, allowed, id_field, poll,
-               cache_path=os.path.join(outdir, "probe.json"), workers=workers)
-
-    print("optimizing seed boosts via probe ...")
+    print("\noptimizing seed boosts via probe ...", flush=True)
     for s in seeds:
         if is_local_rerankable(s):
             opt, _ = optimize_boosts(s, golden, pm, objective, k, allowed)
             opt = dict(opt); opt["name"] = s["name"] + "+opt"
-            obj = board.add(opt, confirm(opt), "optimized")
-            print(f"  {opt['name']:22} {objective}={obj:.4f}")
+            if board.has(opt):
+                print(f"  {opt['name']:22} (cached)")
+                continue
+            sat = _saturation_if_free(opt, golden, pm, objective, k)
+            obj = commit(opt, confirm(opt), "optimized", sat=sat)
+            print(f"  {opt['name']:22} {objective}={obj:.4f}", flush=True)
+            _print_saturation(sat)
 
     return board, pm, index, id_field, baseline_ev
 
@@ -286,6 +454,7 @@ def verify_full(objective, golden_full, board, index, id_field, k, boosts, poll,
           f"(rounds tuned on {n_used}) ...")
     winner_full = confirm_full(board.best()["candidate"])
     baseline_full = confirm_full(C.seed_candidates(boosts)[0])   # seed 0 == frontend_default
+    # frontend_default carries no field list, so no phrase_unsafe filtering is needed here.
     return {
         "n_cases_used": n_used, "n_cases_total": n_total,
         "winner_agg": winner_full["agg"], "winner_per_case": winner_full["per_case"],
@@ -327,22 +496,43 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
         "winner_agg_full": win_agg,
         "baseline_agg": base_agg,
         "fields_bootstrapped": bootstrapped,
+        # boosts the optimizer left pinned at its ceiling, each with whether halving it changes
+        # the score. Empty list = none pinned; absent detail = candidate wasn't free to re-score.
+        "winner_saturation": best.get("saturation") or [],
     }, open(os.path.join(outdir, "leaderboard.json"), "w"), indent=2)
 
-    # tuned_fields.yaml (winner's boosts, drop-in for benchmark/<table>/fields.yaml)
+    # tuned_fields.yaml (the winning config, drop-in for benchmark/<table>/fields.yaml)
     win = best["candidate"]
     scored_on = (f"{verification['n_cases_total']} cases (full set)" if verification
                  else f"{len(golden['cases'])} cases")
-    fy = ["# Auto-tuned field boosts (sciops/tuning/tune.py).",
+    # The file carries BOTH halves of the winner: `fields:` (the boosts) and `query:` (the
+    # shape — query type plus tie_breaker/minimum_should_match/phrase_boost). run.py compiles
+    # the latter into its `tuned` strategy, so the config that gets applied is the config that
+    # was scored. `equivalent_strategy` is only a note about the knob-free strategies.
+    strategy = C.equivalent_strategy(win)
+    fy = ["# Auto-tuned search config (.claude/skills/tuner/scripts/tuning/tune.py).",
           f"# index {golden.get('index_name')} ({index}); objective {objective}="
           f"{win_obj:.4f} on {scored_on}; winning query_type={win.get('query_type')}"
           + (f"/{win.get('multi_match_type')}" if win.get('multi_match_type') else ""),
-          "# DRAFT — review, then copy over benchmark/<table>/fields.yaml and re-run run.py.",
-          "fields:"]
+          "# Reproduce with:  python3 benchmark/run.py <table> --strategy tuned"]
+    if strategy:
+        fy.append(f"#   (knob-free shape — the fixed `{strategy}` strategy sends this same "
+                  f"query too)")
+    fy += ["# DRAFT — review, then copy over benchmark/<table>/fields.yaml and re-run run.py.",
+           "",
+           "# Which columns to match, and how much each is worth.",
+           "fields:"]
     if win.get("fields"):
         fy += [f"  - \"{e}\"" for e in C.to_fields_yaml(win["fields"])]
     else:
         fy.append('  - "*"   # winner searched all fields (no explicit boosts)')
+    fy += ["",
+           "# The query shape the boosts above were tuned for. Omit this block and the table",
+           "# falls back to the fixed strategies, which would score a different query.",
+           "query:"]
+    qyaml = yaml.dump(C.query_block(win), Dumper=_BlockDumper, sort_keys=False,
+                      default_flow_style=False)
+    fy += ["  " + line for line in qyaml.rstrip("\n").split("\n")]
     open(os.path.join(outdir, "tuned_fields.yaml"), "w").write("\n".join(fy) + "\n")
 
     # report.md (experiment log — separate from RESULTS.md)
@@ -360,6 +550,7 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
     if bootstrapped:
         print("note: no fields.yaml existed for this table — the field list explored was "
               "bootstrapped from the index schema, not read from an existing strategy.")
+    _print_saturation(best.get("saturation") or [])
     if base_agg is not None:
         baseline_obj = objective_value(base_agg, objective)
         d = win_obj - baseline_obj
@@ -373,8 +564,9 @@ def write_outputs(table, objective, golden, board, outdir, index, id_field, k, b
         print("WARNING: could not compute a vs-default-frontend-query comparison "
               "(frontend_default was never evaluated).")
     print(f"\nwrote {outdir}/" + "{leaderboard.json, tuned_fields.yaml, report.md}")
-    print("apply:  cp sciops/tuning/%s/tuned_fields.yaml benchmark/%s/fields.yaml  &&  "
-          "python3 benchmark/run.py %s --label tuned" % (table, table, table))
+    print("apply:  cp %s/tuned_fields.yaml benchmark/%s/fields.yaml  &&  "
+          "python3 benchmark/run.py %s --strategy tuned --label tuned"
+          % (outdir, table, table))
 
 
 def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, verification=None):
@@ -408,6 +600,26 @@ def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, veri
                  f"cases** — that full-set number is the one the recommendation stands on.")
         L.append("")
 
+    sat = best.get("saturation") or []
+    if sat:
+        L.append("> **Saturated boosts.** The optimizer left "
+                 + ", ".join(f"`{d['field']}` at {d['boost']}" for d in sat)
+                 + " — its ceiling. Ranking depends only on the *ratios* between boosts, so this "
+                   "isn't a truncated search (the same ratio is reachable by lowering the other "
+                   "fields); it means the field dominates by roughly 10:1, which on a small "
+                   "golden set is an overfitting smell. Halving each:")
+        L.append("")
+        L += [f"| field | boost | halved | {obj} | halved {obj} | verdict |",
+              "| --- | --- | --- | --- | --- | --- |"]
+        for d in sat:
+            verdict = ("no change — the exact value is arbitrary, prefer the smaller one"
+                       if d["flat"] else
+                       "score drops — the ranking hinges on this one field; brittle, verify on "
+                       "more cases")
+            L.append(f"| {d['field']} | {d['boost']} | {d['halved']} | {d['score']:.3f} | "
+                     f"{d['halved_score']:.3f} | {verdict} |")
+        L.append("")
+
     if bootstrapped:
         L.append("> No `fields.yaml` existed for this table — the field list explored below "
                  "was bootstrapped by profiling the live index (names/categories/free text; "
@@ -436,9 +648,10 @@ def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, veri
                 else f"{n_total} golden cases")
     L += [f"Objective: **{obj}@{k}**.  Leaderboard scored on {lb_scope}.  "
          f"Run {time.strftime('%Y-%m-%d', time.gmtime())}.", "",
-         "Query-time tuning only (query type + field selection + boosts). The winner's boosts "
-         "are written to `tuned_fields.yaml`; copy over `benchmark/<table>/fields.yaml` and "
-         "re-run `benchmark/run.py` to confirm on the live index.", "",
+         "Query-time tuning only (query type + field selection + boosts). The full winning "
+         "config — boosts and query shape — is written to `tuned_fields.yaml`; copy it over "
+         "`benchmark/<table>/fields.yaml` and re-run "
+         "`benchmark/run.py <table> --strategy tuned` to confirm on the live index.", "",
          "## Leaderboard" + (f" (slice scores, {n_used}/{n_total} cases)" if verification else ""), "",
          f"| config | source | {obj} | MRR | Recall@{k} | Hit@1 | nDCG@{k} |",
          "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -466,71 +679,6 @@ def report_md(objective, golden, board, k, baseline_ev, bootstrapped=False, veri
     return "\n".join(L) + "\n"
 
 
-# --- `run`: one-shot, human-at-a-terminal-with-their-own-key ------------------------------
-
-def cmd_run(args):
-    if args.rounds > MAX_ROUNDS:
-        print(f"--rounds {args.rounds} exceeds the hard cap of {MAX_ROUNDS}; clamping.")
-        args.rounds = MAX_ROUNDS
-    if args.candidates_per_round > MAX_CANDIDATES_PER_ROUND:
-        print(f"--candidates-per-round {args.candidates_per_round} exceeds the hard cap of "
-              f"{MAX_CANDIDATES_PER_ROUND}; clamping.")
-        args.candidates_per_round = MAX_CANDIDATES_PER_ROUND
-    golden_full, boosts, bootstrapped = load_table(args.table, args.poll)
-    n_total = len(golden_full["cases"])
-    # Tune against the (optional) --max-cases slice for speed; verify the winner on the full set.
-    golden = sliced_golden(golden_full, args.max_cases)
-    n_used = len(golden["cases"])
-    k = args.k or golden.get("k", 10)
-    outdir = os.path.join(HERE, args.table)
-    os.makedirs(outdir, exist_ok=True)
-    if n_used < n_total:
-        print(f"NOTE: tuning on a {n_used}/{n_total}-case slice (--max-cases {args.max_cases}); "
-              f"the winner is re-verified on all {n_total} cases before outputs are written.")
-
-    board, pm, index, id_field, baseline_ev = _seed_and_probe(
-        args.table, golden, boosts, args.objective, k, args.poll, args.workers, outdir, bootstrapped)
-    allowed = sorted(boosts)
-
-    def confirm(cand):
-        return evaluate(live_ranker(index, cand, id_field, args.poll), golden, k, args.workers)
-
-    def live_score_fn(cand):
-        return objective_value(confirm(cand)["agg"], args.objective)
-
-    if not args.no_agent:
-        from propose import propose
-        import profile_index
-        print("\nprofiling index for the proposal agent ...")
-        prof = profile_index.profile(index, 100, poll_s=args.poll)
-        gsum = golden_summary(golden, k, n_cases_total=n_total)
-        best_obj = board.best()["objective"]
-        stale = 0
-        for r in range(args.rounds):
-            print(f"\n=== round {r + 1}/{args.rounds} — asking {args.model} for "
-                  f"{args.candidates_per_round} candidates ===")
-            diags = _diagnose_vs_winner(pm, golden, board, args.objective)
-            try:
-                proposals = propose(prof, gsum, allowed, boosts, board.summary(),
-                                    diags, n=args.candidates_per_round, model=args.model)
-            except Exception as e:
-                print(f"  proposal step failed ({e}); stopping rounds."); break
-            _process_candidates(proposals, board, golden, pm, args.objective, k, allowed,
-                                r + 1, confirm, live_score_fn)
-            cur = board.best()["objective"]
-            if cur > best_obj + 1e-6:
-                best_obj, stale = cur, 0
-            else:
-                stale += 1
-                if stale >= 2:
-                    print("\nno improvement for 2 rounds — stopping early."); break
-
-    verification = verify_full(args.objective, golden_full, board, index, id_field, k, boosts,
-                               args.poll, args.workers, args.max_cases)
-    write_outputs(args.table, args.objective, golden, board, outdir, index, id_field, k,
-                  baseline_ev, bootstrapped, verification)
-
-
 # --- `init` / `add-candidates` / `finalize`: agent-driven, no nested API key --------------
 
 def _state_path(outdir):
@@ -554,9 +702,37 @@ def _load_state(outdir):
     return json.load(open(path))
 
 
+def _init_key(table, golden, boosts, objective, k):
+    """Fingerprint of everything that would invalidate a partially-completed round 0.
+
+    Scores are only reusable if the table, field list, objective, cutoff, and the exact case
+    set they were measured against are all unchanged — change any of them and the persisted
+    numbers describe a different experiment. Hashing the queries (not just their count) also
+    catches an edited golden.yaml."""
+    h = hashlib.sha256()
+    h.update(f"{table}|{objective}|{k}".encode())
+    h.update("|".join(sorted(boosts)).encode())
+    for c in golden["cases"]:
+        h.update(f"{c['id']}={c['query']}".encode())
+    return h.hexdigest()[:16]
+
+
+def _load_state_if(outdir, key):
+    """A prior state.json for this exact setup, or None. A mismatched or unreadable one is
+    ignored rather than fatal — the cost is redoing round 0, not a wrong answer."""
+    path = _state_path(outdir)
+    if not os.path.exists(path):
+        return None
+    try:
+        prior = json.load(open(path))
+    except Exception:
+        return None
+    return prior if prior.get("init_key") == key else None
+
+
 def _write_round_context(outdir, profile_brief_dict, gsum, allowed, boosts, board, diagnostics, state):
     """`profile_brief_dict` is the already-briefed, cached profile (see cmd_init) — not a raw
-    profile_index.profile() result — so this doesn't re-brief or re-fetch it."""
+    index_profile.profile() result — so this doesn't re-brief or re-fetch it."""
     rounds_remaining = MAX_ROUNDS - state["round"]
     ctx = {
         "round_completed": state["round"],
@@ -585,35 +761,60 @@ def _write_round_context(outdir, profile_brief_dict, gsum, allowed, boosts, boar
 
 
 def cmd_init(args):
-    golden_full, boosts, bootstrapped = load_table(args.table, args.poll)
+    golden_full, boosts, bootstrapped, types = load_table(args.table, args.poll)
     n_total = len(golden_full["cases"])
     # Tune against the (optional) --max-cases slice for speed, but keep the FULL golden in state:
     # the final winner is re-verified on all cases at finalize, never on the slice alone.
     golden = sliced_golden(golden_full, args.max_cases)
     n_used = len(golden["cases"])
     k = args.k or golden.get("k", 10)
-    outdir = os.path.join(HERE, args.table)
+    outdir = run_dir(args.table)
     os.makedirs(outdir, exist_ok=True)
     if n_used < n_total:
         print(f"NOTE: tuning on a {n_used}/{n_total}-case slice (--max-cases {args.max_cases}). "
               f"Round scores are slice scores; the winner is re-verified on all {n_total} cases "
               f"at finalize.")
 
+    # Resume a round 0 that was killed or timed out partway: reuse the seed scores already
+    # persisted, as long as they were produced for the SAME setup. --fresh forces a clean start.
+    key = _init_key(args.table, golden, boosts, args.objective, k)
+    resume = None
+    if not args.fresh:
+        prior = _load_state_if(outdir, key)
+        if prior:
+            done = len(prior.get("board_entries") or {})
+            if prior.get("round", 0) > 0:
+                sys.exit(f"{outdir}/state.json is already {prior['round']} round(s) in — `init` "
+                         f"would discard that progress. Continue with `add-candidates`, or pass "
+                         f"--fresh to start over.")
+            print(f"resuming a previous init for this setup ({done} candidate(s) already "
+                  f"scored; pass --fresh to start over)")
+            resume = prior
+
+    # Persist after every seed so a kill costs at most one seed's worth of live queries.
+    partial = {"table": args.table, "init_key": key, "round": 0, "stale": 0}
+
+    def save_partial(bd, base_ev):
+        _save_state(outdir, {**partial, "board_entries": bd.entries, "baseline_ev": base_ev})
+
     board, pm, index, id_field, baseline_ev = _seed_and_probe(
-        args.table, golden, boosts, args.objective, k, args.poll, args.workers, outdir, bootstrapped)
+        args.table, golden, boosts, args.objective, k, args.poll, args.workers, outdir,
+        bootstrapped, types=types, resume=resume, on_progress=save_partial)
     allowed = sorted(boosts)
 
-    import profile_index
     print("\nprofiling index for the proposal step ...")
     # The index profile is immutable across rounds — brief it once here and cache in state so
     # add-candidates can reuse it instead of re-issuing a live 100-doc profiling query each round.
-    prof = profile_brief(profile_index.profile(index, 100, poll_s=args.poll))
+    prof = profile_brief(profile_index(index, 100, poll_s=args.poll))
     gsum = golden_summary(golden, k, n_cases_total=n_total)
 
     state = {
-        "table": args.table, "objective": args.objective, "k": k, "poll": args.poll,
+        "table": args.table, "init_key": key,
+        "objective": args.objective, "k": k, "poll": args.poll,
         "workers": args.workers, "index": index, "id_field": id_field,
         "allowed": allowed, "boosts": boosts, "golden": golden_full, "bootstrapped": bootstrapped,
+        # cached so add-candidates can apply the same phrase-safety guard without re-querying
+        "types": types,
         "max_cases": args.max_cases, "n_cases_total": n_total,
         "board_entries": board.entries, "baseline_ev": baseline_ev,
         "profile": prof, "golden_summary": gsum,
@@ -631,7 +832,7 @@ def cmd_init(args):
 
 
 def cmd_add_candidates(args):
-    outdir = os.path.join(HERE, args.table)
+    outdir = run_dir(args.table)
     state = _load_state(outdir)
     if state["round"] >= MAX_ROUNDS:
         sys.exit(f"round cap reached ({MAX_ROUNDS} rounds) for {args.table} — run "
@@ -673,7 +874,8 @@ def cmd_add_candidates(args):
         _save_state(outdir, state)
 
     _process_candidates(candidates, board, golden, pm, state["objective"], k, allowed,
-                        round_num, confirm, live_score_fn, on_committed=checkpoint)
+                        round_num, confirm, live_score_fn, on_committed=checkpoint,
+                        phrase_unsafe=phrase_unsafe_fields(state.get("types")))
 
     cur = board.best()["objective"]
     improved = cur > state["best_obj"] + 1e-6
@@ -696,7 +898,7 @@ def cmd_add_candidates(args):
 
 
 def cmd_finalize(args):
-    outdir = os.path.join(HERE, args.table)
+    outdir = run_dir(args.table)
     state = _load_state(outdir)
     board = Board(state["objective"], entries=state["board_entries"])
     golden_full = state["golden"]   # full set (init stored the unsliced golden)
@@ -717,41 +919,46 @@ def main():
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="command", required=True)
 
-    def common_args(p):
-        p.add_argument("table", help="benchmark/<table>/ to tune (reads golden.yaml; bootstraps "
-                                     "fields.yaml from the index schema if none exists)")
-        p.add_argument("--objective", choices=OBJECTIVES, default="ndcg")
-        p.add_argument("--k", type=int, default=None)
-        p.add_argument("--poll", type=float, default=0.15)
-        p.add_argument("--workers", type=int, default=8,
-                       help="concurrent index queries (queries are independent async jobs)")
-        p.add_argument("--max-cases", type=int, default=None,
-                       help="use only the first N golden cases (fast smoke test)")
-
-    p_run = sub.add_parser("run", help="one-shot full loop (human CLI, needs ANTHROPIC_API_KEY unless --no-agent)")
-    common_args(p_run)
-    p_run.add_argument("--rounds", type=int, default=3)
-    p_run.add_argument("--candidates-per-round", type=int, default=6)
-    p_run.add_argument("--model", default="claude-opus-5")
-    p_run.add_argument("--no-agent", action="store_true",
-                       help="skip Claude proposals; just numerically optimize the current fields.yaml "
-                            "boosts (no API key needed)")
-    p_run.set_defaults(func=cmd_run)
+    def path_args(p):
+        """On every subcommand: all three write to <out>/<table>/, and all but `finalize` also
+        read the golden set from <bench>/<table>/."""
+        p.add_argument("--bench", metavar="DIR", default=None,
+                       help="directory holding <table>/{golden,fields}.yaml to READ "
+                            "(default: $TUNER_WORK_DIR/benchmark, else this checkout's benchmark/)")
+        p.add_argument("--out", metavar="DIR", default=None,
+                       help="directory to WRITE run artifacts under, as <DIR>/<table>/ "
+                            f"(default: $TUNER_WORK_DIR/{RUNS_DIRNAME}, else "
+                            f"./{RUNS_DIRNAME}/ under the directory you run from)")
 
     p_init = sub.add_parser("init", help="seed+probe+optimize, write round_context.json for an agent to read")
-    common_args(p_init)
+    path_args(p_init)
+    p_init.add_argument("table", help="benchmark/<table>/ to tune (reads golden.yaml; bootstraps "
+                                      "fields.yaml from the index schema if none exists)")
+    p_init.add_argument("--objective", choices=OBJECTIVES, default="ndcg")
+    p_init.add_argument("--k", type=int, default=None)
+    p_init.add_argument("--poll", type=float, default=0.15)
+    p_init.add_argument("--workers", type=int, default=8,
+                        help="concurrent index queries (queries are independent async jobs)")
+    p_init.add_argument("--max-cases", type=int, default=None,
+                        help="use only the first N golden cases (fast smoke test)")
+    p_init.add_argument("--fresh", action="store_true",
+                        help="ignore any partially-completed round 0 in <out>/<table>/state.json "
+                             "and re-score every seed from scratch")
     p_init.set_defaults(func=cmd_init)
 
     p_add = sub.add_parser("add-candidates", help="consume agent-authored candidates.json, optimize+confirm live")
     p_add.add_argument("table")
     p_add.add_argument("candidates_file")
+    path_args(p_add)
     p_add.set_defaults(func=cmd_add_candidates)
 
     p_fin = sub.add_parser("finalize", help="write leaderboard.json/tuned_fields.yaml/report.md from current state")
     p_fin.add_argument("table")
+    path_args(p_fin)
     p_fin.set_defaults(func=cmd_finalize)
 
     args = ap.parse_args()
+    resolve_paths(args)
     try:
         sys.stdout.reconfigure(line_buffering=True)  # show progress even when piped
     except Exception:

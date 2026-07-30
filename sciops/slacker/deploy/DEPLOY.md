@@ -13,8 +13,7 @@ throughout (or `sed` them in the JSON files under `deploy/`).
 
 - Set up goldie, tuner, then the orchestrator first, in that order (see
   `sciops/README.md`'s "Setup") and have the resulting `ORCHESTRATOR_ENV_ID` /
-  `ORCHESTRATOR_AGENT_ID` / `ORCHESTRATOR_AGENT_VERSION` /
-  `ORCHESTRATOR_SCRIPT_FILE_IDS` from `sciops/agents/orchestrator/.env` on hand.
+  `ORCHESTRATOR_AGENT_ID` / `ORCHESTRATOR_AGENT_VERSION` from `sciops/agents/orchestrator/.env` on hand.
 - Create the Slack app (`sciops/slacker/slack_app_manifest.yaml`, see
   `sciops/slacker/README.md`) and have `SLACK_BOT_TOKEN` / `SLACK_APP_TOKEN` on hand.
 - Have an `ANTHROPIC_API_KEY` with the Managed Agents / multi-agent beta enabled.
@@ -44,13 +43,12 @@ aws secretsmanager create-secret --name search-sciops-bot/slack-app-token --secr
 aws secretsmanager create-secret --name search-sciops-bot/anthropic-api-key --secret-string "sk-ant-..."
 ```
 
-The four `ORCHESTRATOR_*` values are **not** secrets — they're opaque
+The three `ORCHESTRATOR_*` values are **not** secrets — they're opaque
 agent/environment/file ids — so they live in the task definition's
 `environment` block instead. That costs nothing (vs. ~$0.40/secret/month),
 and makes the running agent version visible in the task definition rather
 than hidden behind a secret. Fill them in from
 `sciops/agents/orchestrator/.env` before registering in step 4;
-`ORCHESTRATOR_SCRIPT_FILE_IDS` must be its JSON on a single line.
 
 ECS injects both blocks as plain environment variables in the container at
 launch — the app reads everything from process env at startup (falling back
@@ -88,7 +86,7 @@ aws logs put-retention-policy --log-group-name /ecs/search-sciops-bot \
 
 aws ecs create-cluster --cluster-name search-sciops-bot --region <REGION>
 
-# fill in <ACCOUNT_ID>/<REGION> AND the four <ORCHESTRATOR_*> values in the
+# fill in <ACCOUNT_ID>/<REGION> AND the three <ORCHESTRATOR_*> values in the
 # file first (sed, or copy+edit)
 aws ecs register-task-definition \
   --cli-input-json file://sciops/slacker/deploy/ecs-task-definition.json \

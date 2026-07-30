@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate a benchmark golden.yaml — structure AND live resolvability.
 
-Replaces the old one-line assert. Two classes of check:
+Two classes of check:
 
   ERRORS (exit 1 — the file is broken or the benchmark would silently misscore):
     - YAML doesn't parse / no `id_field` / no `cases`
@@ -22,14 +22,14 @@ The id-in-index gate pages through the whole index (match_all) once and checks m
 so it needs network. Use --no-index for a fast, offline structural-only pass.
 
 Invoke from the repo root:
-  python3 sciops/agents/goldie/validate_golden.py benchmark/<table>/golden.yaml [--no-index] [--token ...]
+  python3 .claude/skills/goldie/scripts/validate_golden.py benchmark/<table>/golden.yaml [--no-index] [--token ...]
 """
 import argparse, collections, os, sys
 
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)  # for the vendored synapse_client (keeps the skill self-contained)
+sys.path.insert(0, HERE)  # synapse_client is a sibling — this skill is self-contained
 from synapse_client import search, hit_dict  # noqa: E402
 
 VALID_TYPES = {"topical", "known-item"}

@@ -134,6 +134,59 @@ def _probe_warm_start(candidate, golden, probe_matrix, objective, k, allowed_fie
     return tuned["fields"]
 
 
+# A boost within this of max_boost counts as saturated (the sweep clamps with round(...,4)).
+SATURATION_EPS = 1e-3
+# Objective change below which halving a saturated boost counts as "no difference". nDCG on a
+# few dozen cases moves in steps of ~0.01, so 0.002 is comfortably inside the noise floor.
+FLAT_EPS = 2e-3
+
+
+def saturation(candidate, score_fn, max_boost=10.0, factor=0.5):
+    """Which of `candidate`'s boosts are pinned at the ceiling, and does the score care?
+
+    Ranking depends only on the RATIOS between boosts — scaling them all by a constant leaves
+    the order identical — so a boost resting at max_boost is not evidence the cap truncated the
+    search (the same ratio is reachable by shrinking the others). What it does say is that one
+    field dominates by roughly max_boost:1, and on a small golden set that is an overfitting
+    smell more than a finding.
+
+    The useful follow-up is whether the score actually depends on that extreme, so each pinned
+    field is re-scored at `factor` × its boost:
+
+      flat=True   halving it changes nothing → the exact value is arbitrary within a plateau;
+                  prefer the smaller, less extreme config.
+      flat=False  the score drops → the ranking genuinely hinges on this one field. Real, but
+                  brittle: check it against more cases before trusting it.
+
+    Returns [] when nothing is pinned. Each entry:
+      {field, boost, halved, score, halved_score, delta, flat}
+    """
+    fields = candidate.get("fields") or {}
+    pinned = [f for f, b in fields.items() if b >= max_boost - SATURATION_EPS]
+    if not pinned:
+        return []
+    base_score = score_fn(candidate)
+    out = []
+    for f in sorted(pinned):
+        probe_cand = dict(candidate)
+        probe_cand["fields"] = dict(fields)
+        probe_cand["fields"][f] = round(fields[f] * factor, 4)
+        s = score_fn(probe_cand)
+        out.append({"field": f, "boost": fields[f], "halved": probe_cand["fields"][f],
+                    "score": round(base_score, 4), "halved_score": round(s, 4),
+                    "delta": round(s - base_score, 4), "flat": abs(s - base_score) < FLAT_EPS})
+    return out
+
+
+def probe_score_fn(golden, probe_matrix, objective, k):
+    """The free probe-backed scorer, for callers that want to score extra configs (e.g.
+    saturation()) without spending live queries. Only valid for decomposable candidates."""
+    def sf(c):
+        ev = evaluate(rerank_ranker(c, probe_matrix), golden, k)
+        return objective_value(ev["agg"], objective)
+    return sf
+
+
 def optimize_boosts(candidate, golden, probe_matrix, objective, k, allowed_fields,
                     live_score_fn=None):
     """Tune a candidate's boosts. Decomposable candidates are swept against the probe matrix

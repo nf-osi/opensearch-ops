@@ -1,23 +1,22 @@
 """Scoring core for the tuning harness.
 
-Reuses benchmark/run.py's per-case scoring (MRR / Recall@k / Hit@1 / Hit@k) so the numbers
-match the established benchmark exactly, and adds **nDCG@k** — a graded metric that rewards
-getting the golden's *ranked head order* right, which is the better objective for ranking
-optimization. Everything works off a `ranker(query, size) -> [id, ...]` callable, so the same
-code scores both live index queries and the probe's local re-rank."""
+Computes the same per-case metrics as `benchmark/run.py` (MRR / Recall@k / Hit@1 / Hit@k), so
+tuning numbers are directly comparable to a benchmark run, and adds **nDCG@k** — a graded
+metric that rewards getting the golden's *ranked head order* right, which is the better
+objective for ranking optimization. Everything works off a `ranker(query, size) -> [id, ...]`
+callable, so the same code scores both live index queries and the probe's local re-rank.
+
+`reciprocal_rank`/`score_case` below are deliberately a second copy of run.py's definitions
+rather than an import: keeping this skill self-contained means it can't reach into the
+benchmark tree, which doesn't exist inside a published bundle. They are fixed textbook
+definitions, but if you ever change one, change both — the comparability above is the whole
+point of them matching.
+"""
 import math
-import os
-import sys
 from concurrent.futures import ThreadPoolExecutor
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))     # sciops/tuning -> sciops -> repo root
-sys.path.insert(0, HERE)                          # sibling tuning modules
-sys.path.insert(0, ROOT)                          # query.py
-sys.path.insert(0, os.path.join(ROOT, "benchmark"))  # run.py
-from query import search, hit_dict                # noqa: E402
-from run import score_case, hit_id                # noqa: E402  (reuse, don't duplicate)
-from candidate import build_dsl                   # noqa: E402
+from candidate import build_dsl
+from client import hit_id, search
 
 OBJECTIVES = ("ndcg", "mrr", "recall", "hit1", "hitk")
 # objective -> the key it reads in an `agg` dict (averaged over cases)
@@ -25,6 +24,30 @@ OBJ_AGG_KEY = {"ndcg": "ndcg_at_k", "mrr": "mrr", "recall": "recall_at_k",
                "hit1": "hit_at_1", "hitk": "hit_at_k"}
 # objective -> the key it reads in a `per_case` entry (same, except mrr is "rr" per case)
 OBJ_CASE_KEY = {**OBJ_AGG_KEY, "mrr": "rr"}
+
+
+def reciprocal_rank(ranked_ids, relevant):
+    for i, rid in enumerate(ranked_ids, start=1):
+        if rid in relevant:
+            return 1.0 / i, i
+    return 0.0, None
+
+
+def score_case(ranked_ids, relevant, k):
+    """MRR / Recall@k / Hit@1 / Hit@k for one case — same definitions as benchmark/run.py."""
+    rel = set(relevant)
+    topk = ranked_ids[:k]
+    rr, rank = reciprocal_rank(ranked_ids, rel)
+    found = rel & set(topk)
+    return {
+        "rr": rr,
+        "first_rel_rank": rank,
+        "recall_at_k": (len(found) / len(rel)) if rel else 0.0,
+        "hit_at_1": 1.0 if (ranked_ids and ranked_ids[0] in rel) else 0.0,
+        "hit_at_k": 1.0 if found else 0.0,
+        "n_relevant": len(rel),
+        "n_found_in_k": len(found),
+    }
 
 
 def ndcg_at_k(ranked_ids, relevant, k):
@@ -41,7 +64,7 @@ def ndcg_at_k(ranked_ids, relevant, k):
 
 
 def score_ranked(ranked_ids, relevant, k):
-    """run.py's score_case plus nDCG@k."""
+    """score_case plus nDCG@k."""
     sc = score_case(ranked_ids, relevant, k)
     sc["ndcg_at_k"] = ndcg_at_k(ranked_ids, relevant, k)
     return sc

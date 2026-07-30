@@ -13,13 +13,12 @@ config below from either `sciops/slacker/.env` (dev) or real environment variabl
 (production; real env vars always take precedence), so nothing here changes between the two,
 only how the values get set.
 
-One implementation detail that matters: the Slack bot does more than forward
-the user's text. On every new Managed Agent session it also mounts the static
-helper files that `goldie` and `tuner` expect in the sandbox. Those file IDs
-are produced by the agents' own `agent_setup.py` scripts and saved through the
-orchestrator setup as `ORCHESTRATOR_SCRIPT_FILE_IDS`. Slack-uploaded files
-(`golden.yaml`, `fields.yaml`, etc.) are additional per-request resources, not
-a replacement for those static mounts.
+One implementation detail that matters: the bot mounts **nothing** except the user's own Slack
+attachments. Each specialist's instructions and scripts are published as Agent Skills and
+pinned into its agent version, and in a coordinated session every thread runs with its own
+agent's skills — so the bot never needs to know which files `goldie` or `tuner` depend on.
+Slack-uploaded files (`golden.yaml`, `fields.yaml`, …) are the only `resources` it ever passes
+to `sessions.create()`.
 
 ## One-time setup
 
@@ -39,7 +38,7 @@ Agents, per `sciops/README.md`'s "Setup".
    cat ../agents/orchestrator/.env >> .env
    ```
    That supplies `ORCHESTRATOR_ENV_ID`, `ORCHESTRATOR_AGENT_ID`,
-   `ORCHESTRATOR_AGENT_VERSION`, and `ORCHESTRATOR_SCRIPT_FILE_IDS`. Re-copy whenever the
+   and `ORCHESTRATOR_AGENT_VERSION`. Re-copy whenever the
    orchestrator is re-created or bumped to a new version.
 
 3. Create the Slack app:
@@ -55,8 +54,8 @@ Agents, per `sciops/README.md`'s "Setup".
    ```bash
    python3 slack_bot.py
    ```
-   On startup it checks for all seven required settings (the three keys/tokens above plus the
-   four `ORCHESTRATOR_*` ids) and names the missing one and the `.env` path if any are absent.
+   On startup it checks for all six required settings (the three keys/tokens above plus the
+   three `ORCHESTRATOR_*` ids) and names the missing one and the `.env` path if any are absent.
 
 ## Usage
 
@@ -96,8 +95,11 @@ To commit a result:
 
 **From tuner:**
 1. Download `leaderboard.json`, `tuned_fields.yaml`, `report.md` from the thread.
-2. Review `report.md`, then `cp tuned_fields.yaml benchmark/<table>/fields.yaml`.
-3. Run `python3 benchmark/run.py <table> --label tuned` to confirm on the live index.
+2. Review `report.md`, then `cp tuned_fields.yaml benchmark/<table>/fields.yaml` (it carries
+   both the boosts and the `query:` block naming the query shape they were tuned for).
+3. Run `python3 benchmark/run.py <table> --strategy tuned --label tuned` to confirm on the
+   live index — `tuned` is the strategy compiled from that `query:` block, so it scores the
+   recommended config rather than a stock query shape wearing its boosts.
 4. Note the report's stated data source (pre-supplied / given source) — if it fetched from a
    given repo, that's only as fresh as the last push there.
 

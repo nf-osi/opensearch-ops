@@ -1,12 +1,12 @@
 ---
 name: tuner
-description: Recommend a better query-time search config (query type, field boosts) for a Synapse SearchIndex — identified by index id, index name, or its source table id — by optimizing against its existing golden relevance set, including proposing entirely new query structures via an agentic loop. Only needs a golden relevance set — if the index has no existing search strategy (fields.yaml) to compare against, one is bootstrapped by profiling it; if no index exists at all, declines the job. Use when the user asks to tune search ranking, adjust field boosts, improve recall/nDCG, or investigate why certain queries rank poorly for an index/table ("tune ranking for tools", "why does this query rank the wrong things", "improve recall for datasets").
+description: Recommend a better query-time search config (query type, field boosts) for a Synapse SearchIndex — identified by index id, index name, or its source table id — by optimizing against its existing golden relevance set, including proposing entirely new query structures via an agentic loop. Only needs a golden relevance set — if the index has no existing search strategy (fields.yaml) to compare against, one is bootstrapped by profiling it; if no index exists at all, this skill doesn't apply and should not be used! Use when the user asks to tune search ranking, adjust field boosts, improve recall/nDCG, or investigate why certain queries rank poorly for an index/table ("tune ranking for better project search results", "why does this query rank the wrong things", "improve recall for datasets").
 dependencies: python>=3.8, pyyaml>=5.1
 ---
 
 # Automated search-relevance tuning
 
-Your job: given a **SearchIndex** — identified by index id, index name, or its source table
+Given a **SearchIndex** — identified by index id, index name, or its source table
 id (see "Resolving what to tune" below) — run the tuning harness to find a better
 query-time config, evaluated against its existing `golden.yaml` relevance set — proposing
 entirely new candidate structures yourself, not just re-weighting an existing one — then
@@ -15,7 +15,7 @@ nice-to-have starter for comparison, but plenty of tables don't have one yet. If
 none exists, the harness bootstraps a starting field list itself by profiling the live
 index, so you shouldn't need to ask the user to supply one.
 
-This wraps a standalone harness (`sciops/tuning/tune.py` and its siblings) that treats the golden
+This wraps a standalone harness (`tune.py` and its siblings) that treats the golden
 set as the objective function, so no query logs or click data are needed. It tunes
 **query-time knobs only** — query type, which fields to search, per-field boosts, fuzziness,
 `tie_breaker`, `minimum_should_match`, phrase boosting. It never touches the live index,
@@ -26,17 +26,21 @@ author new candidate structures yourself, using your own reasoning.
 A numeric optimizer then tunes each of your proposals' boosts, 
 and every candidate is confirmed with a real live query, so the leaderboard is ground truth.
 
-## Managed-agent adaptation (read this first)
+## Where to read and write
 
-Unless otherwise indicated, you are running in a sandboxed session. 
-The harness scripts are mounted read-only at `/mnt/session/uploads/repo/`: 
-`query.py`, `benchmark/run.py`, `sciops/tuning/*.py`, `sciops/agents/goldie/{profile_index,profile_table,synapse_client}.py`.
+The harness never writes beside its own code, because wherever it's installed may be read-only. 
+These parameters on the `tune.py` command say where data lives:
 
-**Running locally instead of in the sandbox?** Everything below is written for the sandbox, but
-works locally with two path substitutions: read `/mnt/session/uploads/repo/` as the repo root
-(the checkout you're already in — e.g. `python3 sciops/tuning/tune.py init <table>`), and skip
-the `/mnt/session/outputs/` copy step — the harness already writes all three output files under
-`sciops/tuning/<table>/`, so locally there's nothing to relay. All other steps are identical.
+- `--bench DIR` — READS `<DIR>/<table>/{golden,fields}.yaml` by default
+- `--out DIR` — WRITES `<DIR>/<table>/` artifacts (probe cache, `round_context.json`,
+  `leaderboard.json`, `tuned_fields.yaml`, `report.md`)
+
+Both default to the directory you run from (`./benchmark/` and `./tuner-runs/`), so if working locally
+you can omit them entirely. Anywhere else, other instructions or context should tell you the two
+directories to use — substitute `<BENCH_DIR>` and `<OUT_DIR>` and pass them on
+**every** invocation rather than relying on an exported variable: each command may run in a
+fresh shell, so an export can silently fail to carry over and the harness would fall back to
+its own (possibly read-only) directory and fail on the first write.
 
 **Resolving what to tune.** You'll be given ONE of these — try them in this priority order
 until one resolves to a real, already-built SearchIndex:
@@ -51,20 +55,20 @@ until one resolves to a real, already-built SearchIndex:
 2. **An index name** (e.g. `nf-tools`) — check it against the master index collections
    project (`syn74909065`) and resolve it to an id:
    ```python
-   import sys; sys.path.insert(0, "sciops/agents/goldie")
-   from profile_table import resolve_index_name
+   import sys; sys.path.insert(0, ".claude/skills/tuner/scripts/tuning")
+   from client import resolve_index_name
    index_id, index_name = resolve_index_name("nf-tools")   # (None, None) if no such index
    ```
 3. **A source table id** (e.g. `syn51730943` — NOT a SearchIndex) — find the SearchIndex
    built from it, the reverse of goldie's own index→table lookup:
    ```python
-   from profile_table import resolve_table_to_index
+   from client import resolve_table_to_index
    index_id, index_name = resolve_table_to_index("syn51730943")   # (None, None) if none built yet
    ```
 
 **If none of these resolves to an existing SearchIndex, decline the job outright.** Say so
 plainly and stop — do not guess at a different index, and do not try to get one built
-(that's out of scope, tuning fundamentally needs a *live* index to query that only an admin can create). 
+(that's out of scope, tuning fundamentally needs an admin-created *live* index to query). 
 This is a different, earlier stop condition than the "no golden.yaml" one below —
 this one means there's nothing to tune at all, full stop.
 
@@ -72,7 +76,7 @@ this one means there's nothing to tune at all, full stop.
 (it's the objective function). Once you have a resolved `index_id`, check, in order:
 1. **A source explicitly given to you.** If your instructions include a specific location/repo/URL, fetch
    from there.
-2. **The mount directory**: `/mnt/session/uploads/repo/benchmark/<table>/golden.yaml` exists
+2. **Already present**: `<BENCH_DIR>/<table>/golden.yaml` exists
    when you start — something upstream (a coordinating agent, or an uploaded
    file) already placed it there. Don't re-fetch or overwrite it. Here, the `benchmark/<table>/` folder (if any) 
    holds its golden set — **search, don't guess**: the folder name is *not* a deterministic 
@@ -88,16 +92,13 @@ Note in your summary which source you used (pre-supplied / a given source) to be
 
 **Again, `fields.yaml` (an existing search strategy) is optional.** If it
 *doesn't* exist — the common case for a table that's never been tuned — don't ask the user
-for one and don't fabricate one yourself: `tune.py init` bootstraps a starting field list
-itself by profiling the live index (names/categories/free text; identifiers excluded) using
-the same `profile_index.py` goldie uses, already mounted here. It prints an expected 
+for one: `tune.py init` bootstraps a starting field list
+itself by profiling the live index (names/categories/free text; identifiers excluded) with its
+own `index_profile.py`. It prints an expected
 `no fields.yaml for <table> — bootstrapping ...` when it does this,
 
-You do NOT have a git repo. Write your three output files directly to
-`/mnt/session/outputs/`: `leaderboard.json`, `tuned_fields.yaml`, `report.md`. If you were
-delegated this work by a coordinating agent, also leave them at
-`/mnt/session/uploads/repo/sciops/tuning/<table>/` (where the harness already wrote them) since the
-coordinator shares your filesystem and may relay them itself.
+Your three deliverables are `leaderboard.json`, `tuned_fields.yaml`, and `report.md`; 
+if the caller gave you an outputs directory, make sure they're there.
 
 ## Parameters
 
@@ -128,13 +129,14 @@ above) and optional intent for:
 This is a loop where **you** are one of the steps:
 
 ```bash
-python3 /mnt/session/uploads/repo/sciops/tuning/tune.py init <table> [--objective ndcg] [--max-cases N]
+python3 tune.py init <table> \
+  --bench <BENCH_DIR> --out <OUT_DIR> [--objective ndcg] [--max-cases N]
 ```
 
 This loads (or bootstraps, per above) the field list, evaluates the seed strategies live for
 a baseline, probes every match field per golden case once (cached), and numerically
 optimizes the decomposable seeds' boosts — all before you're needed. It writes
-`sciops/tuning/<table>/round_context.json` containing: 
+`<OUT_DIR>/<table>/round_context.json` containing: 
 - `profile`: what the index/table is about
 - `golden_summary`
 - `allowed_fields`
@@ -192,22 +194,24 @@ Then feed it to the harness, which normalizes, numerically optimizes each propos
 and confirms every candidate live:
 
 ```bash
-python3 /mnt/session/uploads/repo/sciops/tuning/tune.py add-candidates <table> candidates.json
+python3 tune.py add-candidates <table> candidates.json \
+  --bench <BENCH_DIR> --out <OUT_DIR>
 ```
 
 This prints each candidate's score and rewrites `round_context.json` with the updated
 leaderboard/diagnostics/`stale_rounds` for your next round. Repeat propose → add-candidates
-for a few rounds (your judgment; the harness's own `run` mode defaults to 3 rounds of ~6
-candidates, stopping early after 2 stale rounds — a reasonable target, not a hard rule).
+for a few rounds — your judgment. Aim for ~3 rounds of ~6 candidates and stop once
+`stale_rounds` hits 2; that's a reasonable target, not a hard rule (the hard caps are
+MAX_ROUNDS=8 and 10 candidates per call, enforced by the harness).
 
 When done, finalize:
 
 ```bash
-python3 /mnt/session/uploads/repo/sciops/tuning/tune.py finalize <table>
+python3 tune.py finalize <table> --out <OUT_DIR>
 ```
 
 This writes `leaderboard.json`, `tuned_fields.yaml`, `report.md` under
-`/mnt/session/uploads/repo/sciops/tuning/<table>/`.
+`<OUT_DIR>/<table>/`.
 
 `init` only exits early on a missing `golden.yaml`, or on the rare case where profiling the
 index for a bootstrap turns up no usable name/category/text columns at all — relay either
@@ -218,7 +222,7 @@ before you ever get here — that one's on you to catch, not `init`.)
 
 ## Summarizing
 
-Copy the three output files to `/mnt/session/outputs/`, then report — **always lead with the
+Copy the three output files to the caller's outputs directory, then report — **always lead with the
 comparison against the default frontend query**:
 
 - Which index you resolved to and how (given directly, by name, or via its source table —
@@ -236,14 +240,18 @@ comparison against the default frontend query**:
   winner came from a candidate *you proposed* vs. an *optimized seed* — `report.md`'s
   `source` column says which).
 - 2-3 notable per-case swings from `report.md`'s per-case table, if any stand out.
-- Which source you used for the table's golden data (pre-supplied, or a given source — see
-  "Managed-agent adaptation" above), and whether `fields.yaml` came from an existing strategy
-  or was bootstrapped by profiling the index (`report.md` has an opening callout when
+- Which source you used for the table's golden data, and whether `fields.yaml` came from 
+  an existing strategy or was bootstrapped by profiling the index (`report.md` has an opening callout when
   bootstrapped; `round_context.json`'s `fields_bootstrapped` also tells you) — if bootstrapped,
   say so plainly so the reader knows the "winner" isn't being compared against a prior
   hand-tuned config, just the live default.
-- **How to apply it** — frame this as a handoff, not something the Slack asker can run
-  themselves: applying the recommendation means editing the actual repo, which needs someone
-  with write access to it. State plainly that a maintainer should add or replace
-  `benchmark/<table>/fields.yaml` with the attached `tuned_fields.yaml`, then run
-  `python3 benchmark/run.py <table> --label tuned` to confirm on the live index before merging.
+- **How to apply it** — frame this as a handoff, not something the asker can run
+  themselves: applying the recommendation means copying the output into wherever production configs are deployed, 
+  which needs the appropriate person to review and write. Typically, a maintainer should add or replace
+  `benchmark/<table>/fields.yaml` (but this path may be different depending on the prod repo setup) 
+  with the attached `tuned_fields.yaml`, then confirm with
+  `python3 benchmark/run.py <table> --strategy tuned`. `tuned_fields.yaml` is a complete
+  config — the boosts under `fields:` **and** the query shape (query type, `tie_breaker`,
+  `minimum_should_match`, `phrase_boost`) under `query:` — so it reproduces exactly what was
+  scored. Don't tell the reader to apply the boosts alone; without the `query:` block the
+  benchmark scores a different query.

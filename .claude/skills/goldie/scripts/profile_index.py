@@ -11,14 +11,13 @@ Profiles the SearchIndex itself (via the SearchIndex query API) — for the grou
 
 Anonymous; no token needed.
 
-Lives in sciops/agents/goldie/ (it supports golden generation, not the
-benchmark run). Invoke from the repo root:
-  python3 sciops/agents/goldie/profile_index.py <INDEX_ID> [--n 100]
+Invoking from the repo root:
+  python3 .claude/skills/goldie/scripts/profile_index.py <INDEX_ID> [--n 100]
 """
 import argparse, collections, json, os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)  # for the vendored synapse_client (keeps the skill self-contained)
+sys.path.insert(0, HERE)  # synapse_client is a sibling — this skill is self-contained
 from synapse_client import search, hit_dict  # noqa: E402
 
 

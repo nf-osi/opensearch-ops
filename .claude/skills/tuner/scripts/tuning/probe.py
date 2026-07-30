@@ -19,17 +19,10 @@ final number always comes from a real `multi_match` against the index (see tune.
 import hashlib
 import json
 import os
-import sys
 from concurrent.futures import ThreadPoolExecutor
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(os.path.dirname(HERE))     # sciops/tuning -> sciops -> repo root
-sys.path.insert(0, HERE)
-sys.path.insert(0, ROOT)
-sys.path.insert(0, os.path.join(ROOT, "benchmark"))
-from query import search                          # noqa: E402
-from run import hit_id                            # noqa: E402
-from candidate import DECOMPOSABLE                 # noqa: E402
+from candidate import DECOMPOSABLE
+from client import hit_id, search
 
 PROBE_SIZE = 100  # API caps returned hits at 100 regardless
 
@@ -44,8 +37,8 @@ def _key(index, fields, golden):
 
 
 def profile_brief(profile):
-    """Compact a `profile_index.profile()` result for a prompt / round_context.json — the
-    roles map and per-column category vocab are the useful parts, the raw histogram isn't."""
+    """Compact an `index_profile.profile()` result for round_context.json — the roles map and
+    per-column category vocab are the useful parts, the raw histogram isn't."""
     return {
         "total_hits": profile.get("total_hits"),
         "roles": profile.get("roles"),
@@ -58,7 +51,12 @@ def is_local_rerankable(candidate):
     """True if the candidate's ranking can be reproduced from the probe matrix (so the boost
     sweep can avoid live queries). Conservative: plain best_fields/most_fields over an explicit
     field set, no fuzziness / phrase boost / minimum_should_match (those don't decompose or
-    add matches the single-field probe didn't see)."""
+    add matches the single-field probe didn't see).
+
+    `tie_breaker` IS allowed here, because rerank() implements it exactly (max + tb*(sum-max)).
+    Anything added to the candidate schema in future must either be modelled in
+    _combined_scores or excluded here — a knob that is neither is silently ignored while the
+    candidate is still advertised as free to tune, which tunes it against the wrong objective."""
     return (candidate.get("query_type", "multi_match") == "multi_match"
             and candidate.get("multi_match_type") in DECOMPOSABLE
             and bool(candidate.get("fields"))
@@ -67,20 +65,51 @@ def is_local_rerankable(candidate):
             and not candidate.get("minimum_should_match"))
 
 
-def probe(index, golden, fields, id_field, poll_s=0.15, cache_path=None, workers=8):
+SAVE_EVERY = 25   # flush the partial matrix this often (see probe's resumability note)
+
+
+def _write_cache(cache_path, out):
+    """Atomically persist the (possibly partial) matrix. Write-then-rename, because these
+    writes now happen mid-probe: a kill during a plain `json.dump` would leave a truncated
+    file, and a truncated cache is worse than none — it fails to parse and throws away
+    everything, which is exactly the loss this is here to prevent."""
+    os.makedirs(os.path.dirname(cache_path) or ".", exist_ok=True)
+    tmp = cache_path + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(out, f, indent=2)
+    os.replace(tmp, cache_path)
+
+
+def probe(index, golden, fields, id_field, poll_s=0.15, cache_path=None, workers=8,
+          progress=None):
     """Build (or load) the per-(case × field) score matrix.
 
-    Returns {index, fields, k, cases: {case_id: {query, relevant, scores: {field: {id: score}}}}}.
+    Returns {index, fields, cases: {case_id: {query, relevant, scores: {field: {id: score}}}}}.
     Caches to `cache_path` keyed by (index, fields, golden queries). The (case × field) queries
-    are independent, so they run concurrently (`workers`) to hide per-query job latency."""
+    are independent, so they run concurrently (`workers`) to hide per-query job latency.
+
+    RESUMABLE at (case × field) granularity. This is `cases × fields` live queries — the
+    single most expensive thing the harness does, minutes to tens of minutes — so it is
+    checkpointed every SAVE_EVERY results rather than only at the end. A killed or timed-out
+    probe therefore costs at most the last few queries: re-running skips every pair already in
+    the cache. Before this, a kill one query short of the end discarded the entire matrix.
+
+    `progress(done, total)` — if given — is called as pairs complete, so a caller can show
+    that a long silent phase is in fact advancing."""
     key = _key(index, fields, golden)
+    cases = {c["id"]: {"query": c["query"], "relevant": list(c["relevant"]), "scores": {}}
+             for c in golden["cases"]}
     if cache_path and os.path.exists(cache_path):
         try:
             cached = json.load(open(cache_path))
             if cached.get("key") == key:
-                return cached
+                # Adopt whatever pairs it holds; `jobs` below then covers only the gaps. A
+                # complete cache leaves jobs empty and returns without a single query.
+                for cid, cp in (cached.get("cases") or {}).items():
+                    if cid in cases:
+                        cases[cid]["scores"].update(cp.get("scores") or {})
         except Exception:
-            pass
+            pass   # unreadable/corrupt cache: fall through and re-probe from scratch
 
     def one(case, f):
         dsl = {"query": {"multi_match": {"query": case["query"], "fields": [f],
@@ -88,23 +117,41 @@ def probe(index, golden, fields, id_field, poll_s=0.15, cache_path=None, workers
         res = search(index, dsl, response_parts=["HITS"], poll_s=poll_s)
         return case["id"], f, {hit_id(h, id_field): h.get("score", 0.0) for h in res.get("hits", [])}
 
-    cases = {c["id"]: {"query": c["query"], "relevant": list(c["relevant"]), "scores": {}}
-             for c in golden["cases"]}
-    jobs = [(c, f) for c in golden["cases"] for f in fields]
+    out = {"key": key, "index": index, "fields": list(fields), "cases": cases}
+    jobs = [(c, f) for c in golden["cases"] for f in fields
+            if f not in cases[c["id"]]["scores"]]
+    total = len(golden["cases"]) * len(fields)
+    if not jobs:
+        return out
+    done = total - len(jobs)
+    if done:
+        print(f"  resuming probe: {done}/{total} (case × field) pairs already cached")
     with ThreadPoolExecutor(max_workers=workers) as ex:
         for cid, f, scores in ex.map(lambda a: one(*a), jobs):
             cases[cid]["scores"][f] = scores
-    out = {"key": key, "index": index, "fields": list(fields), "cases": cases}
+            done += 1
+            if progress is not None:
+                progress(done, total)
+            if cache_path and done % SAVE_EVERY == 0:
+                _write_cache(cache_path, out)
     if cache_path:
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        json.dump(out, open(cache_path, "w"), indent=2)
+        _write_cache(cache_path, out)
     return out
 
 
-def _combined_scores(fields_boosts, case_probe, combine_sum):
+def _combined_scores(fields_boosts, case_probe, combine_sum, tie_breaker=None):
     """Per-doc combined score + the single field that contributes most to it, under a
-    {field: boost} map. best_fields -> max(boost*field_score); most_fields -> sum. Returns
-    {doc: {"score": float, "top_field": str}}."""
+    {field: boost} map.
+
+      most_fields              -> sum(boost * field_score)
+      best_fields              -> max(boost * field_score)
+      best_fields + tie_breaker-> max + tie_breaker * (sum - max), i.e. the winning field at
+                                  full weight plus every other field discounted by tie_breaker.
+                                  This mirrors OpenSearch's own definition, so a tie_breaker
+                                  candidate can be scored off the probe instead of being
+                                  tuned against a surrogate that ignores its defining knob.
+
+    Returns {doc: {"score": float, "top_field": str}}."""
     scores = case_probe["scores"]
     agg = {}
     for field, boost in fields_boosts.items():
@@ -112,20 +159,30 @@ def _combined_scores(fields_boosts, case_probe, combine_sum):
             contrib = boost * s
             cur = agg.get(doc)
             if cur is None:
-                agg[doc] = {"score": contrib, "top_field": field, "_top": contrib}
+                agg[doc] = {"_sum": contrib, "_top": contrib, "top_field": field}
             else:
-                cur["score"] = cur["score"] + contrib if combine_sum else max(cur["score"], contrib)
+                cur["_sum"] += contrib
                 if contrib > cur["_top"]:
                     cur["_top"], cur["top_field"] = contrib, field
+    tb = 0.0 if tie_breaker is None else float(tie_breaker)
+    for v in agg.values():
+        if combine_sum:
+            v["score"] = v["_sum"]
+        else:
+            v["score"] = v["_top"] + tb * (v["_sum"] - v["_top"])
     return agg
 
 
 def rerank(candidate, case_probe):
     """Locally re-rank a case from the probe matrix under the candidate's fields+boosts.
-    best_fields -> per-doc score = max(boost*field_score); most_fields -> sum. Returns ranked
-    ids (best first). Only valid when is_local_rerankable(candidate)."""
+    See _combined_scores for the per-type formula. Returns ranked ids (best first). Only
+    valid when is_local_rerankable(candidate)."""
     combine_sum = candidate.get("multi_match_type") == "most_fields"
-    agg = _combined_scores(candidate["fields"], case_probe, combine_sum)
+    # tie_breaker only applies to best_fields (build_dsl sets it nowhere else), so pass it
+    # through only there — otherwise a stray value on a most_fields candidate would silently
+    # change the local score while the live query ignored it.
+    tb = candidate.get("tie_breaker") if not combine_sum else None
+    agg = _combined_scores(candidate["fields"], case_probe, combine_sum, tie_breaker=tb)
     return [d for d, _ in sorted(agg.items(), key=lambda kv: kv[1]["score"], reverse=True)]
 
 
@@ -182,7 +239,8 @@ def diagnose(probe_matrix, golden, winner=None, winner_per_case=None, objective=
 
         # Distractors: under the winner's weighting, which non-relevant docs outrank the best
         # ideal doc, and on which field do they win.
-        combined = _combined_scores(wfields, cp, combine_sum)
+        combined = _combined_scores(wfields, cp, combine_sum,
+                                    tie_breaker=None if combine_sum else (winner or {}).get("tie_breaker"))
         relevant = set(case["relevant"])
         best_rel = max((combined[r]["score"] for r in relevant if r in combined), default=0.0)
         distractors = sorted(

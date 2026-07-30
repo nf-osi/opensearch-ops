@@ -7,13 +7,6 @@ searching the index is circular (search can't surface what it misses). This help
 that oracle so the agent doesn't hand-reconstruct the async Table Query loop each run:
 
   resolve(index_id)          -> the definingSQL source-table id (+ the SQL)
-  list_search_indexes()      -> every SearchIndex in the master index collections project
-                                (syn74909065 by default) — [{id, name}, ...]
-  resolve_index_name(name)   -> find a SearchIndex by exact name among the above; (id, name)
-                                or (None, None) if no such index exists
-  resolve_table_to_index(id) -> find the SearchIndex whose definingSQL sources from table
-                                `id`; (index_id, index_name) or (None, None) if none does
-                                (i.e. no index has been built for that table yet)
   tquery(sql, src)           -> run a Synapse Table Query (async poll) and return the bundle
   rows(bundle)               -> unpack a tquery() bundle into a plain list of value-lists —
                                 use this for any ad-hoc query; the bundle's own shape is
@@ -30,16 +23,16 @@ Takes a **source table id** by default (queried directly, no extra lookup) — p
 first. (For profiling the SearchIndex itself instead of its source table, see
 `profile_index.py`.)
 
-Anonymous for public tables; pass --token / token=... for a non-public source table.
+Anonymous for public tables; only pass --token / token=... for a non-public source table.
 
 Invoke from the repo root:
-  python3 sciops/agents/goldie/profile_table.py <SRC_TABLE_ID> [--col NAME ...] [--top N] [--token ...]
-  python3 sciops/agents/goldie/profile_table.py <INDEX_ID> --index-id [--col NAME ...] ...
+  python3 .claude/skills/goldie/scripts/profile_table.py <SRC_TABLE_ID> [--col NAME ...] [--top N] [--token ...]
+  python3 .claude/skills/goldie/scripts/profile_table.py <INDEX_ID> --index-id [--col NAME ...] ...
 """
 import argparse, os, re, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)  # for the vendored synapse_client (keeps the skill self-contained)
+sys.path.insert(0, HERE)  # synapse_client is a sibling — this skill is self-contained
 from synapse_client import _call  # noqa: E402
 
 
@@ -86,48 +79,10 @@ def resolve(entity_id, token=None):
                        f"queryable table (concreteType={ct!r})")
 
 
-def list_search_indexes(parent="syn74909065", token=None):
-    """List every SearchIndex child of `parent` (the master index collections project),
-    paginated. Returns [{"id": "synNNN", "name": "nf-tools"}, ...]."""
-    out = []
-    next_token = None
-    while True:
-        body = {"parentId": parent, "includeTypes": ["searchindex"]}
-        if next_token:
-            body["nextPageToken"] = next_token
-        code, page = _call("entity/children", "POST", body, token)
-        if code >= 400:
-            raise RuntimeError(f"listing children of {parent} failed ({code}): {page}")
-        out.extend({"id": c["id"], "name": c["name"]} for c in page.get("page", []))
-        next_token = page.get("nextPageToken")
-        if not next_token:
-            return out
-
-
-def resolve_index_name(name, parent="syn74909065", token=None):
-    """Find a SearchIndex by exact name among `parent`'s children (the master index
-    collections project). Returns (index_id, index_name), or (None, None) if no SearchIndex
-    with that name exists there — the caller's job to decide what "no index" means, this
-    just reports it plainly rather than guessing a close match."""
-    for c in list_search_indexes(parent, token):
-        if c["name"] == name:
-            return c["id"], c["name"]
-    return None, None
-
-
-def resolve_table_to_index(table_id, parent="syn74909065", token=None):
-    """Find the SearchIndex (among `parent`'s children) whose definingSQL sources from
-    `table_id` — the reverse of resolve(). Returns (index_id, index_name), or (None, None)
-    if no SearchIndex references this table (most likely: none has been built for it yet)."""
-    for c in list_search_indexes(parent, token):
-        code, ent = _call(f"entity/{c['id']}", token=token)
-        if code >= 400:
-            continue
-        sql = ent.get("definingSQL") or ent.get("definingSql") or ""
-        m = re.search(r"\bfrom\s+(syn\d+)", sql, re.I)
-        if m and m.group(1) == table_id:
-            return c["id"], c["name"]
-    return None, None
+# The name→index and table→index lookups that used to live here have moved to the `tuner`
+# skill's client.py, which is their only consumer (it resolves what to tune). goldie goes the
+# other direction — index → source table, via resolve() above — and lists indexes with the
+# entity/children call written out in SKILL.md's "Inputs" section.
 
 
 def tquery(sql, src, token=None, limit=300, part_mask=1, timeout_s=60, poll_s=0.5):

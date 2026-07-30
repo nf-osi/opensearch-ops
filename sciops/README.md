@@ -2,43 +2,62 @@
 
 Managed Agents + Slack bot.
 
+Skills live at the **repo root** in `.claude/skills/` (goldie, tuner) so
+Claude Code can run them locally with no upload; `sciops/publish_skill.py` uploads the same
+skill to the Managed Agents API for the agents below. See `.claude/skills/README.md`.
+
 ```
 sciops/
-├── agents/
-│   ├── goldie/         SKILL.md + agent_setup.py + helper scripts + .env  (specialist)
-│   ├── tuner/          SKILL.md + agent_setup.py + .env                   (specialist)
-│   └── orchestrator/   SKILL.md + agent_setup.py + .env                   (coordinator)
+├── agents/             agent CONFIG: agent_setup.py + .env per specialist
+│   ├── goldie/         agent_setup.py + .env  (attaches goldie)
+│   ├── tuner/          agent_setup.py + .env  (attaches tuner)
+│   └── orchestrator/   SKILL.md + agent_setup.py + .env  (coordinator)
+├── publish_skill.py    the SKILLS registry (what goes in each bundle) + uploader
 ├── slacker/            the Slack bot itself — slack_bot.py, slack_app_manifest.yaml,
 │   │                   requirements.txt, .env, README.md (local setup + usage)
 │   └── deploy/         DEPLOY.md (ECS Fargate) + task definition + IAM policy JSON
-├── Dockerfile          builds the bot image; build context is sciops/
-└── tuning/             the tuning harness tuner drives (tune.py et al.)
+└── Dockerfile          builds the bot image; build context is sciops/
 ```
 
-- **Each specialist owns its own Managed Agent** with its own self-contained `agents/<key>/`
-  directory. `sciops/agents/goldie/agent_setup.py` and `sciops/agents/tuner/agent_setup.py` each create
-  their agent (system prompt derived from their own `SKILL.md`) and a sandboxed environment,
-  upload their static helper scripts as `{mount_path: file_id}`, and save
-  `<PREFIX>_ENV_ID`/`<PREFIX>_AGENT_ID`/`<PREFIX>_AGENT_VERSION`/`<PREFIX>_SCRIPT_FILE_IDS`
-  to their own `.env`. Run these two FIRST.
+The tuning harness lives in `.claude/skills/tuner/scripts/tuning/` (with its design notes in
+`.claude/skills/tuner/README.md`); its run artifacts go to a gitignored `./tuner-runs/`
+wherever it's invoked, not to any directory tracked here.
+
+- **Each specialist owns its own Managed Agent**, split into *config* under `agents/<key>/`
+  (`agent_setup.py` + `.env`) and *payload* under `.claude/skills/<key>/` (`SKILL.md` + `scripts/`, nothing else —
+  what to stage lives in `publish_skill.py`'s `SKILLS` registry).
+  Each `agent_setup.py` creates its agent and a sandboxed environment and saves
+  `<PREFIX>_ENV_ID`/`<PREFIX>_AGENT_ID`/`<PREFIX>_AGENT_VERSION` to its own `.env`.
+
+  **Both specialists are on the skills model.** First publish the relevant 
+  skill(s) with `python3 sciops/publish_skill.py <name>`. Each `agent_setup.py` pins the relevant skill's
+  version into its agent version, and each attaches exactly one: its own. Both skills are
+  self-contained — goldie owns the profiling scripts outright, tuner carries its own Synapse
+  client and index profiler — so there is no shared skill to attach alongside. The only thing
+  ever mounted now is a user's Slack attachment. See `.claude/skills/README.md`.
+
+  Worth knowing: a skill bundle is mounted **read-only**, so the tuning harness
+  can't write beside its own code. `tune.py` therefore takes `--bench DIR` (where to read
+  `<table>/{golden,fields}.yaml`) and `--out DIR` (where to write run artifacts); both default
+  to the directory you run it from, and `.claude/skills/tuner/SKILL.md` passes a writable sandbox directory. That
+  same directory, `/mnt/session/work/benchmark/<table>/`, is where the orchestrator drops
+  goldie's `golden.yaml` for the handoff.
 
 - **`sciops/agents/orchestrator/agent_setup.py`** creates the coordinator: an Agent configured with
   `multiagent: {type: coordinator, agents: [...]}` referencing goldie's and tuner's already-
   created (id, version) pairs — read from their `.env` files, so this step must come after
-  the two above. It also creates its own environment and combines goldie's + tuner's
-  `script_file_ids` into one `ORCHESTRATOR_SCRIPT_FILE_IDS`, saved to its own `.env`. Per the
-  multi-agent docs, all agents in a coordinated session **share one sandbox filesystem** —
-  mounting the union of both specialists' files at session-creation time means either can be
-  delegated to without this bot knowing in advance which one it'll need, and goldie/tuner's
-  own system prompts (which reference their own fixed mount paths) work unchanged whether run
-  standalone or delegated to.
+  the above. It needs nothing else from them: per the multi-agent docs each thread in a
+  coordinated session runs with **its own agent's configuration, including its own skills**, so
+  there is no union of mounts to assemble. All threads still **share one sandbox filesystem**,
+  which is what makes the handoff work — the coordinator copies goldie's `golden.yaml` into
+  `/mnt/session/work/benchmark/<table>/` and tuner reads it from there.
 
 - **`sciops/slacker/slack_bot.py`** — long-running Slack Bolt app (Socket Mode, no public URL
   needed). Only talks to the coordinator; needs `ANTHROPIC_API_KEY`, `SLACK_BOT_TOKEN`,
   `SLACK_APP_TOKEN`, and `ORCHESTRATOR_ENV_ID`/`ORCHESTRATOR_AGENT_ID`/
-  `ORCHESTRATOR_AGENT_VERSION`/`ORCHESTRATOR_SCRIPT_FILE_IDS`. It reads these **from process
+  `ORCHESTRATOR_AGENT_VERSION`. It reads these **from process
   env first, falling back to `sciops/slacker/.env`** — its own directory, *not*
-  `sciops/agents/orchestrator/.env`, so the four `ORCHESTRATOR_*` values must be copied over
+  `sciops/agents/orchestrator/.env`, so the three `ORCHESTRATOR_*` values must be copied over
   from `sciops/agents/orchestrator/.env` after setup (see "Setup" below). One Managed Agent
   **session per Slack thread** — sub-agent delegation happens in separate "threads" *within*
   that one session, but is relayed to Slack via the session-level (primary thread) event
@@ -61,9 +80,9 @@ sciops/
 - **`tuner`** (`sciops/agents/tuner/`) — recommends a better query-time search config for an
   existing `benchmark/<table>/`, proposing entirely new candidate structures each round (not
   just re-weighting the existing config). **The calling agent (tuner itself) IS the proposal step** — 
-  it reads `sciops/tuning/<table>/round_context.json` (profile, leaderboard, diagnostics, candidate schema)
+  it reads `<out>/<table>/round_context.json` (profile, leaderboard, diagnostics, candidate schema)
   and authors `candidates.json` using its own reasoning 
-  (see `sciops/tuning/tune.py`'s `init`/`add-candidates`/`finalize` subcommands). 
+  (see `.claude/skills/tuner/scripts/tuning/tune.py`'s `init`/`add-candidates`/`finalize` subcommands). 
   It fetches the table's `golden.yaml` (required) and `fields.yaml` (optional — a nice-to-have
   existing strategy to compare against) from wherever they're already mounted (e.g. placed
   there by the coordinator) or a source given in the request — deliberately repo-agnostic,
@@ -84,10 +103,17 @@ script resolves its own `.env` relative to itself, so these work from any direct
 below are from `sciops/`:
 
 ```bash
+# Publish the skills first — each agent_setup.py exits with the missing keys if you skip it.
+python3 ../publish_skill.py goldie   # or from the repo root:
+python3 ../publish_skill.py tuner    #   python3 sciops/publish_skill.py <name>
+
 python3 agents/goldie/agent_setup.py --new
 python3 agents/tuner/agent_setup.py --new
 python3 agents/orchestrator/agent_setup.py --new
 ```
+
+Re-publishing a skill does not change a running agent — versions are pinned — so re-run that
+specialist's `agent_setup.py` afterwards to adopt the new skill version.
 
 Pass `--new` only on a first run, when there's no `.env` yet — the default (no flag) *updates*
 the agent already recorded in `.env` in place, bumping its version. Each saves its agent/env
@@ -137,10 +163,12 @@ only, so there's **no ALB, no public URL, and a security group with no inbound r
 
 ## Adding a new specialist
 
-1. Create `agents/<key>/` directory with a `SKILL.md` and an `agent_setup.py`
-   (model on `sciops/agents/goldie/agent_setup.py`) that creates the Managed Agent + environment and
-   saves `<PREFIX>_ENV_ID`/`<PREFIX>_AGENT_ID`/`<PREFIX>_AGENT_VERSION`/
-   `<PREFIX>_SCRIPT_FILE_IDS` to its own `.env`. Prefer having it fetch any live data itself
+1. Create `.claude/skills/<key>/` with a `SKILL.md` + `scripts/`, add an entry to
+   `publish_skill.py`'s `SKILLS` registry (see `.claude/skills/README.md`), and
+   `agents/<key>/` with an `agent_setup.py` (model on `sciops/agents/goldie/agent_setup.py`)
+   that creates the Managed Agent + environment, pins the skill, and saves
+   `<PREFIX>_ENV_ID`/`<PREFIX>_AGENT_ID`/`<PREFIX>_AGENT_VERSION` to its own `.env`.
+   Publish the skill first: `python3 sciops/publish_skill.py <key>`. Prefer having it fetch any live data itself
    (over the network, like goldie's Synapse calls or tuner's fetch from a source named in the
    request) rather than having this bot upload it — keeps the bot stateless and the Docker
    image slim.
@@ -149,8 +177,9 @@ only, so there's **no ALB, no public URL, and a security group with no inbound r
    knows when to delegate to it.
 3. Re-run `sciops/agents/orchestrator/agent_setup.py` (the roster is pinned to specific sub-agent
    versions at creation time), then propagate the new `ORCHESTRATOR_*` values as under
-   "Updating an agent" — `ORCHESTRATOR_SCRIPT_FILE_IDS` grows to include the new specialist's
-   mounts. No change to `slack_bot.py` or the Docker image is needed.
+   "Updating an agent". No change to `slack_bot.py` or the Docker image is needed — the
+   coordinator only pins (id, version) pairs, and the new specialist's payload rides in its
+   own skill.
 
 ## Updating an agent
 

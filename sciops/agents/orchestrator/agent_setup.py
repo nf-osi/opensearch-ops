@@ -15,13 +15,11 @@ param) that can delegate to the already-created `goldie` and `tuner`
 agents, per
 https://platform.claude.com/docs/en/managed-agents/multi-agent .
 
-Run sciops/agents/goldie/agent_setup.py and sciops/agents/tuner/agent_setup.py FIRST —
-this script reads their `.env` files for their agent id/version and static
-`script_file_ids`. All agents in a coordinated session share one sandbox
-filesystem, so this script mounts the UNION of both sub-agents' static
-files at session-creation time (via the combined resources this script
-saves) — goldie's and tuner's own system prompts are unchanged and already
-reference exactly those mount paths, whether run standalone or delegated to.
+Run sciops/agents/goldie/agent_setup.py and sciops/agents/tuner/agent_setup.py FIRST — this
+script reads their `.env` files for their agent id/version. Nothing else: both specialists
+carry their instructions and scripts as Agent Skills, and in a coordinated session each thread
+runs with its own agent's configuration (including its own skills). There is no union of mounts
+to assemble and no ORCHESTRATOR_SCRIPT_FILE_IDS.
 
 Deliberately repo-agnostic: there is no configured default repo anywhere in
 this pipeline. A golden/fields set must be either already mounted (e.g. a
@@ -36,14 +34,11 @@ Usage:
                                                  # resources; run with no args first if .env
                                                  # doesn't have one yet
 
-Requires `anthropic>=0.91.0` with the managed-agents beta enabled on the API
-key. Saves ORCHESTRATOR_ENV_ID, ORCHESTRATOR_AGENT_ID,
-ORCHESTRATOR_AGENT_VERSION, and ORCHESTRATOR_SCRIPT_FILE_IDS (json map
-mount_path -> file_id, the union of goldie's + tuner's) to .env for
+Requires `anthropic>=0.91.0` with the managed-agents beta enabled on the API key. Saves
+ORCHESTRATOR_ENV_ID, ORCHESTRATOR_AGENT_ID, ORCHESTRATOR_AGENT_VERSION to .env for
 sciops/slacker/slack_bot.py.
 """
 import argparse
-import json
 import os
 from pathlib import Path
 
@@ -64,15 +59,18 @@ TUNER_ENV_FILE = AGENTS_DIR / "tuner" / ".env"
 MODEL = os.environ.get("ORCHESTRATOR_AGENT_MODEL", "claude-opus-5")
 
 def _load_sub_agent(env_file: Path, prefix: str) -> dict:
+    """Both specialists now carry their payload as Agent Skills, so all this needs is the
+    (id, version) pair to pin into the coordinator's roster. In a coordinated session each
+    thread runs with its own agent's configuration — including its own skills — so the
+    coordinator does not attach or relay the specialists' files at all."""
     values = dotenv_values(env_file)
-    required = [f"{prefix}_AGENT_ID", f"{prefix}_AGENT_VERSION", f"{prefix}_SCRIPT_FILE_IDS"]
+    required = [f"{prefix}_AGENT_ID", f"{prefix}_AGENT_VERSION"]
     missing = [k for k in required if not values.get(k)]
     if missing:
         raise SystemExit(f"{env_file} missing {missing} — run that agent's own agent_setup.py first")
     return {
         "id": values[f"{prefix}_AGENT_ID"],
         "version": int(values[f"{prefix}_AGENT_VERSION"]),
-        "script_file_ids": json.loads(values[f"{prefix}_SCRIPT_FILE_IDS"]),
     }
 
 
@@ -131,18 +129,13 @@ def update_agent(client: Anthropic, agent_id: str, version: int, goldie: dict, t
     return client.beta.agents.update(agent_id, version=version, **_agent_kwargs(goldie, tuner))
 
 
-def script_resources(file_ids: dict) -> list:
-    return [
-        {"type": "file", "file_id": fid, "mount_path": path}
-        for path, fid in file_ids.items()
-    ]
-
-
-def run_smoke_test(client: Anthropic, env_id: str, agent, file_ids: dict, ask: str):
+def run_smoke_test(client: Anthropic, env_id: str, agent, ask: str):
+    # No `resources=` anywhere in this pipeline any more: each specialist's payload rides in
+    # its own Agent Skill, and in a coordinated session every thread runs with its own agent's
+    # skills. Only user-supplied Slack attachments are ever mounted (see slacker/slack_bot.py).
     session = client.beta.sessions.create(
         environment_id=env_id,
         agent={"type": "agent", "id": agent.id, "version": agent.version},
-        resources=script_resources(file_ids),
         title=f"Smoke test: {ask}",
     )
     client.beta.sessions.events.send(
@@ -180,7 +173,7 @@ def _run_smoke_test_against_existing(client: Anthropic, ask: str):
     in SLACK_AGENT.md/memory). If nothing's recorded yet, run this script with no args first."""
     values = dotenv_values(ENV_FILE)
     required = ["ORCHESTRATOR_ENV_ID", "ORCHESTRATOR_AGENT_ID", "ORCHESTRATOR_AGENT_VERSION",
-                "ORCHESTRATOR_SCRIPT_FILE_IDS"]
+]
     missing = [k for k in required if not values.get(k)]
     if missing:
         raise SystemExit(f"{ENV_FILE} missing {missing} — run `python3 agent_setup.py` "
@@ -189,8 +182,7 @@ def _run_smoke_test_against_existing(client: Anthropic, ask: str):
         values["ORCHESTRATOR_AGENT_ID"], version=int(values["ORCHESTRATOR_AGENT_VERSION"]),
         betas=["managed-agents-2026-04-01"],
     )
-    file_ids = json.loads(values["ORCHESTRATOR_SCRIPT_FILE_IDS"])
-    run_smoke_test(client, values["ORCHESTRATOR_ENV_ID"], agent, file_ids, ask)
+    run_smoke_test(client, values["ORCHESTRATOR_ENV_ID"], agent, ask)
 
 
 def main():
@@ -213,7 +205,6 @@ def main():
 
     goldie = _load_sub_agent(GOLDIE_ENV_FILE, "GOLDIE")
     tuner = _load_sub_agent(TUNER_ENV_FILE, "TUNER")
-    combined_file_ids = {**goldie["script_file_ids"], **tuner["script_file_ids"]}
 
     existing = dotenv_values(ENV_FILE)
     has_existing = not args.new and all(
@@ -243,9 +234,8 @@ def main():
     set_key(str(ENV_FILE), "ORCHESTRATOR_ENV_ID", env_id)
     set_key(str(ENV_FILE), "ORCHESTRATOR_AGENT_ID", agent.id)
     set_key(str(ENV_FILE), "ORCHESTRATOR_AGENT_VERSION", str(agent.version))
-    set_key(str(ENV_FILE), "ORCHESTRATOR_SCRIPT_FILE_IDS", json.dumps(combined_file_ids))
     print(f"Saved ORCHESTRATOR_ENV_ID, ORCHESTRATOR_AGENT_ID, ORCHESTRATOR_AGENT_VERSION, "
-          f"ORCHESTRATOR_SCRIPT_FILE_IDS to {ENV_FILE}")
+          f"to {ENV_FILE}")
 
 
 if __name__ == "__main__":

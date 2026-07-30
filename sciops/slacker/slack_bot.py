@@ -9,7 +9,8 @@ no separate classify-then-dispatch step here anymore. The coordinator reads
 plain language, decides what's needed, and figures out the sequencing
 (e.g. generate a golden set first if one doesn't exist yet, then tune).
 
-Setup: run sciops/agents/goldie/agent_setup.py, sciops/agents/tuner/agent_setup.py, then
+Setup: publish the skills (sciops/publish_skill.py goldie|tuner), run
+sciops/agents/goldie/agent_setup.py and sciops/agents/tuner/agent_setup.py, then
 sciops/agents/orchestrator/agent_setup.py (which reads the first two's ids), then:
   1. Create a Slack app from `slack_app_manifest.yaml`, install it, invite it
      to a channel.
@@ -65,7 +66,6 @@ REQUIRED_ENV_VARS = (
     "ORCHESTRATOR_ENV_ID",
     "ORCHESTRATOR_AGENT_ID",
     "ORCHESTRATOR_AGENT_VERSION",
-    "ORCHESTRATOR_SCRIPT_FILE_IDS",
 )
 
 
@@ -96,13 +96,6 @@ try:
 except ValueError as e:
     raise RuntimeError(
         f"ORCHESTRATOR_AGENT_VERSION must be an integer in {ENV_FILE} or process env."
-    ) from e
-
-try:
-    ORCHESTRATOR_SCRIPT_FILE_IDS = json.loads(_require_env("ORCHESTRATOR_SCRIPT_FILE_IDS"))
-except json.JSONDecodeError as e:
-    raise RuntimeError(
-        f"ORCHESTRATOR_SCRIPT_FILE_IDS must be valid JSON in {ENV_FILE} or process env."
     ) from e
 
 client = Anthropic(api_key=ANTHROPIC_API_KEY)
@@ -244,12 +237,11 @@ def _is_pending(thread_ts: str) -> bool:
 
 def start_job(channel: str, thread_ts: str, text: str, files: list) -> None:
     try:
-        resources = [
-            {"type": "file", "file_id": fid, "mount_path": path}
-            for path, fid in ORCHESTRATOR_SCRIPT_FILE_IDS.items()
-        ]
-        if files:
-            resources += _upload_slack_files(files)
+        # Only user-supplied attachments are ever mounted. Each specialist's instructions and
+        # scripts ride in its own Agent Skill, pinned into its agent version, and in a
+        # coordinated session every thread runs with its own agent's skills — so this bot no
+        # longer needs to know which files any specialist depends on.
+        resources = _upload_slack_files(files) if files else None
 
         session = client.beta.sessions.create(
             environment_id=ORCHESTRATOR_ENV_ID,

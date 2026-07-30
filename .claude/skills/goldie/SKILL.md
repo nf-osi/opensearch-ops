@@ -1,6 +1,6 @@
 ---
 name: goldie
-description: Generate benchmark golden relevance cases for a Synapse SearchIndex table. Use when the user wants to expand benchmark with new, SME-style search queries for a given table/index ("generate goldens for <table>", "add benchmark cases for this index", "make more relevance test queries"). The agent profiles the table, reasons like a domain SME to invent realistic discovery queries, and selects the ideal ranked head set of results for each.
+description: Generate benchmark golden relevance cases for a Synapse SearchIndex table. Use when the user wants to expand benchmark with new, SME-style search queries for a given table/index ("generate goldens for <table>", "add benchmark cases for this index", "make more relevance test queries"). For this workflow, profile the table, reason like a domain SME to invent realistic discovery queries, and select the ideal ranked head set of results for each.
 dependencies: python>=3.8, pyyaml>=5.1
 ---
 
@@ -10,24 +10,23 @@ Your job: given a Synapse SearchIndex table, act like a **subject-matter expert 
 for that data domain** and produce realistic search queries plus the *ideal* set of
 results each should return in a specific `golden.yaml` format. These become ground
 truth for the search benchmark, so they must reflect what a knowledgeable user would
-search for and what a *perfect* search would return, **not** what the current search
+search for *and* what a *perfect* search would return, **not** what the current search
 happens to return.
 
-This skill is **self-contained** — its scripts depend only on Python + PyYAML. You are running
-inside a sandboxed session. The helper scripts below are mounted read-only at `sciops/agents/goldie/`:
+Your tools all live in `.claude/skills/goldie/scripts/` — run them from the repo root:
 - `profile_index.py <INDEX_ID>` — profile the *index* sample (roles, feel). Order-biased; not ground truth.
 - `profile_table.py <SRC_TABLE_ID>` (or `<INDEX_ID> --index-id`) — pull the *real* category
   distributions/counts from the source table (your topical seeds + `expected_pool`). This is the oracle.
+- `synapse_client.py` — the repo-prod client the other scripts import (`_call` / `search` /
+  `hit_dict`); also runnable as a CLI to dump raw index records (see Step 1).
 - `validate_golden.py <GOLDEN_FILE>` — structural checks **plus** the mandatory live gate that
   every `relevant` id actually exists in the index.
-- `synapse_client.py` — the vendored repo-prod client the three scripts import (`_call` /
-  `search` / `hit_dict`); also runnable as a CLI to dump raw index records (see Step 1).
 
 **Two different APIs, used for two different things — do not confuse them:**
 - **The Synapse Table Query API** (SQL against the `definingSQL` *source table*) is your
   **ground-truth oracle**. The relevant set for every case is derived from source-table
   data, not from search. See Step 1/Step 3. Source-table queries go through
-  `profile_table.tquery(...)` (built on the vendored `synapse_client._call`). Public tables work anonymously.
+  `profile_table.tquery(...)` (built on `synapse_client._call`). Public tables work anonymously.
 - **The SearchIndex query API** (`synapse_client.search`, anonymous) runs the *actual search*
   you are benchmarking. Use it ONLY to (a) profile the index and (b) compute the derived
   `recall_gap_current` flag *if the user explicitly asks for it* (optional — off by default).
@@ -66,8 +65,8 @@ The size that matters is the **source table's true row count** — read it from 
 profiler, NOT from the search index:
 
 ```bash
-python3 sciops/agents/goldie/profile_table.py <SRC_TABLE_ID>            # you have the source table id
-python3 sciops/agents/goldie/profile_table.py <INDEX_ID> --index-id     # you only have the SearchIndex id
+python3 .claude/skills/goldie/scripts/profile_table.py <SRC_TABLE_ID>            # you have the source table id
+python3 .claude/skills/goldie/scripts/profile_table.py <INDEX_ID> --index-id     # you only have the SearchIndex id
 # either way, read the `source rows:` line
 ```
 
@@ -107,7 +106,7 @@ prefer the logs.
 Exception: exact `known-item` / sanity-check point-lookups are safe at any size. If the user
 only wants those, you may proceed; it is topical curation and query *coverage* that fail as
 the table grows. You are a **bootstrap** for small-to-medium tables without query logs — not
-a tool for large or heavily-used indexes. When in doubt, reject and explain rather than emit
+a tool for large indexes. When in doubt, reject and explain rather than emit
 goldens you cannot stand behind.
 
 ## Step 1 — Profile the table (discover the schema — assume NOTHING)
@@ -119,13 +118,13 @@ Run the profiler — it infers each column's *role* (identifier / name / categor
 free-text) without hardcoding names:
 
 ```bash
-python3 sciops/agents/goldie/profile_index.py <INDEX_ID> --n 100
+python3 .claude/skills/goldie/scripts/profile_index.py <INDEX_ID> --n 100
 ```
 
 Then read full records for vocabulary and feel:
 
 ```bash
-python3 sciops/agents/goldie/synapse_client.py '{"query":{"match_all":{}},"size":20}' <INDEX_ID>
+python3 .claude/skills/goldie/scripts/synapse_client.py '{"query":{"match_all":{}},"size":20}' <INDEX_ID>
 ```
 
 > **The index `match_all` sample is order-biased — do not trust it for coverage.** It
@@ -137,7 +136,7 @@ python3 sciops/agents/goldie/synapse_client.py '{"query":{"match_all":{}},"size"
 
 ### Profile the SOURCE table (the ground-truth schema + vocabularies)
 
-The source table is where you learn the TRUE controlled vocabularies and pool sizes —
+The source table is where you learn the TRUE controlled vocabularies and pool sizes 
 independent of search. **Use `profile_table.py`; do not hand-write the Table Query loop.**
 Given a source table id directly (the default), it queries it as-is; given `--index-id`, it
 resolves the SearchIndex to its `definingSQL` source table first. Either way it prints the
@@ -146,9 +145,9 @@ the *real* value distribution with counts straight from the source (full-table G
 not a sample):
 
 ```bash
-python3 sciops/agents/goldie/profile_table.py <SRC_TABLE_ID>                        # auto: enum + list cols
-python3 sciops/agents/goldie/profile_table.py <SRC_TABLE_ID> --col age --col race   # specific cols
-python3 sciops/agents/goldie/profile_table.py <INDEX_ID> --index-id                 # only have the index id
+python3 .claude/skills/goldie/scripts/profile_table.py <SRC_TABLE_ID>                        # auto: enum + list cols
+python3 .claude/skills/goldie/scripts/profile_table.py <SRC_TABLE_ID> --col age --col race   # specific cols
+python3 .claude/skills/goldie/scripts/profile_table.py <INDEX_ID> --index-id                 # only have the index id
 ```
 
 Those counts are your topical-query **seeds** AND your `expected_pool` numbers. For anything
@@ -159,7 +158,7 @@ list of rows** — its actual data is nested at `queryResult.queryResults.rows[]
 a flat `bundle["rows"]` you might guess at. Always unpack it with `rows(bundle)`:
 
 ```python
-import sys; sys.path.insert(0, "sciops/agents/goldie")
+import sys; sys.path.insert(0, ".claude/skills/goldie/scripts")
 from profile_table import resolve, tquery, rows
 SRC, _ = resolve("<INDEX_ID>")           # -> the definingSQL source table id (only needed
                                           # if you don't already have it)
@@ -264,7 +263,7 @@ Then:
 Keep the head focused (the strongest 3–5) even when `expected_pool` is large; the
 `relevant` list is just the ideal *head*.
 
-### (Optional, on request) Compute `recall_gap_current`
+### (Optional, only on request) Compute `recall_gap_current`
 
 **Do NOT compute this by default.** It is the one legitimate use of the search index in
 this skill, but only do it when the user explicitly asks for recall-gap flags. By default,
@@ -277,7 +276,7 @@ When requested: after the relevant set is fixed from the source table, run the
 top 20 (Hit@20):
 
 ```python
-import sys; sys.path.insert(0, "sciops/agents/goldie")
+import sys; sys.path.insert(0, ".claude/skills/goldie/scripts")
 from synapse_client import search, hit_dict
 r = search("<INDEX_ID>", {"query":{"multi_match":{"query":"<query>","fuzziness":"AUTO"}},"size":20})
 top20 = [hit_dict(h)["<id_field>"] for h in r.get("hits",[])]
@@ -341,16 +340,13 @@ meaningful on cases carried over from that comparison), and do not invent other 
 
 ### Where do the cases go?
 
-Write your output files directly to `/mnt/session/outputs/`: `golden.yaml` and `README.md`
-(the dataset-documentation companion, see Step 5). You have no git repo or `benchmark/` tree
-here — a human downloads these from the Slack thread and places them into the real repo
-afterward (`benchmark/<table>/`), so name and structure them as if they were already there.
+Write your output files directly to the outputs directory the caller gave you (`<OUT_DIR>`): `golden.yaml` and `README.md`
+(the dataset-documentation companion, see Step 5).
 - **Appending to an existing table's golden set**: if a `golden.yaml` for this table was
-  already mounted for you when you started (e.g. placed there by a coordinating agent, or
-  attached in Slack) rather than generated from scratch, treat it as the base — append your
+  already available when you started, rather than generated from scratch, treat it as the base — append your
   new cases under a clearly-marked provenance block. The `relevant` ids MUST be values of
   that file's `id_field`. **Bump the header `version`, following its current convention.**
-  Write the full merged file to `/mnt/session/outputs/golden.yaml`.
+  Write the full merged file to `<OUT_DIR>/golden.yaml`.
 - **A new table/index**: write a fresh `golden.yaml` — header `index`, `index_name`,
   **`version`**, `k`, and **`id_field`** set to the identifier column you chose in Step 1 (or
   `rowId`). Set `version` to today's date as `YYYY.MM.DD` (dotted) unless the user specifies a
@@ -377,15 +373,15 @@ Example block header to prepend:
 
 ## Step 5 — Validate and hand off
 
-1. **Run the validator against the file you wrote to `/mnt/session/outputs/`**:
+1. **Run the validator against the file you wrote to `<OUT_DIR>`**:
    ```bash
-   python3 sciops/agents/goldie/validate_golden.py /mnt/session/outputs/golden.yaml
+   python3 .claude/skills/goldie/scripts/validate_golden.py <OUT_DIR>/golden.yaml
    ```
    It checks structure (parses, has `id_field`, unique case ids, no empty/duplicate
    `relevant`, mostly-topical split) and that every `relevant` id
    actually exists in the index. However, you can use `--no-index` 
    when the index doesn't exist yet or only for quick offline structural pass while drafting.
-2. **Write `README.md` to `/mnt/session/outputs/`** — the dataset-documentation companion to
+2. **Write `README.md` to `<OUT_DIR>`** — the dataset-documentation companion to
    `golden.yaml` (if a README for this table was already mounted alongside an existing
    `golden.yaml` you're appending to, update it in place instead of starting fresh). Cover:
    - **What this is** — the index (`index_name` + id) and its `definingSQL` source table.

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Create or update the `goldie` Managed Agent + environment.
 
-Re-run whenever SKILL.md or the vendored scripts change. By default this UPDATES the agent
+Re-run whenever the model, tools, or environment change — or after `sciops/publish_skill.py goldie`
+publishes a new skill version, since the skill version is pinned here. By default this UPDATES the agent
 already recorded in .env in place (client.beta.agents.update — bumps its version, same
 agent_id, same environment) rather than minting a new one — agent_id is not something
 anything downstream should have to re-learn every redeploy. Pass --new the first time (no
@@ -11,12 +12,12 @@ has no way to move an existing agent_id to a new environment_id, so --new create
 
 Creates an Anthropic Managed Agent (`client.beta.agents`) in a persistent sandboxed
 `environment` (`client.beta.environments`). SKILL.md and the Python scripts are NOT inlined
-or mounted here — they ship as a custom Agent Skill built by `skill_setup.py`, which must run
+or mounted here — they ship as a custom Agent Skill built by `sciops/publish_skill.py`, which must run
 first. That keeps everything goldie needs inside the agent version, so nothing that starts a
 session has to know which files goldie depends on.
 
 Usage:
-    python3 skill_setup.py            # FIRST — build/version the skill
+    python3 ../../../sciops/publish_skill.py goldie   # FIRST — publish the skill
     python3 agent_setup.py            # update the agent in .env (or create, if none yet)
     python3 agent_setup.py --new      # force a brand-new agent + environment
     python3 agent_setup.py --smoke-test <SEARCH_INDEX_ID>   # run a real session against the
@@ -37,49 +38,64 @@ from dotenv import dotenv_values, load_dotenv, set_key
 
 HERE = Path(__file__).resolve().parent
 ENV_FILE = HERE / ".env"
-SKILL_MD_PATH = HERE / "SKILL.md"
+# SKILL.md and the skill-only assets now live in .claude/skills/goldie/ and are published by
+# sciops/publish_skill.py — nothing here reads them.
 
 OUTPUT_DIR = "/mnt/session/outputs"
 
 MODEL = os.environ.get("GOLDIE_AGENT_MODEL", "claude-sonnet-5")
 
 
-def _load_skill() -> dict:
-    """The skill carries SKILL.md AND the helper scripts, so it must exist before the agent
-    can reference it. Created by skill_setup.py, which writes these three keys."""
-    values = dotenv_values(ENV_FILE)
-    required = ["GOLDIE_SKILL_ID", "GOLDIE_SKILL_VERSION", "GOLDIE_SKILL_DIR"]
-    missing = [k for k in required if not values.get(k)]
-    if missing:
-        raise SystemExit(
-            f"{ENV_FILE} missing {missing} — run `python3 skill_setup.py` first; the agent "
-            f"references its instructions and scripts as a Skill, not as session file mounts."
-        )
-    return {
-        "id": values["GOLDIE_SKILL_ID"],
-        "version": values["GOLDIE_SKILL_VERSION"],
-        "directory": values["GOLDIE_SKILL_DIR"],
-    }
+# (skill name, .env holding its ids, key prefix). One entry, and that's the whole dependency:
+# the goldie skill carries SKILL.md plus every script it needs (the profiling trio and
+# validate_golden.py), so there is no second skill to attach and no shared skill-local .env.
+SKILL_SOURCES = [("goldie", ENV_FILE, "GOLDIE")]
 
 
-def build_system_prompt(skill: dict) -> str:
+def _load_skills() -> list:
+    """Read each required skill's published ids. Built by `sciops/publish_skill.py <name>`."""
+    skills = []
+    for name, env_file, prefix in SKILL_SOURCES:
+        values = dotenv_values(env_file)
+        required = [f"{prefix}_SKILL_ID", f"{prefix}_SKILL_VERSION", f"{prefix}_SKILL_DIR"]
+        missing = [k for k in required if not values.get(k)]
+        if missing:
+            raise SystemExit(
+                f"{env_file} missing {missing} — run `python3 sciops/publish_skill.py {name}` (from the"
+                f" repo root) first. The agent references its instructions and scripts as Skills, "
+                f"not as session file mounts."
+            )
+        skills.append({
+            "name": name,
+            "id": values[f"{prefix}_SKILL_ID"],
+            "version": values[f"{prefix}_SKILL_VERSION"],
+            "directory": values[f"{prefix}_SKILL_DIR"],
+        })
+    return skills
+
+
+def build_system_prompt(skills: list) -> str:
     """Deliberately short. SKILL.md is no longer inlined here — it ships inside the skill and
     loads on demand (progressive disclosure), so the ~400 lines of procedure cost context only
     once the agent actually starts a golden-set task. What stays is the deployment-specific
     context the skill text can't know."""
+    goldie = {s["name"]: s for s in skills}["goldie"]
     return f"""\
 You generate benchmark golden relevance cases for Synapse SearchIndex tables.
 
-Your full procedure lives in the `goldie` skill. Read `{skill['directory']}/SKILL.md`
+Your full procedure lives in the `goldie` skill. Read `{goldie['directory']}/SKILL.md`
 before doing anything else and follow it exactly — it is the authoritative spec for the
-`golden.yaml` format, the profiling steps, and the case-selection rules. The helper scripts
-it references sit in that same directory. If that relative path does not resolve, locate it
-once with `find / -name SKILL.md -path '*{skill['directory']}*' 2>/dev/null | head -1` and
-use its directory throughout.
+`golden.yaml` format, the profiling steps, and the case-selection rules.
+
+Every script it names — `profile_index.py`, `profile_table.py`, `synapse_client.py`,
+`validate_golden.py` — is in that same skill at `{goldie['directory']}/scripts/`. If a
+relative path in SKILL.md does not resolve, locate it once with
+`find / -name profile_table.py 2>/dev/null | head -1` and use its directory throughout.
 
 Deployment-specific notes the skill text can't know:
 
-- Write your outputs to `{OUTPUT_DIR}/` — they are collected from there and posted back.
+- `<OUT_DIR>` = `{OUTPUT_DIR}` — substitute it wherever the skill says `<OUT_DIR>`. Write
+  your outputs there; they are collected from it and posted back.
 - No Synapse token is configured — anonymous access only. Only proceed with public
   tables/indexes. If a table needs a token to query, say so in your final message and stop.
 - Your final message becomes what gets posted back to the Slack thread — confirm with a line
@@ -99,20 +115,19 @@ def create_environment(client: Anthropic):
     )
 
 
-def _agent_kwargs(skill: dict) -> dict:
+def _agent_kwargs(skills: list) -> dict:
     """Shared by create_agent/update_agent so the two paths can't drift apart."""
     return dict(
         name="opensearch-goldie",
         model=MODEL,
-        system=build_system_prompt(skill),
-        skills=[{
-            "type": "custom",
-            "skill_id": skill["id"],
-            # Pinned, not "latest": the agent version and the skill version should move
-            # together, so a skill_setup.py run can't silently change a pinned agent's
-            # behaviour. Re-run agent_setup.py to adopt a new skill version.
-            "version": skill["version"],
-        }],
+        system=build_system_prompt(skills),
+        # Pinned versions, not "latest": the agent version and its skill versions should move
+        # together, so republishing a skill can't silently change a pinned agent's behaviour.
+        # Re-run this script to adopt new skill versions.
+        skills=[
+            {"type": "custom", "skill_id": s["id"], "version": s["version"]}
+            for s in skills
+        ],
         tools=[
             {
                 "type": "agent_toolset_20260401",
@@ -129,12 +144,12 @@ def _agent_kwargs(skill: dict) -> dict:
     )
 
 
-def create_agent(client: Anthropic, skill: dict):
-    return client.beta.agents.create(**_agent_kwargs(skill))
+def create_agent(client: Anthropic, skills: list):
+    return client.beta.agents.create(**_agent_kwargs(skills))
 
 
-def update_agent(client: Anthropic, agent_id: str, version: int, skill: dict):
-    return client.beta.agents.update(agent_id, version=version, **_agent_kwargs(skill))
+def update_agent(client: Anthropic, agent_id: str, version: int, skills: list):
+    return client.beta.agents.update(agent_id, version=version, **_agent_kwargs(skills))
 
 
 def run_smoke_test(client: Anthropic, env_id: str, agent, index_id: str):
@@ -216,13 +231,14 @@ def main():
         existing.get(k) for k in ("GOLDIE_ENV_ID", "GOLDIE_AGENT_ID", "GOLDIE_AGENT_VERSION")
     )
 
-    skill = _load_skill()
-    print(f"Attaching skill {skill['id']} v{skill['version']} (dir {skill['directory']}/)")
+    skills = _load_skills()
+    for s_ in skills:
+        print(f"Attaching skill {s_['name']}: {s_['id']} v{s_['version']} (dir {s_['directory']}/)")
 
     if has_existing:
         env_id = existing["GOLDIE_ENV_ID"]
         old_version = existing["GOLDIE_AGENT_VERSION"]
-        agent = update_agent(client, existing["GOLDIE_AGENT_ID"], int(old_version), skill)
+        agent = update_agent(client, existing["GOLDIE_AGENT_ID"], int(old_version), skills)
         print(f"Updated agent {agent.id} v{old_version} -> v{agent.version} (environment {env_id} reused)")
     else:
         if args.new and existing.get("GOLDIE_AGENT_ID"):
@@ -230,7 +246,7 @@ def main():
                   f"as-is — archive it yourself once you've confirmed the new one works.")
         env = create_environment(client)
         print(f"Created environment {env.id}")
-        agent = create_agent(client, skill)
+        agent = create_agent(client, skills)
         print(f"Created agent {agent.id} v{agent.version}")
         env_id = env.id
 
