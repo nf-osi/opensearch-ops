@@ -14,7 +14,13 @@ Results are printed as a markdown table and written to results/<label>.json so
 runs can be diffed as the index config (analyzers, synonyms, boosts) changes.
 
 Benchmarks live in per-table subfolders: benchmark/<table>/{golden.yaml,
-strategies.py, results/}. Pass the table as the first argument (default: tools).
+fields.yaml, strategies.py, results/}. Pass the table as the first argument (default: tools).
+
+Strategies are the fixed query shapes in strategies.py, plus — for a table whose fields.yaml
+carries a `query:` block — `tuned`, compiled from that block. That block is how a tuner
+winner using tie_breaker / minimum_should_match / phrase_boost is reproduced exactly; the
+fixed strategies take no knobs, so applying such a winner's boosts to one of them would score
+a different query. See the tuner README's "Applying a winner".
 
 Usage:
   python3 benchmark/run.py [table] [--label baseline] [--k 10] [--poll 0.15]
@@ -30,29 +36,38 @@ from query import search, hit_dict  # noqa: E402
 
 
 def load_strategies(table_dir):
-    """Load STRATEGIES from the table's strategies.py, falling back to the
-    shared benchmark/strategies.py if the table doesn't define its own."""
+    """Load the table's strategies.py module, falling back to the shared
+    benchmark/strategies.py if the table doesn't define its own.
+
+    Returns the MODULE, not just its STRATEGIES dict, because main() also needs its
+    `tuned_strategy` factory to compile a table's `query:` block (see load_field_config)."""
     for path in (os.path.join(table_dir, "strategies.py"),
                  os.path.join(HERE, "strategies.py")):
         if os.path.exists(path):
             spec = importlib.util.spec_from_file_location("strategies", path)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-            return mod.STRATEGIES
+            return mod
     sys.exit(f"no strategies.py found in {table_dir} or {HERE}")
 
 
-def load_fields(table_dir):
-    """Load the table's match fields (with `^N` boosts) from benchmark/<table>/fields.yaml.
+def load_field_config(table_dir):
+    """Load benchmark/<table>/fields.yaml -> (fields, query_spec).
 
-    Returns the list as-is, e.g. ["resourceName^5", ...]; strategies that want unboosted
-    matching strip the `^weight` themselves. Falls back to ["*"] (all fields, no boost)
-    when the table has no fields.yaml."""
+    `fields` is the match list with `^N` boosts, e.g. ["resourceName^5", ...], returned as-is;
+    strategies that want unboosted matching strip the `^weight` themselves. Falls back to
+    ["*"] (all fields, no boost) when the table has no fields.yaml.
+
+    `query_spec` is the file's optional `query:` block — the full tuned query recipe (query
+    type plus tie_breaker / minimum_should_match / phrase_boost), or None for the tables that
+    only pin boosts. When present, main() registers it as the `tuned` strategy. Boosts are
+    NOT duplicated inside the block; it describes the query shape, `fields:` supplies the
+    weights."""
     path = os.path.join(table_dir, "fields.yaml")
-    if os.path.exists(path):
-        cfg = yaml.safe_load(open(path)) or {}
-        return cfg.get("fields") or ["*"]
-    return ["*"]
+    if not os.path.exists(path):
+        return ["*"], None
+    cfg = yaml.safe_load(open(path)) or {}
+    return (cfg.get("fields") or ["*"]), (cfg.get("query") or None)
 
 
 def reciprocal_rank(ranked_ids, relevant):
@@ -178,11 +193,21 @@ def main():
 
     golden = yaml.safe_load(open(golden_path))
     k = args.k or golden.get("k", 10)
-    all_strategies = load_strategies(table_dir)
+    strategies_mod = load_strategies(table_dir)
+    fields, query_spec = load_field_config(table_dir)
+    all_strategies = dict(strategies_mod.STRATEGIES)
+    if query_spec:
+        if not hasattr(strategies_mod, "tuned_strategy"):
+            sys.exit(f"{table_dir}/fields.yaml has a `query:` block but this table's "
+                     f"strategies.py defines no tuned_strategy() to compile it")
+        all_strategies["tuned"] = strategies_mod.tuned_strategy(query_spec)
     strategies = all_strategies
     if args.strategy:
+        missing = [n for n in args.strategy if n not in all_strategies]
+        if missing:
+            sys.exit(f"unknown strategy/strategies {missing}; "
+                     f"available: {sorted(all_strategies)}")
         strategies = {n: all_strategies[n] for n in args.strategy}
-    fields = load_fields(table_dir)
 
     out = run(golden, strategies, fields, k, args.poll)
     out["label"] = args.label
