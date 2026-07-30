@@ -5,7 +5,7 @@
 // Logic/data mirror the Python harness (synapse.js / strategies.js / score.js).
 
 import { search, hitDict, hitId, indexName, indexColumns, listSearchIndexes } from "./synapse.js";
-import { STRATEGIES, STRATEGY_ORDER, BOOSTED_KEYS } from "./strategies.js";
+import { STRATEGIES, STRATEGY_ORDER, BOOSTED_KEYS, setTuned } from "./strategies.js";
 import { scoreCase, aggregate } from "./score.js";
 import { generateFieldBoosts } from "./boostgen.js";
 import { strategyLabel, METRIC_LABELS, toolTypeIcon } from "./labels.js";
@@ -26,7 +26,7 @@ const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const pick = (d, keys) => { for (const k of keys) if (d[k]) return d[k]; return null; };
 
-let DATA = null;           // { index, index_name, k, id_field, fields, cases, precomputed, generated? }
+let DATA = null;           // { index, index_name, k, id_field, fields, query?, cases, precomputed, generated? }
 let BOOSTS = [];           // [{ field, boost }] editable, seeded from DATA.fields
 let LAST_BENCH = null;     // { strategies, per_case, k, live }
 
@@ -137,6 +137,13 @@ function updateSearchPlaceholder(data) {
 function applyData(data) {
   DATA = data;
   BOOSTS = (data.fields || []).map(parseBoost);
+  // A tuned table's fields.yaml carries a `query:` block alongside its boosts; register it as
+  // the `tuned` recipe and rebuild both strategy pickers, since the option list is per-table.
+  // Without this the lab would score the table's boosts through multi_match_boosted and call
+  // that its config — a different query whenever the winner uses tie_breaker/phrase_boost.
+  setTuned(data.query || null);
+  setupColumns();
+  renderStrategyChips();
   const golden = data.cases.length ? `${data.cases.length} golden cases` : "no golden set";
   // when we discovered all columns live, show boostable as a subset of the total so it's
   // clear why the two numbers differ (non-text column types are excluded — see the
@@ -195,7 +202,9 @@ function setupColumns() {
   const opts = STRATEGY_ORDER.map((k) =>
     `<option value="${k}"${BOOSTED_KEYS.has(k) ? ' title="Uses Custom Field Boosts"' : ""}>${esc(strategyLabel(k).name)}</option>`
   ).join("");
-  const defaults = { A: "frontend_default", B: "multi_match_cross" };
+  // Show a tuned table's own config against the production baseline by default — that's the
+  // comparison that matters for a table someone has actually tuned.
+  const defaults = { A: "frontend_default", B: STRATEGIES.tuned ? "tuned" : "multi_match_cross" };
   $$(".col").forEach((col) => {
     const which = col.dataset.col;
     col.innerHTML =
@@ -335,10 +344,22 @@ const fmtScore = (s) => (typeof s === "number" ? s.toFixed(2) : "—");
 // ---------------------------------------------------------------- benchmark
 function setupBenchmarkControls() {
   const picker = $("#stratPicker");
-  picker.insertAdjacentHTML("beforeend", `<div class="strat-grid">${STRATEGY_ORDER.map((k) =>
-    `<label class="strat-chip on"><input type="checkbox" value="${k}" checked>${esc(strategyLabel(k).name)}</label>`).join("")}</div>`);
+  renderStrategyChips();
+  // delegated, so it survives renderStrategyChips() swapping the grid out on every table load
   picker.addEventListener("change", (e) => { e.target.closest(".strat-chip")?.classList.toggle("on", e.target.checked); updateEstimate(); });
   $("#runBench").addEventListener("click", runBenchmark);
+}
+
+// (Re)build the strategy checkboxes. Separate from setupBenchmarkControls because the option
+// list depends on the loaded table (its `tuned` recipe), while the listeners are wired once.
+function renderStrategyChips() {
+  const picker = $("#stratPicker");
+  if (!picker) return;
+  const html = `<div class="strat-grid">${STRATEGY_ORDER.map((k) =>
+    `<label class="strat-chip on"><input type="checkbox" value="${k}" checked>${esc(strategyLabel(k).name)}</label>`).join("")}</div>`;
+  const existing = $(".strat-grid", picker);
+  if (existing) existing.outerHTML = html;
+  else picker.insertAdjacentHTML("beforeend", html);
 }
 
 // enable/disable benchmarking for the loaded index (needs a golden set)

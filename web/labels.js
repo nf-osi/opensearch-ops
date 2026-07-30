@@ -11,6 +11,14 @@ export const STRATEGY_LABELS = {
     blurb: "The front-end's built-in default query: searches every field, equal weight, with typo tolerance. No boosts.",
     bestFor: "The baseline — what users get right now.",
   },
+  // Only offered for tables whose fields.yaml carries a `query:` block. The shape varies per
+  // table (that's the point), so the copy stays generic rather than describing one recipe.
+  tuned: {
+    name: "This table's tuned config",
+    tag: "tuned",
+    blurb: "The configuration the tuner recommended for this table, exactly as scored: its own query shape and field boosts, not a stock recipe.",
+    bestFor: "Seeing what tuning actually bought over the live default.",
+  },
   simple_query_string: {
     name: "Google-style",
     tag: "simple",
