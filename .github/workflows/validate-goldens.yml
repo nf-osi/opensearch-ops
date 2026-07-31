@@ -1,0 +1,46 @@
+# Guard the benchmark ground truth: no golden file may use the same query twice.
+#
+# A duplicated query sends the same request to the index twice, so the two cases can only
+# disagree about ground truth, never about ranking — and every aggregate in run.py is a
+# plain mean over cases, so the duplicate silently reweights the benchmark. See the
+# docstring in benchmark/validate_goldens.py for the full rationale.
+#
+# Runs offline: parses YAML only, never queries Synapse, so it needs no secrets and is
+# safe on pull requests from forks.
+name: validate-goldens
+
+on:
+  push:
+    paths:
+      - 'benchmark/**/golden.yaml'
+      - 'benchmark/validate_goldens.py'
+      - '.github/workflows/validate-goldens.yml'
+  pull_request:
+    paths:
+      - 'benchmark/**/golden.yaml'
+      - 'benchmark/validate_goldens.py'
+      - '.github/workflows/validate-goldens.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-goldens-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install pyyaml
+
+      - name: Check goldens for duplicate queries
+        run: python3 benchmark/validate_goldens.py
