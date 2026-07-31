@@ -33,6 +33,17 @@
 #                    query. For topical cases the `relevant` list is just the ranked
 #                    HEAD of this pool, so Recall@k is a floor, not the full picture.
 #   - entity_types:  the kinds of tool the expected results are (Cell Line, Antibody, …).
+#   - source / source_url: where the case came from, so a case can be traced back to
+#                    the person or document that asked for it. Current values:
+#                    agent-generated, manual, NF_tool_search_benchmarking_spreadsheet,
+#                    kg-pipeline-eval, confluence-search-limitations (see the section
+#                    comments below for each batch).
+#   - last_reviewed / reviewer: when an SME last signed off on this case's query and
+#                    `relevant` set, and who. Per-case (not per-file) so cases can drift
+#                    apart as they are re-reviewed individually — bump only the case you
+#                    actually looked at. NOTE this is about SME sign-off on the ground
+#                    truth, which is separate from the "verified live <date>" notes on
+#                    recall_gap_current, which record when the SEARCH was last probed.
 #   - recall_gap_legacy_search: true = the LEGACY search (MySQL TEXT_MATCHES) failed on these queries
 #   - recall_gap_current: a Hit@20 flag — does AT LEAST ONE relevant item appear in the
 #                    top 20 hits? true = NONE do (the search surfaces nothing relevant
@@ -47,7 +58,7 @@
 
 index: syn75081636
 index_name: nf-tools
-version: 2026.07.10
+version: 2026.07.30
 k: 10
 # id_field: which column the `relevant` ids below come from, i.e. what the runner
 # matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
@@ -59,6 +70,8 @@ cases:
   - id: name-exact-schwann
     query: ScienCell Schwann cells
     type: known-item
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Exact resource-name lookup; should rank #1. Sanity check — not discriminating between strategies."
     relevant:
       - b751b5d4-56e6-42a2-a2dc-289f90c6dd82   # ScienCell Schwann cells (Cell Line)
@@ -66,6 +79,8 @@ cases:
   - id: rrid-lookup-cvcl8478
     query: CVCL_8478
     type: known-item
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: RRID lookup; unique in the index. Sanity check — not discriminating between strategies.
     relevant:
       - 25c617df-ff54-4ba5-b293-d9fcc9be39ce   # 10/9CRC1 (Cell Line), rrid:CVCL_8478
@@ -73,6 +88,8 @@ cases:
   - id: synonym-mpc-10-9crc1
     query: MPC 10/9CRC1
     type: known-item
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: Lookup by a synonym rather than the canonical name.
     relevant:
       - 25c617df-ff54-4ba5-b293-d9fcc9be39ce   # 10/9CRC1 (Cell Line)
@@ -80,6 +97,8 @@ cases:
   - id: cellline-ipnf95-11b
     query: ipNF95.11b
     type: known-item
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: Partial cell-line identifier; both clones (C and C/T) are relevant.
     relevant:
       - be2333d6-6716-4d13-947d-41f4198497a4   # hTERT NF1 ipNF95.11b C (Cell Line)
@@ -88,6 +107,8 @@ cases:
   - id: neurofibromin-antibody
     query: neurofibromin antibody
     type: topical
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Antibodies targeting neurofibromin. Seed set — curate before trusting recall. Paired with the bare-term `neurofibromin` (SME) case: this qualified query ranks antibodies #1–2, while bare `neurofibromin` buries them — evidence the gap there is ranking/boost, not recall."
     relevant:
       - 47c1b795-bdcc-4029-b3db-6500bdc23508   # Neurofibromin 1 Antibody
@@ -97,6 +118,8 @@ cases:
   - id: plexiform-neurofibroma
     query: plexiform neurofibroma
     type: topical
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: Cell lines derived from plexiform neurofibromas. Seed set — curate before trusting recall.
     relevant:
       - 8fdc5f7a-ef8c-4193-a5c0-04577c3b134d   # hTERT NF1 ipNF04.4
@@ -119,6 +142,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
     recall_gap_current: false   # verified 2026-07-07 (post-synonym-fix): 4/5 in top 20 — only 2/5 in top 10
@@ -135,6 +160,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 4
     entity_types: [Biobank]
     recall_gap_current: false
@@ -150,6 +177,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 12
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -166,6 +195,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -179,6 +210,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Cell Line, Patient-Derived Model]
     recall_gap_legacy_search: false
@@ -194,6 +227,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 1
     entity_types: [Biobank]
     recall_gap_current: false
@@ -206,6 +241,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -220,6 +257,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 27
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -235,6 +274,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 100
     entity_types: [Antibody]
     recall_gap_legacy_search: true
@@ -252,6 +293,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 100
     entity_types: [Animal Model]
     recall_gap_legacy_search: true
@@ -269,6 +312,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 100
     entity_types: [Genetic Reagent]
     recall_gap_current: false
@@ -285,6 +330,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Biobank, Cell Line]
     recall_gap_current: false
@@ -298,6 +345,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 100
     entity_types: [Animal Model, Cell Line]
     recall_gap_current: false
@@ -314,6 +363,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 6
     entity_types: [Animal Model, Cell Line]
     recall_gap_current: false
@@ -330,6 +381,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Cell Line]
     recall_gap_legacy_search: true
@@ -344,6 +397,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 100
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -360,6 +415,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 1
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -372,6 +429,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -385,6 +444,8 @@ cases:
     type: known-item
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 1
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -397,6 +458,8 @@ cases:
     type: topical
     source: NF_tool_search_benchmarking_spreadsheet
     source_url: "https://docs.google.com/spreadsheets/d/1qL7lpD3F_ncKtWzR6itJmgrEid8Y5O4gvuXmwrs2RIY/view"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 8
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -423,6 +486,8 @@ cases:
     query: pdx
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 23
     entity_types: [Patient-Derived Model]
     recall_gap_current: false
@@ -437,6 +502,8 @@ cases:
     query: ipsc
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 40
     entity_types: [Cell Line]
     recall_gap_current: false
@@ -451,6 +518,8 @@ cases:
     query: minipig model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -463,6 +532,8 @@ cases:
     query: drosophila model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 5
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -477,6 +548,8 @@ cases:
     query: melanoma cell line
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 238
     entity_types: [Cell Line]
     recall_gap_current: true
@@ -491,6 +564,8 @@ cases:
     query: organoid
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 9
     entity_types: [Organoid Protocol]
     recall_gap_current: false
@@ -505,6 +580,8 @@ cases:
     query: pten mouse model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 9
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -519,6 +596,8 @@ cases:
     query: nf1 p53 mouse
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 7
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -533,6 +612,8 @@ cases:
     query: gfap-cre
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 6
     entity_types: [Animal Model]
     recall_gap_current: false
@@ -547,6 +628,8 @@ cases:
     query: crispr plasmid
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 4
     entity_types: [Genetic Reagent]
     recall_gap_current: false
@@ -560,6 +643,8 @@ cases:
     query: nf1 shrna
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Genetic Reagent]
     recall_gap_current: false
@@ -571,6 +656,8 @@ cases:
     query: vestibular schwannoma
     type: known-item
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 1
     entity_types: [Patient-Derived Model]
     recall_gap_current: false
@@ -589,6 +676,8 @@ cases:
     type: known-item
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 1
     entity_types: [Antibody]
     recall_gap_current: false   # verified live 2026-06-22: rank #1
@@ -601,6 +690,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 7
     entity_types: [Antibody]
     recall_gap_current: false   # verified live 2026-06-22: 1/5 head in top 20 (rank 20); epitope-region matches rank deeper
@@ -617,6 +708,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 6
     entity_types: [Antibody]
     recall_gap_current: false   # verified live 2026-06-22: 3/5 head in top 20 (ranks 7-9)
@@ -633,6 +726,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 2
     entity_types: [Animal Model]
     recall_gap_current: true   # verified live 2026-06-22: 0/2 in top 20 — 'metabolic' is not a strong text signal on these models
@@ -646,6 +741,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 5
     entity_types: [Animal Model]
     recall_gap_current: true   # verified live 2026-06-22: 0/5 in top 20 — search returns only the annotated Coriell cell lines; the models are missed
@@ -662,6 +759,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Cell Line]
     recall_gap_current: false   # verified live 2026-07-07 (post-KEYWORD-analyzer fix): 3/3 in top 20, rank #1 on multi_match_cross (was ranks 8-11)
@@ -676,6 +775,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 5
     entity_types: [Cell Line]
     recall_gap_current: true   # verified live 2026-07-10: 0/5 in top 20 — race is a weak/low-signal field for free-text search
@@ -692,6 +793,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 12
     entity_types: [Cell Line]
     recall_gap_current: false   # verified live 2026-07-07 (post-KEYWORD-analyzer fix): improved to rank 3 on multi_match_cross (was rank 10)
@@ -708,6 +811,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Genetic Reagent]
     recall_gap_current: false   # verified live 2026-06-22: 1/3 head in top 20 (rank 18)
@@ -722,6 +827,8 @@ cases:
     type: topical
     source: kg-pipeline-eval
     source_url: "https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml"
+    last_reviewed: 2026-07-30
+    reviewer: avu
     expected_pool: 3
     entity_types: [Genetic Reagent]
     recall_gap_current: true   # verified live 2026-06-22: 0/3 in top 20 — 'bacterial expression' phrasing doesn't match the vector names
@@ -731,3 +838,214 @@ cases:
       - abb887d1-7374-4e60-93d5-a0e32fcf635b   # pETNF1-333 (Genetic Reagent)
       - c75ff77c-b408-4be5-af87-6734ab7544d0   # pTHN (Genetic Reagent)
 
+
+  # ---------------------------------------------------------------------------
+  # Added from the PLFM Confluence page "Examples of Limitations of Table and
+  # Portal Search" (Sage Platform space, page 3668508678; written late 2024,
+  # last edited 2025-12-19):
+  #   https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search
+  #   source: confluence-search-limitations
+  #
+  # The page's "Table Search" section lists search terms that FAILED against the
+  # legacy MySQL full-text (TextMatchesQueryFilter) service, each with a link to a
+  # Synapse table query showing the target the author knew existed. Every row below
+  # comes from that table; the `relevant` sets were RE-DERIVED from the source table
+  # (syn51730943) using the author's own predicate, not copied from the page.
+  #
+  # The page's original predicates, decoded from its query links:
+  #   ipNF      -> resourceName LIKE '%ipnf%'      (9 rows)
+  #   cagg      -> resourceName LIKE '%cagg%'      (2 rows)
+  #   corielle  -> a typo for 'coriell'            (1 row)
+  #   lambda    -> the page notes 'λ also doesn't work because it's too short'
+  #   90-8      -> resourceName LIKE '%90-8%'; the page also tried '90.8'
+  #   NF1+/R1947X pigs / minipigs -> Nf1pArg1947mp1
+  # recall_gap_legacy_search: true on all of them — that is the page's whole point.
+  # recall_gap_current re-verified live against prod OpenSearch (frontend_default
+  # strategy: bare multi_match + fuzziness AUTO) on 2026-07-30.
+  #
+  # Three rows on the page have no case in THIS file:
+  #   - 'biobank' targets a STUDY (syn4939902) -> lives in benchmark/studies/golden.yaml
+  #     as biobank-generic.
+  #   - 'whole genome sequencing' wants files with assay = WGS in the fileview
+  #     syn16858331. There is no nf-files SearchIndex, so the file-level query is not
+  #     scoreable, but the equivalent intent over curated datasets is already covered by
+  #     the `whole-genome-sequencing` case in benchmark/datasets/golden.yaml. (The page
+  #     also left this row's "actual results" cell empty, so it documents an intent
+  #     rather than an observed failure.)
+  #   - 'syn35632706' wants the files belonging to that project, i.e. a Synapse ID typed
+  #     into a free-text box acting as an id lookup, again over syn16858331. OUT OF
+  #     SCOPE and not reproducible anywhere in this benchmark: none of the nf- indexes
+  #     are file-level, and this is arguably a routing concern (recognise a synID and
+  #     navigate) rather than a relevance one. Revisit if an nf-files index is built.
+  # ---------------------------------------------------------------------------
+  - id: ipnf-family-bare
+    query: ipNF
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 9
+    entity_types: [Cell Line]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: 9/9 in top 10 (ranks 1-8, 10)
+    notes: >-
+      Bare cell-line family prefix. Source: resourceName LIKE '%ipnf%' (9 rows) — the page's
+      own predicate, so `relevant` is the COMPLETE pool, not a head, and Recall@10 is exact.
+      The legacy failure was that 'ipNF' is a prefix INSIDE a longer token (ipNF95.11b,
+      ipNF08.1.5), which MySQL FTS cannot reach. Prod now returns all 9 in the top 10; the
+      only non-relevant hit in that window is hTERT NF1 ipnNF09.4 (rank 9), a fuzziness-AUTO
+      near-miss on the distinct ipnNF family. Complements the exact-identifier cases
+      cellline-ipnf95-11b and ipnf05-5, which look up one clone rather than the family.
+    relevant:
+      - 878d9455-2383-4427-88b3-de4fb28de131   # ipNF08.1.5 (Cell Line)
+      - 5502caf5-4cf1-418f-bf50-164cfa316b0f   # hTERT NF1 ipNF05.5 (Cell Line)
+      - 8fdc5f7a-ef8c-4193-a5c0-04577c3b134d   # hTERT NF1 ipNF04.4 (Cell Line)
+      - a8f48ce7-438c-4564-a70b-020abc96d5fe   # hTERT NF1 ipNF00.6 (Cell Line)
+      - b44361f2-9021-4920-901a-b1a1f9143f97   # hTERT NF1 ipNF95.6 (Cell Line)
+      - f21cb7db-ee85-48a7-8f41-e4603238bede   # hTERT NF1 ipNF03.3 (Cell Line)
+      - 844b598c-0171-4972-91c3-27aa21b45d52   # hTERT NF1 ipNF05.5 (Mixed clones) (Cell Line)
+      - be2333d6-6716-4d13-947d-41f4198497a4   # hTERT NF1 ipNF95.11b C (Cell Line)
+      - ab60aae5-7860-4d1d-bb02-208e6631c78b   # hTERT NF1 ipNF95.11b C/T (Cell Line)
+
+  - id: cagg-cre-substring
+    query: cagg
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 2
+    entity_types: [Animal Model]
+    recall_gap_legacy_search: true
+    recall_gap_current: true    # verified live 2026-07-30: ZERO hits — the only case on the page still fully broken
+    notes: >-
+      Cre-driver shorthand. Source: resourceName LIKE '%cagg%' (2 rows) — the page's own
+      predicate, so `relevant` is the complete pool. STILL A HARD GAP: 'cagg' returns 0 hits
+      in prod, because the driver is written as one closed compound token (CAGGCre-ERTM) and
+      the standard analyzer never splits it — 'cagg' is neither a whole token nor a token
+      prefix that a match query can reach, and fuzziness AUTO does not help (deletion of 3+
+      characters). Probed live: 'CAGGCre' -> 2 hits (both, ranks 1-2), 'CAGGCre-ERTM' -> 3.
+      So the resources ARE indexed and findable by the full driver name; only the shorthand
+      fails. Fixing this needs an analyzer change (edge_ngram / word_delimiter on
+      resourceName), not boost tuning — the same class of fix as the other intra-token
+      shorthand cases, and the strongest remaining argument for one.
+    relevant:
+      - 844c4e22-6d4d-454b-9ee4-53dcc7435e43   # Nf14F/4F;CAGGCre-ERTM (Animal Model)
+      - e70947db-35d1-448b-90d8-ec6f14e70303   # Nf14F/Arg681*;CAGGCre-ERTM (Animal Model)
+
+  - id: coriell-typo
+    query: corielle
+    type: known-item
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 1
+    entity_types: [Biobank]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: rank #1 (1 total hit)
+    notes: >-
+      Typo tolerance. The page flags 'corielle' explicitly as 'this is a typo' for Coriell —
+      legacy FTS required the exact spelling. Source: resourceName LIKE '%coriell%' (1 row).
+      Prod resolves it at rank 1 because the frontend sends fuzziness AUTO, which allows 2
+      edits at this term length ('corielle' -> 'coriell' is 1 deletion). This case therefore
+      measures a property of the QUERY (fuzziness), not the index: any strategy that drops
+      fuzziness will score 0 here. Keep it as the harness's typo canary.
+    relevant:
+      - 60e2d28b-9bf1-40e4-a0a1-dc3ef71b0e6d   # Coriell Institute for Medical Research Biobank (Biobank)
+
+  - id: lambda-greek-symbol
+    query: lambda
+    type: known-item
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 1
+    entity_types: [Cell Line]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: rank #1 (1 total hit)
+    notes: >-
+      Greek symbol typed out as a word. The page notes that both 'lambda' and 'λ' failed,
+      the latter 'because it's too short' (MySQL innodb_ft_min_token_size). Source: the
+      spelled-out token 'lambda' exists in exactly 1 row — hTERT ipn02.3 2λ, whose synonyms
+      column carries 'ipn02.3 2lambda' / 'hTERT SC ipn02.3 2lambda'. Prod finds it at rank 1,
+      so this now works — but only via that curated synonym, which is why `relevant` is 1 row
+      and not 2. KNOWN CEILING: HSC1λ (a0193c87-8813-4841-92e7-ee5095bd94fe) is the other λ
+      cell line and has NO spelled-out synonym, so 'lambda' cannot reach it by any query-time
+      change. Fixing that is a CURATION task (add a 'HSC1lambda' synonym) or an index-time
+      λ -> lambda character filter — deliberately excluded from `relevant` so this case stays
+      a query-side measurement.
+    relevant:
+      - 3a507bfd-7d2b-4238-b79a-83fe985c2cea   # hTERT ipn02.3 2λ (Cell Line), synonyms: ipn02.3 2lambda
+
+  - id: cellline-90-8-numeric
+    query: 90-8
+    type: known-item
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 1
+    entity_types: [Cell Line]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: rank #1 of 18 hits; the '90.8' variant also ranks #1 of 4
+    notes: >-
+      Punctuated numeric identifier. Source: resourceName LIKE '%90-8%' (1 row) — the cell
+      line is literally named '90-8'. Legacy FTS dropped it (all-digit/short tokens plus the
+      hyphen); the page notes '90.8' failed too. Prod ranks it #1 on both spellings, so the
+      case is a regression guard: the 18 other hits are digit-fragment noise (word_delimiter
+      splits '90-8' into '90' OR '8', matching any name containing either), which is exactly
+      why an exact-numeric-name case is worth pinning.
+    relevant:
+      - 0f404e70-2acf-4877-bcd5-6da81d9fa41e   # 90-8 (Cell Line)
+
+  - id: minipigs-plural
+    query: minipigs
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 3
+    entity_types: [Animal Model]
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: 2/3 at ranks 1-2 (2 total hits)
+    notes: >-
+      Bare PLURAL of the species shorthand; the page records 'minipigs' as returning no
+      results at all. Source: species HAS ('Sus scrofa') (3 rows). Prod returns 2 of 3 —
+      Nf1pArg1947mp1 (via its 'NF1 minipig' synonym) and the model named '...minipig' — and
+      misses Nf1+/ex42del pig, which never says 'minipig' in any field. Distinct from the
+      existing minipig-model case: that one adds the word 'model' and tests topical
+      discovery; this one isolates plural/stemming on the bare species shorthand. Reaching
+      the third row needs 'pig' <-> 'minipig' expansion (analyzer or curation), not boosts.
+    relevant:
+      - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model), synonyms: NF1 minipig
+      - 02aba952-5860-4bd9-bfb2-ff796b22bf48   # Nf1 heterozygous mutant minipig (Animal Model)
+      - 57625a6e-c039-418e-8e22-db464f8aa827   # Nf1+/ex42del pig (Animal Model) — no 'minipig' text anywhere
+
+  - id: nf1-r1947x-pig-genotype
+    query: NF1+/R1947X pigs
+    type: known-item
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 1
+    entity_types: [Animal Model]
+    recall_gap_legacy_search: true   # page: 'technically in the results, but nowhere near the top'
+    recall_gap_current: false   # verified live 2026-07-30: rank 15 of 1013 hits — in top 20 but NOT top 10, so Hit@10 = 0
+    notes: >-
+      Genotype-style shorthand for a single known model. The page's target link was
+      Nf1pArg1947mp1 and its complaint was RANKING, not recall ('technically in the results,
+      but nowhere near the top'). That is still the situation: prod puts it at rank 15 of
+      1013 hits, so it passes recall_gap_current (top 20) while failing Hit@10 — the clearest
+      ranking-depth case on the page. The user's spelling never appears verbatim: the model is
+      named Nf1pArg1947mp1 and its description says 'p.Arg1947*(R1947*)', so only the '1947'
+      fragment and the plural 'pigs' can match, while '+' and '/' are stripped and the 1013
+      hits come from the generic 'nf1' token. Named distractor to keep below it: HEK293 NF1
+      -/- with R1947X mNf1 cDNA (14353c91), which DOES contain 'R1947X' verbatim but is a
+      human cell line, not a pig.
+    relevant:
+      - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model), p.Arg1947*(R1947*) minipig

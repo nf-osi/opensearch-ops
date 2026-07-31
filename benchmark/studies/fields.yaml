@@ -1,0 +1,59 @@
+# Search config for the nf-studies benchmark (syn75081633, source syn52694652).
+#
+# Produced by the tuner (2026-07-28, 3 rounds / 16 candidates, objective ndcg@10):
+# ndcg 0.495 -> 0.641 vs the live frontend default. Full experiment log in the run's
+# report.md; this file is the applied result. Reproduce with:
+#
+#     python3 benchmark/run.py studies --strategy tuned
+#
+# There was no prior fields.yaml for this table — the field list the tuner explored was
+# bootstrapped by profiling the index, so this is measured against the live default, not
+# against an earlier hand-tuned strategy.
+
+# ---------------------------------------------------------------------------
+# Which columns to match, and how much each is worth.
+#
+# Only THREE fields, out of 17 the index exposes. That is deliberate, not an oversight:
+# the bound SearchConfiguration (id 10, config/nf_studies_search_config.json) routes the
+# categorical facets to the KEYWORD analyzer, which matches exact and CASE-SENSITIVELY --
+# `fundingAgency:NTAP` returns 101 hits, `fundingAgency:ntap` returns 0. Users type
+# lowercase, so fundingAgency / dataType / initiative / institutions / studyLeads /
+# studyStatus / dataStatus cannot contribute to free-text ranking at all and are dead
+# weight in the field list. diseaseFocus is dropped for a different reason: 326 of 355
+# rows match `nf`, so it separates nothing.
+#
+# This is why `ntap mri` and `dod cdmrp mpnst` still score poorly -- their intent lives in
+# a facet column no free-text query can reach. Fixing those needs an analyzer change (a
+# text sub-field on the facets), not a boost change.
+# ---------------------------------------------------------------------------
+fields:
+  - "manifestation^10"   # tumour/phenotype vocab; carries synonym expansion, the strongest signal
+  - "studyName^6"        # the study title
+  - "summary^3.5"        # prose; the ONLY reachable field for funder/programme queries
+
+# ---------------------------------------------------------------------------
+# The query shape the boosts above were tuned for. run.py compiles this into the `tuned`
+# strategy; drop the block and the table falls back to the fixed strategies, which would
+# score a different query than the one recommended.
+#
+# `tie_breaker` is doing the real work: under plain best_fields a distractor winning
+# studyName on one generic term ("therapy", "nf1") outranked ideal docs that matched
+# manifestation AND summary. Letting non-winning fields contribute at 0.5 reverses that.
+#
+# The `phrase_boost` is worth +0.0003 ndcg over the same config without it -- noise on 31
+# cases, and the tuner now flags it as a near-tie in its own report. It is kept because it is
+# what was scored, but deleting the phrase_boost block loses nothing measurable and drops the
+# config to one knob.
+#
+# Caveat on `manifestation^10`: halving it costs -0.034 ndcg, so the ranking genuinely hinges
+# on this one field. Real, but brittle on 31 cases -- worth re-checking as the golden set grows.
+# ---------------------------------------------------------------------------
+query:
+  query_type: multi_match
+  multi_match_type: best_fields
+  tie_breaker: 0.5
+  phrase_boost:
+    fields:
+      - studyName
+      - summary
+    boost: 4.0

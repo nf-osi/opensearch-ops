@@ -11,6 +11,12 @@
 # derived automatically by stripping the boosts — no need to list the fields twice.
 # Tune these weights and re-run; this is one of the main levers the harness exists to test.
 #
+# This file may also carry an optional `query:` block describing a full tuned query shape
+# (query type, tie_breaker, minimum_should_match, phrase_boost), which run.py compiles into
+# a `tuned` strategy — see benchmark/studies/fields.yaml for a worked example and the tuner
+# README's "Applying a winner". nf-tools has no block yet: its boosts below are hand-curated
+# and every strategy here is one of the fixed shapes.
+#
 # NOTE: a multi_match/simple_query_string with an explicit `fields` list searches ONLY
 # these columns — the ~30 columns NOT listed below are invisible to every strategy except
 # `frontend_default` (which sends no field list and so searches all fields). Commented
