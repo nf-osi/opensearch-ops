@@ -1,9 +1,11 @@
-# Guard the benchmark ground truth: no golden file may use the same query twice.
+# Guard the benchmark ground truth: schema/format, plus no duplicate queries or case ids.
 #
 # A duplicated query sends the same request to the index twice, so the two cases can only
 # disagree about ground truth, never about ranking — and every aggregate in run.py is a
-# plain mean over cases, so the duplicate silently reweights the benchmark. See the
-# docstring in benchmark/validate_goldens.py for the full rationale.
+# plain mean over cases, so the duplicate silently reweights the benchmark. The schema
+# check mainly earns its keep on typos: a misspelled optional field (`revewer:`) is
+# otherwise ignored by the runner forever. See the docstring in
+# benchmark/validate_goldens.py for the full rationale and the field list.
 #
 # Runs offline: parses YAML only, never queries Synapse, so it needs no secrets and is
 # safe on pull requests from forks.
@@ -42,5 +44,5 @@ jobs:
       - name: Install deps
         run: pip install pyyaml
 
-      - name: Check goldens for duplicate queries
+      - name: Validate goldens (schema, duplicate queries, duplicate ids)
         run: python3 benchmark/validate_goldens.py
