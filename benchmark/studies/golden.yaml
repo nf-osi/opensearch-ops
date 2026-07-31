@@ -11,11 +11,22 @@
 #   method/gene/therapy concepts with no clean category column.
 # Heads are ordered best-first (canonical / most on-topic studies first). expected_pool
 #   is the true source COUNT(*) for the predicate; `relevant` is only the ideal head.
+#
+# Every case carries `source` (+ `source_url` where there is a document to point at) so
+#   it can be traced back to whoever asked for it. Values in use: agent-generated,
+#   manual, confluence-search-limitations (see the section comment near the end of the
+#   file for that batch, taken from the PLFM "Examples of Limitations of Table and
+#   Portal Search" page). Last updated 2026-07-30.
+# Every case also carries `last_reviewed` / `reviewer` — when an SME last signed off on
+#   that case's query and `relevant` set, and who. Per-case so cases can drift apart as
+#   they are re-reviewed individually; bump only the case you actually looked at. Distinct
+#   from the "verified live <date>" notes on recall_gap_current, which say when the SEARCH
+#   was last probed, not when the ground truth was blessed.
 # ---------------------------------------------------------------------------
 
 index:      syn75081633
 index_name: nf-studies
-version:    2026.07.20
+version:    2026.07.30
 k:          10
 id_field:   studyId
 
@@ -24,6 +35,8 @@ cases:
     query: mpnst drug screen
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "MPNST studies with drug-screening data. Source: manifestation HAS ('MPNST') AND dataType HAS ('drugScreen')."
     expected_pool: 5
     relevant:
@@ -34,9 +47,11 @@ cases:
       - syn74288412   # Triple Combination of MEK, BET, and CDK Inhibitors Significantly Reduces Human MPNST in Mouse Models
 
   - id: mpnst-rnaseq
-    query: mpnst rna-seq gene expression
+    query: mpnst gene expression
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "MPNST studies with gene-expression/RNA-seq data. Source: manifestation HAS ('MPNST') AND dataType HAS ('geneExpression'), pool 15; head favors MPNST-centric titles over the biospecimen repository."
     expected_pool: 15
     relevant:
@@ -47,9 +62,11 @@ cases:
       - syn25999248   # Targeting the Let7-HMGA2 axis in Malignant Peripheral Nerve Sheath Tumor Prevention
 
   - id: plexiform-drug-screening
-    query: plexiform neurofibroma drug screening
+    query: pnf drug screening
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "pNF preclinical drug-screening studies. Source: manifestation HAS ('Plexiform Neurofibroma') AND dataType HAS ('drugScreen'), pool 8."
     expected_pool: 8
     relevant:
@@ -60,9 +77,11 @@ cases:
       - syn4939916    # Transition to confirmatory and secondary screening of plexiform neurofibroma models in 96-well format
 
   - id: cnf-models
-    query: cutaneous neurofibroma model
+    query: cnf model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "cNF model-system studies. Source: manifestation HAS ('Cutaneous Neurofibroma') AND dataType HAS ('image'); head favors explicit model/3D titles."
     expected_pool: 13
     relevant:
@@ -76,6 +95,8 @@ cases:
     query: nf1 optic glioma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Studies of NF1 optic pathway glioma. Source: manifestation HAS ('Optic Glioma'), pool 6."
     expected_pool: 6
     relevant:
@@ -89,6 +110,8 @@ cases:
     query: schwannoma targeted therapy
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Studies addressing schwannoma. Source: manifestation HAS ('Schwannoma'), pool 22; head favors schwannoma-drug/therapy titles."
     expected_pool: 22
     relevant:
@@ -102,6 +125,8 @@ cases:
     query: nf2 meningioma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF2-associated meningioma studies. Source: manifestation HAS ('Meningioma'), pool 7; head favors explicit meningioma titles over broader NF2-tumor studies."
     expected_pool: 7
     relevant:
@@ -114,8 +139,10 @@ cases:
   - id: ntap-mri
     query: ntap mri
     type: topical
-    source: agent-generated
-    notes: "NTAP-funded MRI/imaging studies. PORTALS-3975. Source: fundingAgency HAS ('NTAP') AND (studyName/summary LIKE '%MRI%'/'%imaging%'/'%magnetic resonance%'), pool 6. syn17100988 leads: NTAP-funded and explicitly built around MRS/fMRI/BOLD/MRI methods."
+    source: PORTALS-3975
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    notes: "NTAP-funded MRI/imaging studies. PORTALS-3975; also written up as Scenario 1 (\"Multi-Keyword Search Fails to Combine Facets\") on the PLFM page https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search — see ntap-and-mri-operator for the 'AND'/'+' spelling variants. Source: fundingAgency HAS ('NTAP') AND (studyName/summary LIKE '%MRI%'/'%imaging%'/'%magnetic resonance%'), pool 6. syn17100988 leads: NTAP-funded and explicitly built around MRS/fMRI/BOLD/MRI methods."
     expected_pool: 6
     relevant:
       - syn17100988   # The role of GABA in the working memory impairments in Neurofibromatosis Type 1
@@ -126,9 +153,11 @@ cases:
       - syn26957643   # High-Resolution Ultrasonography and Optical Frequency Domain Imaging for Measurement and Characterization of Cutaneous Neurofibromas in Patients with NF1
 
   - id: low-grade-glioma
-    query: nf1 low grade glioma
+    query: nf1 lgg
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1 low-grade / optic-pathway glioma studies. Source: manifestation HAS ('Low Grade Glioma'), pool 9."
     expected_pool: 9
     relevant:
@@ -142,6 +171,8 @@ cases:
     query: atypical neurofibroma malignant transformation
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Atypical neurofibroma / ANNUBP malignant-progression studies. Source: manifestation HAS ('Atypical Neurofibroma'), pool 6."
     expected_pool: 6
     relevant:
@@ -155,6 +186,8 @@ cases:
     query: liquid biopsy mpnst
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Circulating-DNA / liquid-biopsy early-detection studies. Source: studyName/summary LIKE cfDNA / liquid biopsy / cell-free DNA, pool 7."
     expected_pool: 7
     relevant:
@@ -168,6 +201,8 @@ cases:
     query: plasma wgs early detection
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Plasma/ulp whole-genome-sequencing early-detection studies. Source: studyName LIKE whole genome / genome sequencing, pool 2 (small but distinct sub-domain)."
     expected_pool: 2
     relevant:
@@ -178,6 +213,8 @@ cases:
     query: scrnaseq nf1 tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Single-cell / scRNA-seq studies of NF tumors. Source: studyName/summary LIKE single cell / single-cell; head favors titles that are explicitly single-cell. syn11374353 and syn27261848 only mention 'single cell' tangentially in the description (culture/suspension technique, not the study's method) and were swapped out for stronger explicit matches."
     expected_pool: 20
     relevant:
@@ -190,6 +227,8 @@ cases:
     query: ipsc derived schwann cell model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "iPSC / induced-pluripotent-stem-cell modeling studies. Source: summary/studyName LIKE induced pluripotent / iPSC, pool 15."
     expected_pool: 15
     relevant:
@@ -203,6 +242,8 @@ cases:
     query: patient derived organoid drug screening
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Patient-derived organoid / 3D model studies. Source: summary/studyName LIKE organoid; head favors explicit organoid titles."
     expected_pool: 15
     relevant:
@@ -215,6 +256,8 @@ cases:
     query: crispr gene editing nf1 correction
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Genome/base/prime-editing NF1 correction studies. Source: studyName LIKE genome editing / gene editing / base edit / prime edit, pool 3."
     expected_pool: 3
     relevant:
@@ -223,9 +266,11 @@ cases:
       - syn36530086   # Optimization of Base and Prime Editing Strategies for NF1 Therapeutics
 
   - id: antisense-nonsense-suppression
-    query: antisense oligonucleotide exon skipping nonsense suppression
+    query: aso exon skipping nonsense suppression
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "RNA-therapeutic studies (ASO, exon skipping, nonsense suppression, ribozyme). Source: studyName LIKE antisense / exon skip / nonsense / ribozyme, pool 9."
     expected_pool: 9
     relevant:
@@ -239,6 +284,8 @@ cases:
     query: nf1 gene therapy
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Studies in CTF's Gene Therapy Initiative. Source: initiative = 'Gene Therapy Initiative', pool 29."
     expected_pool: 29
     relevant:
@@ -252,6 +299,8 @@ cases:
     query: optic nerve regeneration vision restoration
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "GFF Vision Restoration Initiative studies (RGC regeneration/transplantation). Source: initiative = 'Vision Restoration Initiative', pool 31."
     expected_pool: 31
     relevant:
@@ -265,6 +314,8 @@ cases:
     query: synodos
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "CTF Synodos team-science projects. Source: initiative = 'Synodos', pool 8. Two later rows (syn25999950, syn51117783) are Synodos-initiative studies with non-Synodos titles; kept last."
     expected_pool: 8
     relevant:
@@ -278,6 +329,8 @@ cases:
     query: dhart spore
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "DHART-SPORE program projects. Source: initiative LIKE '%DHART-SPORE%', pool 25; head favors the explicitly-named Project/Phase studies."
     expected_pool: 25
     relevant:
@@ -291,6 +344,8 @@ cases:
     query: meki selumetinib
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "MEK-inhibitor / selumetinib / trametinib therapy studies. Source: studyName/summary LIKE MEK / selumetinib; head favors explicit MEK-inhibitor titles."
     expected_pool: 39
     relevant:
@@ -303,6 +358,8 @@ cases:
     query: nf1 proteomics
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Studies contributing proteomics data. Source: dataType HAS ('proteomics'), pool 13; head favors protein-focused titles."
     expected_pool: 13
     relevant:
@@ -312,9 +369,11 @@ cases:
       - syn4984604    # Cutaneous Neurofibroma Data Resource
 
   - id: ntap-mpnst
-    query: ntap malignant peripheral nerve sheath tumor
+    query: ntap mpnst
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NTAP-funded MPNST studies. Source: fundingAgency HAS ('NTAP') AND manifestation HAS ('MPNST'), pool 16 (live); head favors clearly MPNST-focused NTAP titles. syn21984813 no longer carries the NTAP funder tag live (now NFRI/NIH-NCI) and was replaced."
     expected_pool: 16
     relevant:
@@ -327,6 +386,8 @@ cases:
     query: dod cdmrp mpnst precision medicine
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "CDMRP (DoD)-funded studies. Source: fundingAgency HAS ('CDMRP'), pool 4 (all four are the full CDMRP set)."
     expected_pool: 4
     relevant:
@@ -339,6 +400,8 @@ cases:
     query: young investigator award neurofibromin
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "CTF Young Investigator Award studies. Source: initiative = 'Young Investigator Award', pool 50; head favors neurofibromin/mechanism-focused early-career titles."
     expected_pool: 50
     relevant:
@@ -352,6 +415,8 @@ cases:
     query: nf1 cognitive learning memory
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1 cognitive/behavioral studies. Source: manifestation HAS ('Cognition'/'Memory'/'Behavioral'), pool 7."
     expected_pool: 7
     relevant:
@@ -361,9 +426,11 @@ cases:
       - syn74755292   # BLTS Cerebral cortical mechanisms of sensory hypersensitivity in NF1
 
   - id: nf-pain
-    query: neurofibromatosis pain
+    query: nf pain
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF-related pain studies. Source: manifestation HAS ('Pain'), pool 2."
     expected_pool: 2
     relevant:
@@ -374,6 +441,8 @@ cases:
     query: Synodos NF2
     type: known-item
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "SANITY CHECK: exact study name lookup. Source: studyName = 'Synodos NF2' (single row). Confirms the harness resolves an exact title; does not discriminate strategies."
     expected_pool: 1
     relevant:
@@ -383,7 +452,184 @@ cases:
     query: Johns Hopkins NF1 biospecimen repository
     type: known-item
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "SANITY CHECK: exact named-resource lookup. Source: studyName LIKE '%biospecimen repository%' (single row). Confirms exact-name retrieval."
     expected_pool: 1
     relevant:
       - syn4939902    # The Johns Hopkins NF1 biospecimen repository
+
+  - id: jhu-biobank-shorthand
+    query: JHU biobank
+    type: known-item
+    source: manual
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    notes: >-
+      Shorthand name for the resource in jhu-biospecimen-exact, tested against summary-only
+      evidence: 'JHU biobank' appears verbatim in summary but NOT in studyName, so this case
+      measures whether free-text summary matches surface the named resource above studies that
+      match only one of the two terms. Source: summary LIKE '%JHU biobank%' OR summary/studyName
+      LIKE '%Johns Hopkins NF1 Biospecimen Repository%', pool 3 — the repository itself, then two
+      studies that explicitly draw specimens from it. Distractors to keep below the head: five
+      other studies mention 'biobank' with no JHU tie (syn4984604, syn9727752, syn26957643,
+      syn53072189), and two mention 'JHU' with no biobank tie (syn51356860). Not a synonym test —
+      no analyzer expansion of JHU -> Johns Hopkins is needed for the head to rank.
+    expected_pool: 3
+    relevant:
+      - syn4939902    # The Johns Hopkins NF1 biospecimen repository
+      - syn53974914   # Is RasL11A a mechanism for cutaneous neurofibromas regression — "...available at the Johns Hopkins NF1 biospecimen repository (JHU biobank)..."
+      - syn58577585   # Liquid biopsy with ctDNA to detect MRD after MPNST resection — "...retrospectively analyze cases from our Johns Hopkins NF1 Biospecimen Repository..."
+
+  # ---------------------------------------------------------------------------
+  # Added from the PLFM Confluence page "Examples of Limitations of Table and
+  # Portal Search" (Sage Platform space, page 3668508678; written late 2024,
+  # last edited 2025-12-19):
+  #   https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search
+  #   source: confluence-search-limitations
+  #
+  # The page has two sections. Its "Portal Search" section walks four numbered
+  # scenarios against the NF Data Portal study search; its "Table Search" section
+  # lists failed terms against the legacy MySQL full-text service, one of which
+  # ('biobank') targets a study. Coverage of the page from this file:
+  #
+  #   Table Search / 'biobank'  -> biobank-generic (below)
+  #   Scenario 1 (NTAP MRI, multi-keyword doesn't combine facets)
+  #                             -> the EXISTING ntap-mri case, plus
+  #                                ntap-and-mri-operator (below) for the 'AND' variant
+  #   Scenario 3 (kinomics data, generic term hurts precision)
+  #                             -> kinomics-data-generic-term (below)
+  #   Scenario 4 (project title needs quotes)
+  #                             -> study-title-unquoted (below)
+  #   Scenario 2 (bare 'NTAP' returns non-NTAP studies)
+  #                             -> NOT SCOREABLE HERE; see the note below.
+  #
+  # SCENARIO 2 — deliberately not a case. The complaint is PRECISION ("98 results
+  # appear. The majority are NTAP but 2 CTF studies are listed and it is unclear
+  # why"), and run.py only scores MRR / Recall@k / Hit@k against a `relevant` set —
+  # it has no precision or graded-relevance metric, and the true pool is 101 studies
+  # (fundingAgency HAS 'NTAP'), far past k=10, so any `relevant` head we picked would
+  # produce a meaningless recall number. Recording the live diagnosis instead, since
+  # it answers the page's "unclear why" (probed 2026-07-30, prod, frontend_default;
+  # bare 'ntap' now returns 21 hits, not 98, of which 3 are not NTAP-tagged):
+  #   syn20613866 (Neurofibromatosis Therapeutic Consortium - Brigham and Women's)
+  #   syn21452685 (Neurofibromatosis Therapeutic Consortium - UCSF)
+  #     -> NOT search bugs. Both are fundingAgency=[CTF] but their summaries say the
+  #        collaboration "was co-funded with NTAP (Neurofibromatosis Therapeutic
+  #        Acceleration Program)". The free-text match is correct; the FUNDER METADATA
+  #        is incomplete. This is a curation fix, not a relevance fix.
+  #   syn64500888 (Targeting PRMT5 in MTAP-deleted NF1 High Grade Gliomas)
+  #     -> a REAL false positive, and the only one: the summary is about the MTAP
+  #        gene, and fuzziness AUTO (which the frontend always sends) treats MTAP as
+  #        1 edit from NTAP. Short all-caps acronyms are exactly where blanket
+  #        fuzziness backfires. Fixing it means making fuzziness length-aware or
+  #        conditional, which is a query-shape change worth benchmarking separately.
+  # ---------------------------------------------------------------------------
+  - id: biobank-generic
+    query: biobank
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 9
+    recall_gap_legacy_search: true
+    recall_gap_current: false   # verified live 2026-07-30: 4/5 head in top 5 (ranks 1,2,3,5); syn71998358 not in top 20
+    notes: >-
+      From the page's Table Search list: the author searched 'biobank' and pointed at
+      syn4939902 as the target, noting that its summary says "biospecimen and xenograft
+      bank" — i.e. they expected a synonym/compound match. Verified against the source
+      table (syn52694652): 'biobank' actually appears VERBATIM in that summary ("The goal
+      of the JHU biobank project is to establish a biospecimen and xenograft bank"), so no
+      synonym expansion is needed and the legacy miss was tokenization, not vocabulary.
+      Source predicate: summary/studyName LIKE '%bank%' in the biorepository sense, 9 rows;
+      `relevant` is the ideal head — the 5 studies whose CORE contribution is a
+      bank/repository, ordered with the page's own target first. Prod ranks 4 of the 5 in
+      the top 5. Excluded from the pool: syn11672851 (Drug-Target Explorer), which matches
+      only on 'DrugBank', a database name — a false friend. Ranking-depth note: syn71998358
+      falls outside the top 20 because it says "tissue bank and data bank", never the
+      closed compound. Related but distinct: jhu-biobank-shorthand qualifies the query with
+      'JHU' and is a known-item; this one is the bare ambiguous term.
+    relevant:
+      - syn4939902    # The Johns Hopkins NF1 biospecimen repository — the page's stated target; "the JHU biobank project"
+      - syn9727752    # Synodos Schwannomatosis — "develop a clinically annotated schwannomatosis biobank"
+      - syn53072189   # Uncovering the molecular landscape of cutaneous neurofibromas — "database (>10 years) and biobank for NF"
+      - syn4984604    # Cutaneous Neurofibroma Data Resource — "the biobank enables comprehensive analysis of diverse NF samples"
+      - syn71998358   # Establishing a Postmortem Donation Program for NF1-associated Cancers — "centralized tissue bank and data bank"
+
+  - id: kinomics-data-generic-term
+    query: kinomics data
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 3
+    recall_gap_current: false   # verified live 2026-07-30: 2/3 at ranks 1-2 of 269 hits; syn51133914 not in top 20
+    notes: >-
+      Scenario 3 verbatim: "I want to search for kinomics data, so I type in the words
+      'kinomics data'. Result - 268 results appear. Since I used the additional word 'data'
+      this causes irrelevant results to appear ... Removing the word 'data' results in 3
+      results." Source: dataType HAS ('kinomics') (3 rows), which matches the page's count
+      of 3 exactly, so `relevant` is the COMPLETE pool and Recall@10 is exact. The point of
+      the case is that the query keeps the useless word: a generic term the user naturally
+      types must not dilute the specific one. Probed live 2026-07-30 — the dilution is
+      unchanged: 'kinomics data' -> 269 total hits with 2/3 recovered, while bare 'kinomics'
+      -> 5 total hits with 3/3 at ranks 1, 3, 5. Any strategy that fixes this (cross_fields,
+      minimum_should_match, or a stopword-ish handling of 'data') should close the gap to
+      bare 'kinomics'; that delta is the metric to watch.
+    relevant:
+      - syn8016599    # Modeling signaling networks of NF1-deficient Schwann cells ... mass spectrometry-based proteomics — dataType [geneExpression, kinomics]
+      - syn51133914   # DHART SPORE Project 1 Phase 1 — Molecular, Developmental, and Genetic Evaluation of Plexiform Neurofibromas
+      - syn2343195    # Synodos NF2 — kinomics is one of 7 dataTypes
+
+  - id: study-title-unquoted
+    query: Genetic studies of neurofibromatosis
+    type: known-item
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 1
+    recall_gap_current: false   # verified live 2026-07-30: rank #1 of 351 hits, unquoted AND lowercased
+    notes: >-
+      Scenario 4: the author could only find this study by wrapping the title in quotes —
+      unquoted, and with the title's own capitalisation, it "still not listed as a
+      candidate". Source: studyName LIKE '%Genetic Studies%' (1 row, syn11374339). The case
+      is stated in the FAILING form on purpose: lowercase 'studies', no quotes. Prod now
+      ranks it #1, and the quoted form ("Genetic Studies of Neurofibromatosis") also ranks
+      #1, so quoting is no longer load-bearing — this is a regression guard for exact-title
+      recall. Note the 351 total hits: every study matching 'neurofibromatosis' or 'studies'
+      is in the tail, so #1 here is a ranking win, not a filtering one.
+    relevant:
+      - syn11374339   # Genetic Studies of Neurofibromatosis (NTAP, Cutaneous Neurofibroma Initiative)
+
+  - id: ntap-and-mri-operator
+    query: NTAP AND MRI
+    type: topical
+    source: confluence-search-limitations
+    source_url: "https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search"
+    last_reviewed: 2026-07-30
+    reviewer: avu
+    expected_pool: 6
+    recall_gap_current: false   # verified live 2026-07-30: syn17100988 at rank 16 of 127 — identical to bare 'ntap mri'
+    notes: >-
+      Scenario 1's boolean-operator variant. The user tried 'NTAP MRI', then 'NTAP + MRI',
+      then 'NTAP AND MRI', expecting one of them to intersect the two concepts; on legacy
+      search 'AND' actively hurt (104 results -> 283). Same intent and same `relevant` set
+      as the ntap-mri case — this case exists only to measure what the OPERATOR SYNTAX does
+      to the result set, which is a property no other case tests. Probed live 2026-07-30:
+      'ntap mri', 'NTAP + MRI' and 'NTAP AND MRI' all return exactly 127 hits with the head
+      study at rank 16, i.e. '+' and 'AND' are now tokenised away and harmlessly ignored
+      rather than making things worse. The regression to guard against is a strategy change
+      (e.g. simple_query_string, which DOES interpret '+' and 'AND') that silently gives
+      these three spellings different behaviour. The underlying Scenario 1 complaint —
+      neither spelling actually intersects funder AND method, so the head sits at rank 16
+      instead of rank 1 — is still open and is what ntap-mri scores.
+    relevant:
+      - syn17100988   # The role of GABA in the working memory impairments in Neurofibromatosis Type 1
+      - syn17098100   # Imaging predictors of malignant peripheral nerve sheath tumors
+      - syn25999239   # Towards clinical translation of imaging studies in neurofibromatosis type 1
+      - syn4939894    # Imaging Biomarkers of Neurofibromatosis Type 1-Associated Optic Pathway Glioma
+      - syn29867701   # Multi-parametric Imaging Biomarker Development to Predict Malignant Conversion in Patients with Neurofibromatosis Type 1
+      - syn26957643   # High-Resolution Ultrasonography and Optical Frequency Domain Imaging for Measurement and Characterization of Cutaneous Neurofibromas in Patients with NF1

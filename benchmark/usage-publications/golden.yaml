@@ -1,6 +1,6 @@
 index:      syn75081644
 index_name: nf-publications-v2
-version:    2026.07.10
+version:    2026.07.30
 k:          10
 id_field:   pmid
 # id_field rationale: the source table (syn51735450) has 1892 rows but only ~655 distinct
@@ -11,6 +11,16 @@ id_field:   pmid
 # pmid is stored verbatim as in the source: mostly "PMID:<n>", with 2 recent rows as bare
 # "<n>". The runner/validator match hits' pmid value, and multiple index docs may share a
 # pmid — any hit carrying a relevant pmid counts.
+notes: |
+  Every case carries `source` (+ `source_url` where there is a document to point at) so it
+  can be traced back to whoever asked for it; all cases here are currently
+  source: agent-generated.
+
+  Every case also carries `last_reviewed` / `reviewer` — when an SME last signed off on that
+  case's query and `relevant` set, and who. Per-case so cases can drift apart as they are
+  re-reviewed individually; bump only the case you actually looked at. Distinct from any
+  "verified live <date>" note, which records when the SEARCH was last probed rather than
+  when the ground truth was blessed.
 
 cases:
   # ---------------------------------------------------------------------------
@@ -34,6 +44,8 @@ cases:
     query: mpnst treatment
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Malignant peripheral nerve sheath tumor + therapeutic intent. Head favors preclinical drug-target papers in MPNST models over pure characterization; pool spans all MPNST-mentioning pubs."
     expected_pool: 61
     relevant:
@@ -47,6 +59,8 @@ cases:
     query: plexiform neurofibroma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Benign PN, the classic NF1 tumor. Head leads with PN models + preclinical therapy; the 3D-culture and pharmacogenomic-profiling papers are canonical PN resources."
     expected_pool: 26
     relevant:
@@ -60,6 +74,8 @@ cases:
     query: cutaneous neurofibroma model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "cNF — the most common NF1 tumor, distinct from plexiform. Small clean pool; head favors model/mechanism papers over the two very recent QoL/organoid pubs."
     expected_pool: 5
     relevant:
@@ -72,6 +88,8 @@ cases:
     query: optic pathway glioma nf1 mouse
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1 optic pathway glioma, a pediatric hallmark; qualified to the mouse-model literature. FALSE FRIENDS EXCLUDED: the 'learning/memory' NF1 mouse (PMID:9054942) and the minipig model (PMID:30302402) only mention optic glioma in passing — dropped from head."
     expected_pool: 8
     relevant:
@@ -84,6 +102,8 @@ cases:
     query: nf2 merlin mutation
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF2 / merlin biology — a distinct disease gene from NF1. Small pool; head leads with the NF2 mutation + merlin-function papers. Excludes the two pan-NF pharmacology papers that merely list NF2 lines."
     expected_pool: 7
     relevant:
@@ -96,6 +116,8 @@ cases:
     query: malignant schwannoma cell line
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Schwannoma/neurofibrosarcoma-derived cell lines. Head favors papers establishing/characterizing such lines. FALSE FRIENDS EXCLUDED: melanoma/neuroblastoma NF1 line paper and zebrafish paper share the token but aren't schwannoma lines."
     expected_pool: 12
     relevant:
@@ -108,6 +130,8 @@ cases:
     query: ras mapk pathway nf1
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Core NF1 signaling axis (neurofibromin is a RAS-GAP). Head favors mechanistic RAS/MAPK-in-NF1 papers over generic pan-cancer RAS papers in the corpus."
     expected_pool: 36
     relevant:
@@ -120,6 +144,8 @@ cases:
     query: tp53 mutation malignant nerve sheath tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "p53/NF1 cooperation in MPNST transformation. Head leads with the classic TP53-in-NF1-tumors papers and the NF1/p53 model."
     expected_pool: 8
     relevant:
@@ -131,6 +157,8 @@ cases:
     query: pten loss schwann cell tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "PTEN cooperation with NF1 in Schwann cells. FALSE FRIENDS EXCLUDED: the melanoma PTEN/MMAC1 lines papers (different tissue/context) trimmed from head; they remain in the pool. CORRECTED 2026-07-10: PMID:21725359 (live title 'Concurrent loss of the PTEN and RB1 tumor suppressors attenuates RAF dependence in melanomas harboring (V600E)BRAF') IS the excluded melanoma false friend, not a Schwann-cell paper -- it had been miscategorized into the head. Replaced with PMID:33707600, a sporadic MPNST cell line paper reporting PTEN mutation alongside CDKN2A/TP53 loss, live-linked via nf:Development."
     expected_pool: 8
     relevant:
@@ -142,6 +170,8 @@ cases:
     query: neurofibromin tumor suppressor function
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Neurofibromin (NF1 protein) biology. Broad pool; head leads with review/mechanism papers on neurofibromin as a tumor suppressor."
     expected_pool: 36
     relevant:
@@ -154,6 +184,8 @@ cases:
     query: nf1 loss melanoma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1 as a melanoma driver (a major theme of this corpus). Head leads with the landmark NF1-melanoma papers."
     expected_pool: 16
     relevant:
@@ -167,6 +199,8 @@ cases:
     query: mek inhibitor neurofibroma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "MEK inhibition, the leading NF1 therapeutic strategy (selumetinib). Head favors NF1/neurofibroma MEKi preclinical papers over the melanoma/thyroid MEKi papers that also match."
     expected_pool: 15
     relevant:
@@ -179,6 +213,8 @@ cases:
     query: selumetinib
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Bare drug-name query (selumetinib / AZD6244), the FDA-approved NF1 PN drug. Small clean pool. FALSE FRIEND EXCLUDED: PMID:24002593 (squamous lung cancer) matches 'selumetinib' in a generic drug list, not an NF context — dropped from head."
     expected_pool: 6
     relevant:
@@ -190,6 +226,8 @@ cases:
     query: mtor inhibitor nf1 tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "mTOR/TORC1 signaling in NF1 malignancy. FALSE FRIENDS EXCLUDED: many pan-cancer cell-line-panel papers mention mTOR generically; head keeps only NF1-context mechanism/therapy papers."
     expected_pool: 20
     relevant:
@@ -202,6 +240,8 @@ cases:
     query: shp2 inhibitor nf1
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "SHP2 (PTPN11) inhibition, an emerging RAS-pathway strategy in NF1. Very small pool (3); head leads with the NF1-MPNST SHP2+MEK combination paper. Note 39793045 is stored as a bare pmid (no 'PMID:' prefix)."
     expected_pool: 3
     relevant:
@@ -210,9 +250,11 @@ cases:
       - PMID:38000020   # CDK4/6 inhibition enhances SHP2 inhibitor efficacy
 
   - id: tyrosine-kinase-inhibitor-pn
-    query: tyrosine kinase inhibitor plexiform neurofibroma
+    query: tyrosine kinase inhibitor pnf
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Small-molecule TKIs (imatinib/sorafenib/sunitinib) tested in PN/NF1 models. Head leads with the preclinical PN TKI trials."
     expected_pool: 5
     relevant:
@@ -225,6 +267,8 @@ cases:
     query: nf1 knockout mouse model tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Genetically engineered NF1 mouse models of tumorigenesis. Head favors the canonical conditional/cre NF1 tumor models."
     expected_pool: 20
     relevant:
@@ -237,6 +281,8 @@ cases:
     query: zebrafish nf1 model
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Zebrafish NF1 models. Small pool. FALSE FRIEND: PMID:31444410 (topoisomerase/mTOR synergy) only mentions zebrafish tangentially — kept out of head."
     expected_pool: 5
     relevant:
@@ -248,6 +294,8 @@ cases:
     query: ipsc derived neurofibroma
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "iPSC-based NF1 disease modeling. Head leads with iPSC-derived neurofibroma tumor models and NF1 patient iPSC line generation. CORRECTED 2026-07-10: PMID:34343671's live title/abstract is an induced-pluripotent-stem-cell model of OVARIAN cancer -- unrelated to NF1, apparently a mismatched PMID in the draft. Replaced with PMID:32243842 (human iPSC-derived neurons/cerebral organoids modeling germline NF1 mutations), which is on-topic and live-linked via nf:Development."
     expected_pool: 9
     relevant:
@@ -260,6 +308,8 @@ cases:
     query: patient derived xenograft nerve sheath tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "PDX / orthotopic models of nerve sheath tumors. FALSE FRIENDS EXCLUDED: generic breast/colorectal PDX papers matched 'xenograft' but are off-domain; head keeps nerve-sheath/NF1 models."
     expected_pool: 10
     relevant:
@@ -273,6 +323,8 @@ cases:
     query: crispr screen nf1
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "CRISPR/Cas9 screens + editing in NF1 biology. FALSE FRIENDS EXCLUDED: pan-cancer CRISPR panel papers (neuroblastoma, colorectal) trimmed; head keeps NF1-context screens/editing."
     expected_pool: 11
     relevant:
@@ -284,6 +336,8 @@ cases:
     query: mpnst proteomics phosphoproteomics
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Proteomics/phosphoproteomics of nerve sheath tumors. FALSE FRIENDS EXCLUDED: the corpus has many generic cell-line-panel proteomics papers (NCI-60, colorectal, HEK293) — head keeps only Schwann/MPNST/neurofibromin-focused ones."
     expected_pool: 24
     relevant:
@@ -295,6 +349,8 @@ cases:
     query: rna-seq schwann cell tumor
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Transcriptomic profiling in nerve sheath / neurofibroma. FALSE FRIENDS EXCLUDED: many pan-cancer transcriptome-panel papers match 'transcriptom'; head keeps NF/nerve-sheath-context studies."
     expected_pool: 15
     relevant:
@@ -306,6 +362,8 @@ cases:
     query: exome sequencing nf1 mutation
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Exome/genome sequencing identifying NF1/RASopathy variants. FALSE FRIENDS EXCLUDED: NCI-60/HEK293 exome resource papers are off-domain; head keeps NF1-variant-discovery studies."
     expected_pool: 15
     relevant:
@@ -318,6 +376,8 @@ cases:
     query: nf1 learning memory deficit
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1 cognitive/learning phenotype — a major non-tumor clinical feature. Head leads with the classic Nf1 learning-deficit mouse work and the lovastatin rescue."
     expected_pool: 10
     relevant:
@@ -330,6 +390,8 @@ cases:
     query: nf1 neurofibromatosis pain crmp2
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "NF1-related pain and the CRMP2-neurofibromin axis. Small clean pool; all three are directly on-topic."
     expected_pool: 3
     relevant:
@@ -342,6 +404,8 @@ cases:
     query: melanoma cell line panel mutation
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Human melanoma cell-line panels + their driver mutations (BRAF/NRAS/NF1) — a large secondary theme. FALSE FRIENDS EXCLUDED: canine melanoma line papers trimmed from head (kept in pool)."
     expected_pool: 12
     relevant:
@@ -354,6 +418,8 @@ cases:
     query: pancreatic cancer kras cell line
     type: topical
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "Pancreatic ductal adenocarcinoma cell lines + KRAS — part of the pan-cancer resource corpus. Head favors PDAC line characterization + KRAS-response papers."
     expected_pool: 16
     relevant:
@@ -367,6 +433,8 @@ cases:
     query: Loss of NF1 in cutaneous melanoma is associated with RAS activation and MEK dependence
     type: known-item
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "SANITY CHECK — exact full title of a single landmark paper (Cancer Research 2014). Confirms the harness resolves an exact-title lookup; does not discriminate ranking strategies."
     relevant:
       - PMID:24576830   # Loss of NF1 in cutaneous melanoma is associated with RAS activation and MEK dependence
@@ -375,6 +443,8 @@ cases:
     query: clinically and genomically annotated nerve sheath tumor biospecimen repository
     type: known-item
     source: agent-generated
+    last_reviewed: 2026-07-30
+    reviewer: avu
     notes: "SANITY CHECK — exact title of the NF nerve-sheath biospecimen repository paper (Scientific Data 2020). Point lookup; harness sanity, not a discriminating case."
     relevant:
       - PMID:32561749   # A clinically and genomically annotated nerve sheath tumor biospecimen repository
