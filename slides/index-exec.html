@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Search that knows what you mean — NF Portal search (exec briefing)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;900&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — lifted from the Search Lab (web/style.css) so the deck
+   and the live demo read as one system with no visual handoff.
+   teal = the new search · green = measured gain · clay = caution
+   faint = the legacy / dead state
+   ───────────────────────────────────────────────────────────── */
+:root{
+  --paper:      #faf8f3;
+  --paper-2:    #f3efe6;
+  --card:       #fffdf8;
+  --ink:        #16201e;
+  --muted:      #5f6b67;
+  --faint:      #8a938f;
+  --teal:       #0e8c7f;
+  --teal-deep:  #0a655b;
+  --teal-wash:  #e4f0ee;
+  --teal-line:  #bfdcd7;
+  --green:      #4c9a2a;
+  --green-deep: #2e6b19;
+  --green-wash: #e9f3e0;
+  --clay:       #c4622d;
+  --clay-wash:  #f7e7dc;
+  --rule:       #e2dccf;
+  --rule-soft:  #ece7db;
+  --shadow:     14px 18px 40px -28px rgba(16,32,30,.45);
+
+  --f-disp: "Chivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Public Sans", ui-sans-serif, system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --spine: 92px;
+  --pad: 72px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--paper);overflow:hidden}
+body{
+  font-family:var(--f-body);color:var(--ink);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+}
+
+/* ── STAGE: fixed 1600×900, scaled to any viewport ── */
+#stage{position:fixed;inset:0;display:grid;place-items:center}
+#deck{
+  position:relative;width:1600px;height:900px;flex:none;
+  transform-origin:center center;overflow:hidden;
+  background:
+    radial-gradient(1200px 620px at 82% -10%, var(--teal-wash) 0%, transparent 56%),
+    radial-gradient(900px 520px at -6% 112%, var(--clay-wash) 0%, transparent 52%),
+    var(--paper);
+}
+/* the Lab's paper grain, same recipe */
+#grain{
+  position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── spine ── */
+#spine{
+  position:absolute;left:0;top:0;bottom:0;width:var(--spine);
+  border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:28px 0;z-index:40;
+}
+#spine::before{
+  content:"";position:absolute;top:0;left:0;width:3px;height:132px;
+  background:linear-gradient(180deg,var(--teal) 0%,var(--teal-deep) 60%,var(--clay) 100%);
+}
+#spine .idx{font-family:var(--f-mono);font-size:13px;font-weight:600;color:var(--teal-deep);letter-spacing:.06em}
+#spine .idx small{color:var(--faint);font-weight:400}
+#spine .vert{
+  writing-mode:vertical-rl;text-orientation:mixed;
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.28em;
+  text-transform:uppercase;color:var(--faint);
+}
+#spine .clock{font-family:var(--f-mono);font-size:11px;color:var(--faint);text-align:center;line-height:1.5}
+#spine .clock b{display:block;color:var(--muted);font-weight:500;font-size:13px}
+#spine .clock.over b{color:var(--clay)}
+
+/* ── progress rail ── */
+#rail{position:absolute;left:var(--spine);right:0;bottom:0;height:3px;display:flex;gap:2px;z-index:40}
+#rail button{flex:1;height:100%;border:0;padding:0;cursor:pointer;background:var(--rule);transition:background .25s}
+#rail button:hover{background:var(--teal-line)}
+#rail button.done{background:var(--teal-line)}
+#rail button.now{background:var(--teal)}
+#rail button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+/* ─────────────────────────────────────────────────────────────
+   SLIDES
+   ───────────────────────────────────────────────────────────── */
+.slide{
+  position:absolute;inset:0;z-index:1;
+  padding:var(--pad) var(--pad) 60px calc(var(--spine) + 54px);
+  display:flex;flex-direction:column;justify-content:center;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transition:opacity .34s ease, visibility .34s;
+}
+.slide.active{opacity:1;visibility:visible;z-index:35}
+/* The click-to-advance zones (z-index 30) used to sit above slide content, which
+   would swallow clicks on any link or button beneath them. The active slide now
+   paints above the zones but stays transparent to pointer events, so background
+   clicks still fall through and advance; links and buttons opt back in. */
+.slide a,.slide button{pointer-events:auto}
+
+.slide .rise{opacity:0;transform:translateY(14px)}
+.slide.active .rise{animation:rise .5s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.slide.active .rise:nth-child(1){animation-delay:.05s}
+.slide.active .rise:nth-child(2){animation-delay:.13s}
+.slide.active .rise:nth-child(3){animation-delay:.21s}
+.slide.active .rise:nth-child(4){animation-delay:.29s}
+.slide.active .rise:nth-child(5){animation-delay:.37s}
+.slide.active .rise:nth-child(6){animation-delay:.45s}
+
+/* ── shared type ── */
+.eyebrow{
+  font-family:var(--f-body);font-size:11.5px;letter-spacing:.22em;font-weight:700;
+  text-transform:uppercase;color:var(--teal-deep);margin-bottom:14px;
+}
+.eyebrow.mute{color:var(--faint)}
+h1{font-family:var(--f-disp);font-weight:900;font-size:70px;line-height:1.04;letter-spacing:-.026em}
+h2{font-family:var(--f-disp);font-weight:900;font-size:44px;line-height:1.1;letter-spacing:-.021em;margin-bottom:10px}
+h2 em{font-style:normal;color:var(--teal-deep)}
+.lede{font-size:20px;line-height:1.5;color:var(--muted);max-width:62ch}
+.lede b{color:var(--ink);font-weight:600}
+.fine{font-family:var(--f-mono);font-size:11.5px;color:var(--faint);line-height:1.65}
+.fine b{color:var(--muted);font-weight:500}
+code{
+  font-family:var(--f-mono);font-size:.9em;white-space:nowrap;
+  background:var(--teal-wash);color:var(--teal-deep);
+  padding:.12em .42em;border-radius:3px;border:1px solid var(--teal-line);
+}
+.slide > .foot{margin-top:42px;padding-top:20px}
+
+/* ── SIGNATURE: the split ledger ── */
+.split{display:grid;grid-template-columns:1fr 1px 1fr;align-items:stretch}
+.split > .rule{background:var(--rule);position:relative}
+.split > .rule::after{
+  content:attr(data-q);position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--f-mono);font-size:12px;color:var(--ink);
+  background:var(--card);border:1px solid var(--rule);
+  padding:6px 12px;border-radius:999px;box-shadow:0 2px 8px -4px rgba(16,32,30,.25);
+}
+.side{padding:0 30px}
+.side:first-child{padding-left:0}
+.side__head{
+  display:flex;align-items:center;gap:9px;margin-bottom:15px;
+  font-family:var(--f-body);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;
+}
+.side--old .side__head{color:var(--faint)}
+.side--new .side__head{color:var(--teal-deep)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+
+.void{
+  border:1px dashed var(--faint);border-radius:8px;padding:26px 22px;text-align:center;
+  background:repeating-linear-gradient(45deg,transparent,transparent 7px,rgba(138,147,143,.10) 7px,rgba(138,147,143,.10) 14px);
+}
+.void b{display:block;font-family:var(--f-disp);font-size:33px;font-weight:900;color:var(--faint);letter-spacing:-.02em}
+.void span{font-family:var(--f-mono);font-size:11px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase}
+
+.ranks{list-style:none;display:flex;flex-direction:column;gap:5px}
+.ranks li{
+  display:flex;align-items:center;gap:13px;
+  background:var(--card);border:1px solid var(--rule-soft);border-left:3px solid var(--teal);
+  padding:9px 14px;border-radius:0 6px 6px 0;
+}
+.ranks .n{font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--teal-deep);min-width:16px}
+.ranks .hit{font-family:var(--f-mono);font-size:13.5px;color:var(--ink)}
+.ranks .kind{margin-left:auto;font-family:var(--f-mono);font-size:10.5px;color:var(--faint);letter-spacing:.06em;text-transform:uppercase}
+.ranks li.dim{border-left-color:var(--teal-line);background:transparent}
+.ranks li.dim .n,.ranks li.dim .hit{color:var(--faint)}
+
+/* ─────────────── 1 · HERO ─────────────── */
+#s1 .searchbar{
+  display:flex;align-items:center;gap:15px;
+  border:1px solid var(--rule);background:var(--card);box-shadow:var(--shadow);
+  border-radius:10px;padding:16px 22px;max-width:520px;margin-bottom:32px;
+}
+#s1 .searchbar .lens{width:15px;height:15px;border:1.8px solid var(--faint);border-radius:50%;position:relative;flex:none}
+#s1 .searchbar .lens::after{content:"";position:absolute;right:-6px;bottom:-3px;width:7px;height:1.8px;background:var(--faint);transform:rotate(45deg)}
+#s1 .typed{font-family:var(--f-mono);font-size:22px;color:var(--ink);letter-spacing:.02em}
+#s1 .caret{display:inline-block;width:9px;height:22px;background:var(--teal);vertical-align:-4px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+#s1 .split{max-width:1080px}
+#s1 h1{margin-top:44px;max-width:19ch}
+#s1 h1 span{color:var(--teal-deep)}
+#s1 .sub{margin-top:18px}
+#s1 .sub p{font-size:19px;color:var(--muted)}
+
+/* ─────────────── 2 · THE OLD WORLD ─────────────── */
+#s2 .body{display:grid;grid-template-columns:1fr 1.05fr;gap:60px;align-items:start;margin-top:32px}
+#s2 .quote{font-family:var(--f-disp);font-size:30px;line-height:1.26;font-weight:500;letter-spacing:-.018em}
+#s2 .quote b{color:var(--teal-deep);font-weight:700}
+#s2 .why{margin-top:24px;display:flex;flex-direction:column;gap:13px}
+#s2 .why div{font-size:16.5px;line-height:1.5;color:var(--muted);padding-left:17px;border-left:2px solid var(--rule)}
+#s2 .misses{display:flex;flex-direction:column;gap:8px}
+#s2 .miss{
+  display:grid;grid-template-columns:170px 1fr;align-items:center;gap:16px;
+  background:var(--card);border:1px solid var(--rule-soft);border-radius:6px;padding:13px 18px;
+}
+#s2 .miss .q{font-family:var(--f-mono);font-size:17px;color:var(--ink)}
+#s2 .miss .r{font-family:var(--f-mono);font-size:12.5px;color:var(--muted)}
+#s2 .miss .r s{color:var(--faint)}
+#s2 .punch{font-family:var(--f-disp);font-size:22px;font-weight:900;letter-spacing:-.015em;line-height:1.32;margin-top:16px}
+#s2 .misses .cap{font-family:var(--f-body);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--faint);margin-bottom:4px}
+
+/* ─────────────── 3 · COMPARISON ─────────────── */
+#s3 .cmp{margin-top:24px;border-top:1px solid var(--rule)}
+#s3 .row{display:grid;grid-template-columns:238px 1fr 1fr;border-bottom:1px solid var(--rule-soft);align-items:center}
+#s3 .row > *{padding:12px 22px}
+#s3 .row.hd{border-bottom:1px solid var(--faint)}
+#s3 .row.hd > *{font-family:var(--f-body);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;padding-top:8px;padding-bottom:8px}
+#s3 .row.hd .old{color:var(--faint)}
+#s3 .row.hd .new{color:var(--teal-deep)}
+#s3 .row .lbl{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);padding-left:0}
+#s3 .row .old{font-size:15.5px;color:var(--faint);line-height:1.4}
+#s3 .row .new{font-size:15.5px;color:var(--ink);line-height:1.4;background:rgba(14,140,127,.055)}
+#s3 .row .new b{color:var(--teal-deep);font-weight:700}
+
+/* ── merged slide 2: legacy evidence band + coverage board ── */
+#s3 .ev{margin-top:26px;border-top:1px solid var(--rule);padding-top:16px}
+#s3 .ev .k{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--faint);margin-bottom:12px}
+#s3 .ev .qs{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#s3 .ev .qz{display:flex;align-items:baseline;gap:9px;background:var(--card);border:1px solid var(--rule-soft);border-radius:6px;padding:8px 14px}
+#s3 .ev .qz b{font-family:var(--f-mono);font-size:15.5px;font-weight:500;color:var(--ink)}
+#s3 .ev .qz s{font-family:var(--f-mono);font-size:12px;color:var(--faint)}
+#s3 .ev .qz em{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--muted);text-decoration:none}
+#s3 .ev .punch{font-family:var(--f-disp);font-size:21px;font-weight:900;letter-spacing:-.015em;margin-top:15px;line-height:1.3}
+
+#s3 .cov{margin-top:22px;border-top:1px solid var(--rule);padding-top:16px}
+#s3 .cov .hd{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+#s3 .cov .hd h3{font-family:var(--f-disp);font-size:21px;font-weight:900;letter-spacing:-.015em}
+#s3 .cov .hd h3 em{font-style:normal;color:var(--teal-deep)}
+#s3 .cov .hd .lg{font-family:var(--f-mono);font-size:11px;color:var(--faint)}
+#s3 .cov .hd .lg i{font-style:normal;display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--teal);vertical-align:-1px;margin-right:5px}
+#s3 .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#s3 .chip{font-family:var(--f-body);font-size:13.5px;font-weight:600;padding:6px 13px;border-radius:999px;white-space:nowrap}
+#s3 .chip.own{background:var(--teal);color:#fff;border:1px solid var(--teal-deep)}
+#s3 .chip.on{background:var(--teal-wash);color:var(--teal-deep);border:1px solid var(--teal-line)}
+#s3 .chip.rest{background:transparent;color:var(--muted);border:1px solid var(--rule);font-weight:500;font-style:italic}
+#s3 .chip.off{background:transparent;color:var(--faint);border:1px dashed var(--faint);font-weight:500}
+
+/* ─────────────── 4 · ANALYZERS ─────────────── */
+#s4 .specimen{margin:26px 0 4px;font-family:var(--f-mono);font-size:42px;font-weight:500;letter-spacing:-.01em}
+#s4 .specimen span{color:var(--faint)}
+#s4 .readings{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}
+#s4 .reading{border-top:2px solid var(--teal-line);padding-top:14px}
+#s4 .reading .name{font-family:var(--f-body);font-size:11.5px;letter-spacing:.15em;text-transform:uppercase;font-weight:700;color:var(--teal-deep);margin-bottom:9px}
+#s4 .reading .what{font-size:15.5px;line-height:1.48;color:var(--muted);margin-bottom:11px}
+#s4 .reading .use{font-family:var(--f-mono);font-size:11.5px;color:var(--faint);line-height:1.7}
+#s4 .caseback{
+  margin-top:36px;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center;
+  border:1px solid var(--rule);border-left:3px solid var(--clay);
+  background:var(--card);padding:19px 26px;border-radius:0 8px 8px 0;box-shadow:var(--shadow);
+}
+#s4 .caseback .tag{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--clay);line-height:1.5}
+#s4 .caseback p{font-size:16px;line-height:1.5;color:var(--muted)}
+#s4 .caseback p b{color:var(--ink);font-weight:600}
+#s4 .arc{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:12.5px;margin-top:9px;flex-wrap:wrap}
+#s4 .arc i{font-style:normal;padding:3px 9px;border-radius:4px;background:var(--paper-2);color:var(--muted)}
+#s4 .arc i.bad{color:var(--clay);background:var(--clay-wash)}
+#s4 .arc i.good{color:var(--green-deep);background:var(--green-wash);font-weight:600}
+#s4 .arc u{text-decoration:none;color:var(--faint)}
+
+/* ─────────────── 5 · SYNONYMS ─────────────── */
+#s5 .body{display:grid;grid-template-columns:1fr 1fr;gap:56px;margin-top:28px;align-items:start}
+#s5 .map{display:flex;flex-direction:column;gap:11px}
+#s5 .pair{display:grid;grid-template-columns:96px 30px 1fr;align-items:center;gap:12px}
+#s5 .pair .abbr{font-family:var(--f-mono);font-size:19px;font-weight:600;color:var(--teal-deep);text-align:right}
+#s5 .pair .to{height:1px;background:linear-gradient(90deg,var(--teal-line),var(--rule));position:relative}
+#s5 .pair .to::after{content:"";position:absolute;right:0;top:-2.5px;border-left:5px solid var(--faint);border-top:3px solid transparent;border-bottom:3px solid transparent}
+#s5 .pair .full{font-size:16.5px}
+#s5 .note{margin-top:20px}
+#s5 .proof .pslip{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;padding:15px 0;border-bottom:1px solid var(--rule-soft)}
+#s5 .proof .pslip .t{font-size:15.5px;line-height:1.4;color:var(--muted)}
+#s5 .proof .pslip .t b{color:var(--ink);font-weight:600}
+#s5 .proof .pslip .vs{display:flex;flex-direction:column;gap:6px;text-align:right}
+#s5 .proof .pslip .vs span{font-family:var(--f-mono);font-size:12.5px;white-space:nowrap}
+#s5 .proof .pslip .vs .was{color:var(--faint);text-decoration:line-through;text-decoration-color:var(--rule)}
+#s5 .proof .pslip .vs .now{color:var(--green-deep);font-weight:500}
+
+/* ─────────────── 6 & 7 · BARS ─────────────── */
+.bars{display:flex;flex-direction:column;gap:12px}
+.bar{display:grid;grid-template-columns:152px 1fr 52px;align-items:center;gap:14px}
+.bar .fname{font-family:var(--f-mono);font-size:12.5px;color:var(--muted);text-align:right;line-height:1.3}
+.bar .track{height:22px;background:var(--paper-2);border:1px solid var(--rule-soft);border-radius:3px;overflow:hidden;position:relative}
+.bar .fill{display:block;height:100%;background:var(--teal);border-radius:2px;transform-origin:left}
+.slide.active .bar .fill{animation:grow .62s cubic-bezier(.2,.75,.25,1) both}
+.slide.active .bar:nth-child(1) .fill{animation-delay:.24s}
+.slide.active .bar:nth-child(2) .fill{animation-delay:.34s}
+.slide.active .bar:nth-child(3) .fill{animation-delay:.44s}
+.slide.active .bar:nth-child(4) .fill{animation-delay:.54s}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.bar .val{font-family:var(--f-mono);font-size:12.5px;color:var(--teal-deep);font-weight:600}
+.bar.base .fill{background:var(--faint)}
+.bar.base .val,.bar.base .fname{color:var(--faint)}
+
+#s6 .body{display:grid;grid-template-columns:1.1fr 1fr;gap:60px;margin-top:30px;align-items:start}
+#s6 .aside h3{font-family:var(--f-disp);font-size:21px;font-weight:900;margin-bottom:10px;letter-spacing:-.01em}
+#s6 .aside p{font-size:16.5px;line-height:1.55;color:var(--muted);margin-bottom:18px}
+#s6 .aside p b{color:var(--ink);font-weight:600}
+#s6 .aside .tick{border-left:2px solid var(--teal);padding-left:16px}
+
+/* ─────────────── 7 · WHAT TUNING IS WORTH ─────────────── */
+#s7 .body{display:grid;grid-template-columns:1.06fr .94fr;gap:58px;margin-top:30px;align-items:start}
+#s7 .cap-row{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--faint);margin-bottom:14px;padding-left:166px}
+#s7 .gain{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:26px}
+#s7 .g{border-top:2px solid var(--green);padding-top:13px}
+#s7 .g .m{font-family:var(--f-body);font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--muted);margin-bottom:9px}
+#s7 .g .nums{display:flex;align-items:baseline;gap:9px}
+#s7 .g .was{font-family:var(--f-mono);font-size:17px;color:var(--faint)}
+#s7 .g .arw{color:var(--rule);font-size:13px}
+#s7 .g .now{font-family:var(--f-disp);font-size:34px;font-weight:900;color:var(--green-deep);letter-spacing:-.03em;line-height:1}
+#s7 .aside .big{
+  background:var(--card);border:1px solid var(--rule);border-left:3px solid var(--green);
+  border-radius:0 8px 8px 0;padding:22px 26px;box-shadow:var(--shadow);
+}
+#s7 .aside .big .k{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--green-deep);margin-bottom:11px}
+#s7 .aside .big .hero{font-family:var(--f-disp);font-size:25px;font-weight:900;line-height:1.25;letter-spacing:-.015em;margin-bottom:9px}
+#s7 .aside .big .hero em{font-style:normal;color:var(--green-deep)}
+#s7 .aside .big p{font-size:15.5px;line-height:1.5;color:var(--muted)}
+#s7 .aside .knob{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px}
+#s7 .aside .knob b{display:block;font-family:var(--f-disp);font-size:19px;font-weight:900;margin-bottom:7px}
+#s7 .aside .knob span{font-size:15.5px;line-height:1.5;color:var(--muted)}
+
+/* ─────────────── 8 · GOLDEN SET ─────────────── */
+#s8 .stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:26px;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+#s8 .stat{padding:20px 26px;border-right:1px solid var(--rule-soft)}
+#s8 .stat:last-child{border-right:0}
+#s8 .stat b{display:block;font-family:var(--f-disp);font-size:50px;font-weight:900;color:var(--teal-deep);letter-spacing:-.03em;line-height:1}
+#s8 .stat span{display:block;margin-top:8px;font-size:14.5px;color:var(--muted);line-height:1.4}
+#s8 .body{display:grid;grid-template-columns:1fr 1fr;gap:54px;margin-top:28px;align-items:start}
+#s8 .metrics dt{font-family:var(--f-disp);font-size:17px;font-weight:900;color:var(--ink);margin-bottom:4px}
+#s8 .metrics dd{font-size:15.5px;line-height:1.45;color:var(--muted);margin-bottom:15px}
+#s8 .metrics dd i{font-style:normal;font-family:var(--f-mono);font-size:12px;color:var(--faint)}
+#s8 .card{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:22px 24px;box-shadow:var(--shadow)}
+#s8 .card .k{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--faint);margin-bottom:12px}
+#s8 .card .qq{font-family:var(--f-mono);font-size:20px;color:var(--ink);margin-bottom:14px}
+#s8 .card ol{list-style:none;display:flex;flex-direction:column;gap:6px}
+#s8 .card ol li{display:flex;gap:11px;font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+#s8 .card ol li i{font-style:normal;color:var(--teal-deep);font-weight:600}
+#s8 .card .src{margin-top:14px;font-family:var(--f-mono);font-size:11px;color:var(--faint);line-height:1.65;border-top:1px solid var(--rule-soft);padding-top:12px}
+#s8 .card .src b{color:var(--teal-deep);font-weight:600}
+
+/* ─────────────── 9 · BEFORE / AFTER (3 columns) ─────────────── */
+#s9 .tbl{margin-top:22px;border-top:1px solid var(--faint)}
+#s9 .tr{display:grid;grid-template-columns:224px 132px 1fr 1fr;align-items:center;border-bottom:1px solid var(--rule-soft)}
+#s9 .tr > *{padding:12px 18px}
+#s9 .tr.hd > *{font-family:var(--f-body);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;padding-top:8px;padding-bottom:8px;line-height:1.4}
+#s9 .tr.hd .l{color:var(--faint)}
+#s9 .tr.hd .t{color:var(--muted)}
+#s9 .tr.hd .n{color:var(--teal-deep)}
+#s9 .tr .q{font-family:var(--f-mono);font-size:15.5px;color:var(--ink);padding-left:0}
+#s9 .tr .l{font-family:var(--f-mono);font-size:12.5px;color:var(--faint)}
+#s9 .tr .t{font-size:14.5px;color:var(--muted);line-height:1.35}
+#s9 .tr .t b{font-family:var(--f-mono);font-size:13px;color:var(--ink);font-weight:600}
+#s9 .tr .n{font-size:14.5px;color:var(--ink);line-height:1.35;background:rgba(14,140,127,.055)}
+#s9 .tr .n b{font-family:var(--f-mono);font-size:13px;color:var(--teal-deep);font-weight:600}
+#s9 .tr.gap .n{background:var(--clay-wash)}
+#s9 .tr.gap .n b,#s9 .tr.gap .t b{color:var(--clay)}
+
+/* ─────────────── 10 · LIVE DEMO ─────────────── */
+#s10 .body{display:grid;grid-template-columns:.82fr 1.18fr;gap:52px;margin-top:26px;align-items:start}
+#s10 .lab{
+  background:var(--card);border:1px solid var(--rule);border-radius:12px;
+  padding:24px 26px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+#s10 .lab::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--teal) 0%,var(--teal-deep) 55%,var(--clay) 100%)}
+#s10 .lab .name{font-family:var(--f-disp);font-size:26px;font-weight:900;letter-spacing:-.02em;margin:6px 0 6px}
+#s10 .lab .name em{font-style:normal;color:var(--teal-deep)}
+#s10 .labcta{
+  display:flex;align-items:center;gap:14px;text-decoration:none;
+  background:var(--teal);color:#fff;border:1px solid var(--teal-deep);
+  border-radius:9px;padding:14px 18px;margin:8px 0 14px;
+  box-shadow:0 8px 22px -14px rgba(10,101,91,.85);transition:.16s ease;
+}
+#s10 .labcta:hover{background:var(--teal-deep);transform:translateY(-1px)}
+#s10 .labcta:focus-visible{outline:3px solid var(--clay);outline-offset:3px}
+#s10 .labcta .go{font-family:var(--f-disp);font-size:18px;font-weight:900;letter-spacing:-.012em}
+#s10 .labcta .ext{margin-left:auto;font-family:var(--f-mono);font-size:11.5px;opacity:.95;white-space:nowrap}
+#s10 .laburl{font-family:var(--f-mono);font-size:12.5px;color:var(--teal-deep);margin-bottom:14px;word-break:break-all}
+#s10 .laburl b{color:var(--faint);font-weight:400}
+#s10 .lab .tab{display:grid;grid-template-columns:auto 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--rule-soft)}
+#s10 .lab .tab .pill{
+  font-family:var(--f-body);font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--teal-wash);color:var(--teal-deep);border:1px solid var(--teal-line);
+  padding:4px 10px;border-radius:999px;height:fit-content;white-space:nowrap;
+}
+#s10 .lab .tab p{font-size:14.5px;line-height:1.45;color:var(--muted)}
+#s10 .lab .tab p b{color:var(--ink);font-weight:600}
+#s10 .lab .noinstall{margin-top:16px;font-family:var(--f-mono);font-size:11.5px;color:var(--green-deep);line-height:1.6}
+#s10 .fallback{margin-top:22px;border-left:2px solid var(--rule);padding-left:18px}
+#s10 .fallback .k{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--faint);margin-bottom:8px}
+#s10 .fallback p{font-size:14.5px;line-height:1.5;color:var(--muted)}
+#s10 .fallback p b{color:var(--ink);font-weight:600}
+#s10 .bank{display:flex;flex-direction:column;gap:13px}
+#s10 .demo{display:grid;grid-template-columns:20px 1fr;gap:14px;align-items:start}
+#s10 .demo .step{font-family:var(--f-mono);font-size:11px;font-weight:600;color:var(--faint);padding-top:3px}
+#s10 .demo .what{font-family:var(--f-disp);font-size:17px;font-weight:900;letter-spacing:-.01em;margin-bottom:6px}
+#s10 .demo .terms{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:5px}
+#s10 .demo .terms button{
+  font-family:var(--f-mono);font-size:14px;cursor:pointer;
+  background:var(--paper-2);border:1px solid var(--rule);color:var(--ink);
+  padding:5px 12px;border-radius:6px;transition:.15s ease;
+}
+#s10 .demo .terms button:hover{background:var(--teal-wash);border-color:var(--teal-line);color:var(--teal-deep)}
+#s10 .demo .terms button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+#s10 .demo .terms button.copied{background:var(--green-wash);border-color:var(--green);color:var(--green-deep)}
+#s10 .demo .terms .vs{font-family:var(--f-mono);font-size:12px;color:var(--faint);align-self:center}
+#s10 .demo .expect{font-size:14px;line-height:1.45;color:var(--muted)}
+#s10 .demo .expect b{color:var(--ink);font-weight:600}
+#s10 .demo.warn .what{color:var(--clay)}
+
+/* ─────────────── 11 · THE WORK ─────────────── */
+#s11 .grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:14px;margin-top:26px;flex:1}
+#s11 .t{background:var(--card);border:1px solid var(--rule);border-radius:10px;padding:20px 22px;display:flex;flex-direction:column}
+#s11 .t .num{font-family:var(--f-disp);font-size:32px;font-weight:900;color:var(--teal-deep);letter-spacing:-.025em;line-height:1;margin-bottom:10px}
+#s11 .t .num small{font-size:14.5px;font-weight:600;color:var(--muted);letter-spacing:0}
+#s11 .t h3{font-family:var(--f-disp);font-size:18px;font-weight:900;margin-bottom:7px;letter-spacing:-.01em}
+#s11 .t p{font-size:14.5px;line-height:1.5;color:var(--muted)}
+#s11 .t .path{margin-top:auto;padding-top:12px;font-family:var(--f-mono);font-size:11px;color:var(--faint)}
+#s11 .t.lead{border-color:var(--teal-line);background:linear-gradient(150deg,var(--teal-wash),var(--card) 62%);box-shadow:var(--shadow)}
+/* three tiles instead of six — let them size to their content rather than
+   stretching to fill the frame */
+#s11 .grid{flex:0 1 auto;grid-auto-rows:auto;margin-bottom:8px}
+
+/* ─────────────── 12 · GAPS ─────────────── */
+#s12 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:26px}
+#s12 .c{border-top:2px solid var(--clay);padding-top:15px}
+#s12 .c .n{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--clay);margin-bottom:9px}
+#s12 .c h3{font-family:var(--f-disp);font-size:20px;font-weight:900;margin-bottom:9px;letter-spacing:-.01em;line-height:1.2}
+#s12 .c p{font-size:15px;line-height:1.5;color:var(--muted);margin-bottom:11px}
+#s12 .c .ex{font-family:var(--f-mono);font-size:12px;color:var(--faint);line-height:1.75}
+#s12 .c .ex b{color:var(--muted);font-weight:500}
+#s12 .fix{
+  margin-top:34px;border:1px solid var(--rule);border-left:3px solid var(--teal);
+  background:var(--card);padding:19px 26px;border-radius:0 8px 8px 0;
+  display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;box-shadow:var(--shadow);
+}
+#s12 .fix .tag{font-family:var(--f-body);font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:var(--teal-deep)}
+#s12 .fix p{font-size:16px;line-height:1.5;color:var(--muted)}
+#s12 .fix p b{color:var(--ink);font-weight:600}
+
+/* ─────────────── 13 · CLOSE ─────────────── */
+#s13 h2{font-size:54px;max-width:22ch;margin-bottom:34px}
+#s13 .bens{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;max-width:1240px}
+#s13 .ben .k{font-family:var(--f-body);font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--teal-deep);margin-bottom:11px}
+#s13 .ben p{font-size:17.5px;line-height:1.5;color:var(--muted)}
+#s13 .ben p b{color:var(--ink);font-weight:600}
+#s13 .kicker{
+  margin-top:44px;font-family:var(--f-disp);font-size:25px;font-weight:900;
+  letter-spacing:-.015em;max-width:54ch;line-height:1.32;
+  border-left:3px solid var(--green);padding-left:22px;
+}
+#s13 .kicker em{font-style:normal;color:var(--green-deep)}
+
+/* ─────────────── OVERLAYS ─────────────── */
+.overlay{position:absolute;inset:0;z-index:60;display:none;background:rgba(250,248,243,.95);backdrop-filter:blur(3px);padding:64px 88px}
+.overlay.on{display:block}
+#notes{
+  top:auto;height:300px;background:var(--card);border-top:1px solid var(--rule);
+  padding:24px 40px 24px calc(var(--spine) + 40px);overflow:auto;
+  box-shadow:0 -14px 40px -28px rgba(16,32,30,.5);
+}
+#notes .k{font-family:var(--f-body);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;font-weight:700;color:var(--teal-deep);margin-bottom:11px}
+#notes .txt{font-size:16px;line-height:1.62;color:var(--muted);max-width:100ch;white-space:pre-line}
+#help{display:none}
+#help.on{display:grid;place-items:center}
+#help .box{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:32px 40px;min-width:400px;box-shadow:var(--shadow)}
+#help h3{font-family:var(--f-disp);font-size:22px;font-weight:900;margin-bottom:18px}
+#help dl{display:grid;grid-template-columns:auto 1fr;gap:10px 22px;align-items:center}
+#help dt{font-family:var(--f-mono);font-size:12px;color:var(--teal-deep);background:var(--teal-wash);border:1px solid var(--teal-line);padding:3px 9px;border-radius:4px;justify-self:start}
+#help dd{font-size:15px;color:var(--muted)}
+
+.zone{position:absolute;top:0;bottom:14px;width:16%;z-index:30;cursor:pointer;border:0;background:transparent;padding:0}
+.zone.prev{left:var(--spine)}
+.zone.next{right:0;width:30%}
+.zone:focus-visible{outline:1px solid var(--rule)}
+
+/* a live toast for the copy buttons */
+#toast{
+  position:absolute;left:50%;bottom:40px;transform:translate(-50%,14px);z-index:70;
+  background:var(--ink);color:var(--paper);font-family:var(--f-mono);font-size:13px;
+  padding:10px 18px;border-radius:999px;opacity:0;transition:.24s ease;pointer-events:none;
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+@media (prefers-reduced-motion: reduce){
+  .slide,.slide .rise,.bar .fill{transition:none!important;animation:none!important;opacity:1!important;transform:none!important}
+  #s1 .caret{animation:none}
+}
+#tiny{display:none}
+@media (max-width:520px){
+  #tiny{display:grid;place-items:center;position:fixed;inset:0;z-index:99;background:var(--paper);padding:40px;text-align:center}
+  #tiny p{font-size:17px;color:var(--muted);line-height:1.5}
+}
+</style>
+</head>
+<body>
+
+<div id="stage">
+<div id="deck">
+  <div id="grain" aria-hidden="true"></div>
+
+  <div id="spine">
+    <div class="idx"><span id="cur">01</span><small>/12</small></div>
+    <div class="vert" id="sect">NF Portal Search</div>
+    <div class="clock" id="clock"><b>0:00</b>of 20:00</div>
+  </div>
+
+  <button class="zone prev" id="zprev" aria-label="Previous slide"></button>
+  <button class="zone next" id="znext" aria-label="Next slide"></button>
+
+  <!-- ═══════════ 1 · HERO ═══════════ -->
+  <section class="slide" id="s1" data-sect="Open" data-sec="60" data-notes="Say the query out loud: 'p-n-f' — plexiform neurofibroma, the abbreviation every NF researcher uses daily.
+On the old search that returned nothing. Zero. A researcher typing the most natural shorthand in their field got an empty page.
+Same data, same query, new search engine: the plexiform-derived cell lines come back at ranks one and two.
+That's the whole talk in one slide. Everything after this is how, how we know it's real, and then we go and do it live.">
+    <div class="rise">
+      <div class="eyebrow">Synapse · NF Portal · search rebuild</div>
+      <div class="searchbar"><span class="lens"></span><span class="typed" id="typed"></span><span class="caret" id="caret"></span></div>
+    </div>
+    <div class="split rise">
+      <div class="side side--old">
+        <div class="side__head"><span class="dot"></span>The search we had before</div>
+        <div class="void"><b>No results</b><span>nothing to show the user</span></div>
+      </div>
+      <div class="rule" data-q="pnf"></div>
+      <div class="side side--new">
+        <div class="side__head"><span class="dot"></span>The search we have now</div>
+        <ol class="ranks">
+          <li><span class="n">1</span><span class="hit">hTERT NF1 ipNF04.4</span><span class="kind">Plexiform line</span></li>
+          <li><span class="n">2</span><span class="hit">hTERT NF1 ipNF00.6</span><span class="kind">Plexiform line</span></li>
+          <li class="dim"><span class="n">7</span><span class="hit">hTERT NF1 ipNF95.11b C/T</span><span class="kind">Plexiform line</span></li>
+        </ol>
+        <div class="fine" style="margin-top:11px">all three are plexiform-derived cell lines — exactly what a researcher typing “pnf” is after</div>
+      </div>
+    </div>
+    <h1 class="rise">Search that knows <span>what you mean</span></h1>
+    <div class="sub rise"><p>Replacing database keyword matching with a *real* search engine and measuring it.</p></div>
+    <div class="foot rise"><div class="fine">Query <code>pnf</code> · the research tools catalogue, 1,216 resources · the old search's result as recorded by the portal team · current ranks verified live <b>2026-07-30</b>, out of 819 possible matches</div></div>
+  </section>
+
+  <!-- ═══════════ 2 · THE OLD WORLD → WHAT WE HAVE NOW (merged) ═══════════ -->
+  <section class="slide" id="s3" data-sect="The old world" data-sec="95" data-notes="This is the whole before-and-after in one slide. Three things to say, in this order.
+One — the table, and don't read it out. Pull the top row: the old search asked 'does this record contain these words', yes or no. The new one asks 'how well does each result answer this'. Everything else follows from that.
+Two — the four searches underneath. These are not hypotheticals; they are phrases from the portal team's own test set, and on the old search every one of them returned nothing. Dwell on nf1-flox: around a hundred engineered mouse models in the catalogue, and the old search found none of them. Then say the line: the data was always there, the search could not reach it.
+Three — the board at the bottom. Every catalogue in the NF portal now runs on OpenSearch. Only file search is still to come. And the six in solid teal already run search settings we wrote ourselves — that is the work the rest of this talk is about.
+If someone asks why MySQL was ever used: it is an excellent database, it was simply never a search engine. Be generous about it.">
+    <div class="rise">
+      <div class="eyebrow mute">Where we started · and where we are now</div>
+      <h2>A database was doing a <em>search engine's</em> job</h2>
+    </div>
+    <div class="cmp rise">
+      <div class="row hd"><span class="lbl"></span><span class="old">The search we had before</span><span class="new">What we have now</span></div>
+      <div class="row"><span class="lbl">what it asks</span><span class="old">Does this record contain these words? Yes or no.</span><span class="new"><b>How well does each result answer this?</b></span></div>
+      <div class="row"><span class="lbl">vocabulary</span><span class="old">An abbreviation is just three letters</span><span class="new"><b>We teach it our terms</b> — <code>pnf</code> = plexiform neurofibroma</span></div>
+      <div class="row"><span class="lbl">what counts most</span><span class="old">Every part of a record counts the same</span><span class="new"><b>We decide</b> — a name can count ten times a passing mention</span></div>
+      <div class="row"><span class="lbl">making a change</span><span class="old">Rebuild the database</span><span class="new"><b>Change a setting, measure it the same day</b></span></div>
+    </div>
+    <div class="ev rise">
+      <div class="k">Four phrases a researcher would type · on the old search</div>
+      <div class="qs">
+        <span class="qz"><b>pnf</b><s>0 results</s></span>
+        <span class="qz"><b>cnf</b><s>0 results</s></span>
+        <span class="qz"><b>neurofibromin</b><s>0 results</s><em>· ~100 antibodies exist</em></span>
+        <span class="qz"><b>nf1-flox</b><s>0 results</s><em>· ~100 mouse models exist</em></span>
+      </div>
+      <div class="punch">The data was always there but the search could not reach it.</div>
+    </div>
+    <div class="cov rise">
+      <div class="hd">
+        <h3><em>Every</em> catalogue in the NF portal now runs on OpenSearch</h3>
+        <span class="lg"><i></i>solid = already running search settings we wrote ourselves</span>
+      </div>
+      <div class="chips">
+        <span class="chip own">Research tools</span>
+        <span class="chip own">Studies</span>
+        <span class="chip own">Datasets</span>
+        <span class="chip own">Publications</span>
+        <span class="chip own">Initiatives</span>
+        <span class="chip own">Hackathons</span>
+        <span class="chip on">People</span>
+        <span class="chip on">Funders</span>
+        <span class="chip rest">…and every other catalogue</span>
+        <span class="chip off">Files — not yet</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4 · ANALYZERS ═══════════ -->
+  <section class="slide" id="s4" data-sect="Reading the text" data-sec="70" data-notes="This is the first of three settings we control, and the least obvious one.
+Before anything can be searched, the text has to be broken into findable pieces. Someone has to choose that rule, and we choose it separately for each part of a record — 46 of them on the research tools catalogue alone.
+The example is the whole point in one line. Take a real search: 'hybridoma cell line' — hybridomas are the cells used to make antibodies. Read that part of the record as an exact label and you get nothing, because an exact label has to be typed perfectly, capitals and all, and people type in lowercase. Read it as ordinary text and all three come back. Same catalogue, same search, opposite outcomes. The only difference is the reading rule.
+So the honest summary is: this setting is powerful in both directions, which is exactly why we score every change against the answer key before it goes anywhere near a researcher.
+If asked: yes, we hit that exact-label case ourselves while testing before release. That is what the answer key is for.">
+    <div class="rise">
+      <div class="eyebrow">Setting we control, 1 of 3 · how the search reads text</div>
+      <h2>How the text is <em>read</em> decides what can be found</h2>
+    </div>
+    <div class="rise">
+      <p class="lede" style="max-width:94ch">Before anything can be searched, text has to be broken into findable pieces. We choose that rule for each part of a record — and the choice can be the difference between <b>every right answer and none.</b></p>
+    </div>
+    <div class="rise" style="margin-top:28px">
+      <div class="fine" style="margin-bottom:13px">ONE SEARCH — <b>“hybridoma cell line”</b>, the cells used to make antibodies — UNDER TWO READING RULES</div>
+      <div class="readings" style="grid-template-columns:repeat(2,1fr);max-width:1140px;margin-top:0">
+        <div class="reading" style="border-top-color:var(--clay)">
+          <div class="name" style="color:var(--clay)">Read as an exact label</div>
+          <div class="arc" style="margin:0 0 11px"><i class="bad">0 results</i></div>
+          <div class="what">It has to be typed perfectly, capital letters and all. The catalogue says “Hybridoma”, people type lowercase, and nothing matches at all.</div>
+        </div>
+        <div class="reading">
+          <div class="name">Read as ordinary text</div>
+          <div class="arc" style="margin:0 0 11px"><i class="good">all 3 found</i></div>
+          <div class="what">Lowercased, trimmed back to word stems, our NF vocabulary applied. Same records, same search — now every right answer comes back.</div>
+        </div>
+      </div>
+    </div>
+    <div class="caseback rise">
+      <div class="tag">Why this<br>matters to you</div>
+      <div>
+        <p>Same catalogue data, <b>opposite outcomes</b> — the only difference is the reading rule. Reading rules can be set on each indexed attribute. It is powerful in both directions, which is why nothing changes without being benchmarked first.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5 · SYNONYMS ═══════════ -->
+  <section class="slide" id="s5" data-sect="Vocabulary" data-sec="70" data-notes="This is the lever non-technical people feel most directly, because it's where domain knowledge becomes search behaviour.
+We wrote a synonym set for NF. It's a plain list — abbreviation on the left, meaning on the right. It's ours, it lives in version control next to the code, and anyone here can propose an addition.
+The engine expands the query at search time. Someone types 'pnf' and the search also looks for plexiform neurofibroma, without the user needing to know that.
+Both rows on the right are queries that returned zero on the legacy search. Today pnf puts plexiform lines at ranks one and two, and cnf finds all five cutaneous lines. Verified this morning.
+This is the shortest path from 'an expert knows something' to 'the search knows it too'.">
+    <div class="rise">
+      <div class="eyebrow">Setting we control, 2 of 3 · our vocabulary</div>
+      <h2>Teaching the search <em>our vocabulary</em></h2>
+    </div>
+    <div class="body rise">
+      <div>
+        <div class="map">
+          <div class="pair"><span class="abbr">nf</span><span class="to"></span><span class="full">neurofibromatosis</span></div>
+          <div class="pair"><span class="abbr">pnf</span><span class="to"></span><span class="full">plexiform neurofibroma</span></div>
+          <div class="pair"><span class="abbr">cnf</span><span class="to"></span><span class="full">cutaneous neurofibroma</span></div>
+          <div class="pair"><span class="abbr">mpnst</span><span class="to"></span><span class="full">malignant peripheral nerve sheath tumor</span></div>
+        </div>
+        <p class="lede note">A plain list we write and own — abbreviation on the left, meaning on the right. The engine expands the query as the user types it, so <b>nobody has to know the long form</b> to find the right resource.</p>
+        <div class="punch" style="font-size:19px;margin-top:18px">Anyone in this room can propose a line in that list. It is not code.</div>
+      </div>
+      <div class="proof">
+        <div class="side__head" style="color:var(--teal-deep)"><span class="dot"></span>Measured on the live catalogue</div>
+        <div class="pslip">
+          <span class="t">Someone searches <b>pnf</b><br>plexiform neurofibroma cell lines</span>
+          <span class="vs"><span class="was">before · nothing</span><span class="now">now · ranks 1 and 2</span></span>
+        </div>
+        <div class="pslip">
+          <span class="t">Someone searches <b>cnf</b><br>cutaneous neurofibroma cell lines</span>
+          <span class="vs"><span class="was">before · nothing</span><span class="now">now · all 5 found</span></span>
+        </div>
+        <p class="fine" style="margin-top:22px">Verified live 2026-07-30 on what the portal sends today. Both still have near-identical resources jostling below them, so the order isn't perfect — but that is an <b>ordering</b> problem now, not an empty-page problem.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6 · WEIGHTS ═══════════ -->
+  <section class="slide" id="s6" data-sect="Weighting" data-sec="70" data-notes="Third lever: not every column deserves an equal vote.
+The live default treats every column identically. That's how a study whose summary happens to mention 'therapy' outranks a study whose actual tumour-type field says schwannoma.
+The bars are the real weights now in production for the studies index. Tumour and phenotype vocabulary counts ten times a prose match. The study title counts six.
+The interesting detail is what's missing: only three columns out of seventeen are searched at all. That's deliberate, and you only learn it by measuring. The other columns are configured as exact labels for filtering — case-sensitive — so a lowercase query can never match them. Leaving them in was dead weight, and dropping them made the search better.">
+    <div class="rise">
+      <div class="eyebrow">Setting we control, 3 of 3 · what counts most</div>
+      <h2>Not every part of a record gets an <em>equal vote</em></h2>
+    </div>
+    <div class="body rise">
+      <div>
+        <div class="bars">
+          <div class="bar"><span class="fname">the tumour<br>or symptom</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="val">×10</span></div>
+          <div class="bar"><span class="fname">the study title</span><span class="track"><span class="fill" style="width:60%"></span></span><span class="val">×6</span></div>
+          <div class="bar"><span class="fname">the study summary</span><span class="track"><span class="fill" style="width:35%"></span></span><span class="val">×3.5</span></div>
+          <div class="bar base"><span class="fname">the other 14 parts</span><span class="track"><span class="fill" style="width:0.6%"></span></span><span class="val">not&nbsp;searched</span></div>
+        </div>
+        <div class="fine" style="margin-top:18px">The settings running on the studies catalogue today</div>
+      </div>
+      <div class="aside">
+        <h3>What the weights buy</h3>
+        <p>The old behaviour gave every part of a record an equal vote. So a study that merely <b>mentions “therapy” in its summary</b> can outrank one whose tumour type actually is <b>schwannoma</b>.</p>
+        <div class="tick">
+          <p style="margin-bottom:0">Only 3 of the 17 parts of a record are searched at all, and that is deliberate. Searching <code>NTAP</code> returns 101 studies; <code>ntap</code> returns <b>zero</b>. People type in lowercase, so those parts could never help — and <b>taking them out made the results better.</b></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7 · WHAT TUNING IS WORTH ═══════════ -->
+  <section class="slide" id="s7" data-sect="What it's worth" data-sec="75" data-notes="So what are all those levers actually worth? One picture, one number.
+Same index, same 48 expert-written searches, same morning. Grey is the query the portal sends users today. Teal is our best recipe. The right answer lands markedly higher, and the share of searches whose very first result is correct goes from about half to about two thirds.
+The box on the right is the one to quote — and say the caveat with it. On the studies catalogue our tuned settings take 'page one has something useful on it at all' from 84% to 100%, 31 out of 31. Today about one search in six still shows a first page with nothing useful. Be explicit that this is measured but NOT yet switched on for users — it is exactly what slide 12 asks for.
+And the last note is the cheapest available win: typo tolerance is switched on in production right now, and on this data it costs us — because the registry is full of codes like CVCL_8478, where being forgiving about spelling just drags in wrong answers.
+We're about to switch between these two recipes live, so you can watch results reorder.">
+    <div class="rise">
+      <div class="eyebrow">What those three settings add up to</div>
+      <h2>Does it actually work better? <em>Here's how much.</em></h2>
+    </div>
+    <div class="body rise">
+      <div>
+        <div class="cap-row">How near the top the right answer sits</div>
+        <div class="bars">
+          <div class="bar"><span class="fname">our tuned settings</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="val">0.73</span></div>
+          <div class="bar base"><span class="fname">what users get today</span><span class="track"><span class="fill" style="width:84.7%"></span></span><span class="val">0.62</span></div>
+        </div>
+        <div class="gain">
+          <div class="g" style="grid-column:span 2">
+            <div class="m">The very first result is the right one</div>
+            <div class="nums"><span class="was">1 search in 2</span><span class="arw">→</span><span class="now">2 in 3</span></div>
+            <div class="plain fine" style="margin-top:9px">52% → 65% of 48 expert searches</div>
+          </div>
+          <div class="g" style="grid-column:span 2;border-top-color:var(--teal-line)">
+            <div class="m">And when it isn't first, it's nearer the top</div>
+            <div class="nums"><span class="was">0.620</span><span class="arw">→</span><span class="now" style="font-size:28px;color:var(--teal-deep)">0.732</span></div>
+            <div class="plain fine" style="margin-top:9px">a ranking score out of 1.00 — higher means right answers sit nearer the top</div>
+          </div>
+        </div>
+        <div class="fine" style="margin-top:20px">The research tools catalogue · 48 expert-written searches · both settings scored in the same run, 2026-07-30 · we can re-run any of this on demand</div>
+      </div>
+      <div class="aside">
+        <div class="big">
+          <div class="k">The number to remember · studies catalogue</div>
+          <div class="hero">Page one <em>always</em> has something useful: 84% → 100%</div>
+          <p>Our tuned settings take this from 84% to <b>100% — 31 searches out of 31.</b> Today about one search in six still shows a first page with nothing useful on it. These settings are in hand and land with this deliverable.</p>
+        </div>
+        <div class="knob">
+          <b>Sometimes the fix is switching something off</b>
+          <span>The portal currently forgives spelling mistakes. On this catalogue that <em>hurts</em> — it is full of exact codes like <code>CVCL_8478</code>, so being forgiving just drags in wrong answers. Turning it off is free.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 8 · GOLDEN SET ═══════════ -->
+  <section class="slide" id="s8" data-sect="How we know" data-sec="80" data-notes="Everything so far is a claim. This is how we make it checkable.
+We built a golden set: real searches paired with the answers a domain expert says are correct, in the order they should appear. 168 of them across five indexes, with 607 hand-picked ideal results.
+One methodology point worth saying out loud, because it's what makes the numbers honest: the right answers are derived from the source table, not from the search index. If you build your answer key from what search returns, you can never discover what search is missing. So we query the underlying data directly, ask what should have come back, then check whether it did.
+Then four plain-English measures. How high is the first right answer. How many right answers made page one. How often is the very top result right. And how often is there anything right on page one at all — that last one is the 84-to-100 number from the previous slide.">
+    <div class="rise">
+      <div class="eyebrow">How we know it is better</div>
+      <h2>We wrote down the <em>right answers</em> first</h2>
+      <p class="lede" style="margin-top:10px">An <b>answer key (benchmark)</b>: real searches paired with the results that ought to come back, <b>in the order they ought to appear.</b>
+    </div>
+    <div class="stats rise">
+      <div class="stat"><b>168</b><span>curated test searches</span></div>
+      <div class="stat"><b>607</b><span>individual judgements</span></div>
+      <div class="stat"><b>5</b><span>catalogues with an answer key so far</span></div>
+    </div>
+    <div class="body rise">
+      <div>
+        <dl class="metrics">
+          <dt>Is the very first result the right one?</dt>
+          <dd>What matters when a researcher already knows what they are looking for, and what the drop-down shows as they type. <i>Hit@1</i></dd>
+          <dt>Is there anything useful on page one at all?</dt>
+          <dd>The floor. Failing this is a researcher staring at a page of nothing. <i>Hit@10</i></dd>
+        </dl>
+        <p class="lede" style="font-size:16.5px;margin-top:4px">The answer keys are plain text files. <b>An NF expert can read one, disagree with it and correct it</b> without going near any code. Community correction is the most useful thing anyone outside the team can do.</p>
+        <p class="fine" style="margin-top:16px">Can measure more things behind these (such as how near the top the first one sits).
+      </div>
+      <div class="card">
+        <div class="k">Example item</div>
+        <div class="qq">“drosophila model”</div>
+        <ol>
+          <li><i>1</i> Nf1-/- Drosophila</li>
+          <li><i>2</i> dNf1 Drosophila</li>
+          <li><i>3</i> Nf1P1 Drosophila</li>
+          <li><i>4</i> Nf1E1 Drosophila</li>
+          <li><i>5</i> Nf1P1/Nf1E1 Drosophila</li>
+        </ol>
+        <div class="src"><b>The right answers come from the underlying data, never from the search.</b> We asked the tools database directly: which resources are fruit-fly models? Five. Then we checked whether search found all five. Building the key from search results would hide exactly what search is missing.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 9 · BEFORE / AFTER ═══════════ -->
+  <section class="slide" id="s9" data-sect="Before / after" data-sec="85" data-notes="These are the clearest cases in the benchmark, and I've split the 'after' into two columns on purpose.
+Middle column is what a user gets right now. Right column is what our tuned recipe gets. Both measured this morning.
+Top four all previously returned zero. Today pnf and cnf come back thanks to synonyms. nf1-flox and neurofibromin are found but ranked low — so those became ranking problems, which is a far better problem than an empty page. And look what the tuned recipe does: nf1-flox to the top slot, neurofibromin's antibodies up to four, eight and eleven.
+The two analyzer cases show the same pattern: found today, but the tuned recipe puts the hybridomas at one, two and three.
+Then two honest rows. Melanoma cell line fails both ways — add the generic words 'cell line' and the right lines fall off the page. And pnf is the one case where the tuned recipe is worse; over-boosting names amplifies the crowding. We report that rather than hide it.
+The headline: the right-hand column is what lands with this deliverable, not what is live this minute.">
+    <div class="rise">
+      <div class="eyebrow">The clearest cases in our answer key</div>
+      <h2>What actually <em>changed for the user</em></h2>
+    </div>
+    <div class="tbl rise">
+      <div class="tr hd"><span class="q"></span><span class="l">The old search</span><span class="t">What users get today</span><span class="n">With our tuned settings · shipping with this deliverable</span></div>
+      <div class="tr"><span class="q">pnf</span><span class="l">0 results</span><span class="t"><b>ranks 1, 2</b> plexiform lines</span><span class="n"><b>ranks 14–16</b> — the one search our tuning makes <em>worse</em></span></div>
+      <div class="tr"><span class="q">cnf</span><span class="l">0 results</span><span class="t"><b>all 5</b> found (2, 4, 17–19)</span><span class="n"><b>all 5</b> found, tighter (2, 7, 12–15)</span></div>
+      <div class="tr"><span class="q">nf1-flox</span><span class="l">0 results</span><span class="t"><b>rank 9</b></span><span class="n"><b>top of the page</b> — a correct mouse model first</span></div>
+      <div class="tr"><span class="q">neurofibromin</span><span class="l">0 results</span><span class="t"><b>rank 18</b>, 1 of 3</span><span class="n"><b>ranks 4, 8, 11</b> — all 3 antibodies</span></div>
+      <div class="tr"><span class="q">hybridoma cell line</span><span class="l">—</span><span class="t"><b>ranks 5–7</b>, all 3</span><span class="n"><b>ranks 1, 2, 3</b> — the fix from two slides ago, fully realised</span></div>
+      <div class="tr"><span class="q">lung cancer lines</span><span class="l">—</span><span class="t"><b>none</b> in the top 15</span><span class="n"><b>ranks 7, 10, 11</b> — all 3 recovered</span></div>
+      <div class="tr gap"><span class="q">melanoma cell line</span><span class="l">—</span><span class="t"><b>buried at 16</b></span><span class="n"><b>fails both ways</b> — off the page entirely. “melanoma” on its own ranks them 1 and 4; the two everyday words bury them</span></div>
+    </div>
+    <div class="foot rise"><div class="fine">The old search's results as recorded by the portal team · both of today's figures measured against the live research tools catalogue <b>2026-07-30</b>. Say out loud that the right-hand column is what lands with this deliverable, not what is live this minute.</div></div>
+  </section>
+
+  <!-- ═══════════ 10 · LIVE DEMO ═══════════ -->
+  <section class="slide" id="s10" data-sect="Live demo" data-sec="300" data-notes="DEMO SLIDE — budget about 5 minutes. Click any query to copy it, then paste into the Lab. Keep this slide on a second screen if you can.
+EXPECTED RESULTS (kept off the slide on purpose — don't invite them to mark your homework):
+One: CVCL_8478 — exactly 1 hit, the cell line 10/9CRC1. Establishes the search works and the room trusts it.
+Two: ipNF95 — 9 hits, with the full ipNF95.11b cell lines at ranks 2 and 3.
+Three: the pair, and this is the most persuasive moment. Search 'neurofibromin' — no antibodies near the top, the first is at rank 18. Now 'neurofibromin antibody' — an antibody at rank 1. Same catalogue, one extra word.
+Four: left side 'Default site search', right side 'Cross fields' — on screen just call them today's settings and our tuned settings. Search 'hybridoma cell line'. Left gives 5, 6, 7. Right gives 1, 2, 3.
+Five, the honest one: 'melanoma' works, 'melanoma cell line' does not. Say plainly that we know why and it isn't fixed.
+IF THE NETWORK FAILS: slides 6 and 8 carry the same results, and every search here is recorded there. Don't stall — move on to the next slide.">
+    <div class="rise">
+      <div class="eyebrow">Now let's actually do it</div>
+      <h2>See it live — the <em>Search Lab</em></h2>
+    </div>
+    <div class="body rise">
+      <div>
+        <div class="lab">
+          <div class="eyebrow" style="margin-bottom:2px">Synapse Portal</div>
+          <div class="name">Search <em>Lab</em></div>
+          <a class="labcta" href="https://nf-osi.github.io/opensearch-ops/" target="_blank" rel="noopener noreferrer">
+            <span class="go">Open the Search Lab</span>
+            <span class="ext" aria-hidden="true">new tab ↗</span>
+          </a>
+          <div class="laburl">nf-osi.github.io/opensearch-ops <b>— nothing to install</b></div>
+          <div class="tab"><span class="pill">Try a search</span><p>Type anything, put <b>two sets of settings side by side</b>, and slide what counts most up and down to watch the order change.</p></div>
+          <div class="tab"><span class="pill">Score it</span><p>Run the whole answer key yourself, in the page, and get <b>the same numbers</b> we have been quoting.</p></div>
+          <div class="noinstall">no login · no install · any catalogue in the portal<br>real, live production data</div>
+        </div>
+        <div class="fallback">
+          <div class="k">If the network misbehaves</div>
+          <p>Slides <b>6</b> and <b>8</b> carry these same measured results, and every search here is recorded there. <b>Skip ahead rather than stall.</b></p>
+        </div>
+      </div>
+      <div class="bank">
+        <div class="demo">
+          <span class="step">01</span>
+          <div>
+            <div class="what">A catalogue code finds exactly one thing</div>
+            <div class="terms"><button type="button" data-copy="CVCL_8478">CVCL_8478</button></div>
+            <div class="expect">One result. The right one.</div>
+          </div>
+        </div>
+        <div class="demo">
+          <span class="step">02</span>
+          <div>
+            <div class="what">Part of a name finds the whole thing</div>
+            <div class="terms"><button type="button" data-copy="ipNF95">ipNF95</button></div>
+            <div class="expect">Part of a cell line's name finds the full versions of it.</div>
+          </div>
+        </div>
+        <div class="demo">
+          <span class="step">03</span>
+          <div>
+            <div class="what">One extra word changes everything</div>
+            <div class="terms">
+              <button type="button" data-copy="neurofibromin">neurofibromin</button>
+              <span class="vs">then</span>
+              <button type="button" data-copy="neurofibromin antibody">neurofibromin antibody</button>
+            </div>
+            <div class="expect">No antibodies near the top. Then, with one more word, an antibody first.</div>
+          </div>
+        </div>
+        <div class="demo">
+          <span class="step">04</span>
+          <div>
+            <div class="what">Switch the settings, watch the order change</div>
+            <div class="terms"><button type="button" data-copy="hybridoma cell line">hybridoma cell line</button></div>
+            <div class="expect">Today's settings on the left, our tuned settings on the right.</div>
+          </div>
+        </div>
+        <div class="demo warn">
+          <span class="step">05</span>
+          <div>
+            <div class="what">And one that still fails</div>
+            <div class="terms">
+              <button type="button" data-copy="melanoma">melanoma</button>
+              <span class="vs">then</span>
+              <button type="button" data-copy="melanoma cell line">melanoma cell line</button>
+            </div>
+            <div class="expect">Two everyday words push every right answer off the page.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="foot rise"><div class="fine">Click any search to copy it. Expected results verified live 2026-07-30 on what the portal sends today — <b>re-check before presenting</b>, the catalogue changes.</div></div>
+  </section>
+
+  <!-- ═══════════ 11 · THE WORK ═══════════ -->
+  <section class="slide" id="s11" data-sect="What is running" data-sec="55" data-notes="Short slide — don't dwell, and don't read the tiles out.
+Three things only. Six catalogues already run on search settings we wrote. We have an answer key of 168 expert searches that catches our own mistakes — that's what caught the one on slide four. And the page you just used is open to anyone, with no install.
+The line to say out loud is the one at the bottom: we can now change how search behaves, measure whether it helped, and do that in an afternoon. Before this, nobody could answer 'did that make it better' at all.
+If someone asks how it's built, answer it then. Don't volunteer it.">
+    <div class="rise">
+      <div class="eyebrow">What is running today</div>
+      <h2>Enough infrastructure <em>built</em> to make tuning routine</h2>
+    </div>
+    <div class="grid rise" style="grid-template-columns:repeat(3,1fr)">
+      <div class="t lead">
+        <div class="num">6 <small>catalogues, and counting</small></div>
+        <h3>Already running our own search settings</h3>
+        <p>Our NF vocabulary and our reading rules, switched on for real users: research tools, studies, datasets, publications, hackathons and initiatives. The rest are the same job again.</p>
+      </div>
+      <div class="t">
+        <div class="num">168 <small>expert searches</small></div>
+        <h3>An answer key that catches our mistakes</h3>
+        <p>Every change is scored against it before it goes anywhere. We also have an (agentic) tool that proposes new settings and scores them for us.</p>
+      </div>
+      <div class="t">
+        <div class="num">0 <small>installs</small></div>
+        <h3>Search Lab</h3>
+        <p>Open to anyone, no login, against any catalogue in the portal and real production data. You can verify and build intuition about the new system yourself.</p>
+      </div>
+    </div>
+    <div class="foot rise"><div class="punch" style="font-size:20px;margin-top:0">We can now change how search behaves, measure whether it actually helped, and continuously improve.</div></div>
+  </section>
+
+  <!-- ═══════════ 12 · GAPS ═══════════ -->
+  <section class="slide" id="s12" data-sect="Still hard" data-sec="75" data-notes="I want to be straight about what doesn't work, because the benchmark makes these visible rather than letting them hide.
+Five of the 48 tool searches still fail outright, and they fail for three distinct reasons — which is the useful part, because each has a different owner.
+First: generic words drown specific ones. You just saw it — melanoma cell line. Ours to fix, in the query shape.
+Second: some searches ask about information nobody recorded. Café-au-lait spots are a hallmark NF1 sign and the mouse models do show it, but nobody ever tagged them with it. No search engine can find an annotation that doesn't exist. That's a curation task, and it's a genuinely useful finding.
+Third, and the biggest: everything in the right-hand column two slides back is measured and lands with this deliverable, not live this minute. The portal still sends a bare, unweighted query with typo tolerance hard-coded on. The gains are in a config file waiting on a frontend change.
+So the ask is concrete, and it's on the bottom strip.">
+    <div class="rise">
+      <div class="eyebrow mute">Remaining gaps · 5 of 48 searches</div>
+      <h2>What are <em>still refinements</em></h2>
+      <p class="lede" style="margin-top:10px">5 of the 48 searches in the research tools answer key still fail outright. They fail for three different reasons.</p>
+    </div>
+    <div class="cards rise">
+      <div class="c">
+        <div class="n">Continued search tuning</div>
+        <h3>Everyday words drown out specific ones</h3>
+        <p>Search weights can still weigh common words more against rare rare ones: "cell line" is on hundreds of records, "melanoma" on handful, but common words currently win. Still a search configuration to address.</p>
+        <div class="ex"><b>melanoma cell line</b><br>“melanoma” on its own → ranks 1 and 4<br>add “cell line” → 16 and off the page</div>
+      </div>
+      <div class="c">
+        <div class="n">Curation · not search</div>
+        <h3>Data isn't there</h3>
+        <p>Still need to curate relevant manifestations and other attributes, descriptions into the record. Search cannot index what's not there.</p>
+        <div class="ex"><b>MEKi tested model</b><br>a curation gap showing up as a search gap</div>
+      </div>
+      <div class="c">
+        <div class="n">Needs NF experts</div>
+        <h3>Our answer key is still small</h3>
+        <p>48 searches for the research tools, 31 for studies. Enough to catch our own mistakes and improve things so far, not yet enough to be certain we are tuning for <b>what researchers actually want</b>.</p>
+        <div class="ex"><b>Written by the portal team</b><br>every case an additional expert adds to<br>would make this better</div>
+      </div>
+    </div>
+    <div class="fix rise">
+      <div class="tag">Challenge summary</div>
+      <div><p><b>Not all search improvement is engineering/infrastructure.</b> First, <b>expert time on the benchmark</b>. We wrote them, so they carry our assumptions. Second, the labelling gap above is <b>curation, not search</b></p></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 13 · CLOSE ═══════════ -->
+  <section class="slide" id="s13" data-sect="Close" data-sec="55" data-notes="Three things to take away.
+Researchers can search the way they actually talk — abbreviations, shorthand, partial clone names. That used to return nothing.
+We can prove improvements instead of asserting them. Every claim in this deck has a command you can run, and you watched the Lab do it live.
+And tuning is now routine: a config file and a benchmark run, not a project.
+The one number: all 31 of 31 expert searches on the studies catalogue return something useful on page one. Today it is five in six. That's the difference between a search box people trust and one they work around — and it lands with this deliverable.
+Happy to take questions — and the Lab is a link, not an install, so please go and break it.">
+    <div class="rise">
+      <div class="eyebrow">Where this leaves us</div>
+      <h2>Researchers can now search <em>the way they talk</em></h2>
+    </div>
+    <div class="bens rise">
+      <div class="ben">
+        <div class="k">For researchers</div>
+        <p>Search the way you <b>actually talk</b> — abbreviations, shorthand, half a cell-line name, a disease instead of a resource name. All of that used to return nothing.</p>
+      </div>
+      <div class="ben">
+        <div class="k">For the programme</div>
+        <p>Improvements are <b>proven, not asserted</b> — every claim here is a number we can re-run on demand. And the same method now applies to any new catalogue you fund, with no new engineering.</p>
+      </div>
+      <div class="ben">
+        <div class="k">For the team</div>
+        <p>Improving search is now <b>a setting and a measurement</b>, not a project. New catalogue, new answer key, tune it, check it actually helped.</p>
+      </div>
+    </div>
+    <p class="kicker rise">If you remember one number: <em>all 31 of 31</em> expert searches on the studies catalogue return something useful on page one. Today it is five in six — and that improvement is in hand, landing with this deliverable.</p>
+    <div class="foot rise"><div class="fine">Try it yourself — <a href="https://nf-osi.github.io/opensearch-ops/" target="_blank" rel="noopener noreferrer" style="color:var(--teal-deep);font-weight:500">nf-osi.github.io/opensearch-ops</a> · no login, no install · <code>N</code> speaker notes · <code>?</code> shortcuts</div></div>
+  </section>
+
+  <!-- ══ OVERLAYS ══ -->
+  <div class="overlay" id="notes"><div class="k">Speaker notes — <span id="ntitle"></span></div><div class="txt" id="ntext"></div></div>
+  <div class="overlay" id="help"><div class="box">
+    <h3>Getting around</h3>
+    <dl>
+      <dt>→ ␣ ↵</dt><dd>Next slide</dd>
+      <dt>←</dt><dd>Previous slide</dd>
+      <dt>1 – 9</dt><dd>Jump to a slide · <code>0</code> also jumps to the live demo</dd>
+      <dt>N</dt><dd>Speaker notes</dd>
+      <dt>T</dt><dd>Start / reset the 20-minute timer</dd>
+      <dt>?</dt><dd>This panel</dd>
+    </dl>
+  </div></div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="rail"></div>
+</div>
+</div>
+
+<div id="tiny"><p>This deck is built for a wide screen. Turn your phone sideways, or open it on a laptop.</p></div>
+
+<script>
+(function(){
+  "use strict";
+  var deck   = document.getElementById('deck');
+  var slides = Array.prototype.slice.call(deck.querySelectorAll('.slide'));
+  var rail   = document.getElementById('rail');
+  var cur    = document.getElementById('cur');
+  var sect   = document.getElementById('sect');
+  var i = 0;
+
+  function fit(){
+    var s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  slides.forEach(function(s, n){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'Slide ' + (n + 1) + ': ' + (s.dataset.sect || ''));
+    b.addEventListener('click', function(){ go(n); });
+    rail.appendChild(b);
+  });
+  var dots = Array.prototype.slice.call(rail.children);
+
+  function go(n){
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function(s, k){
+      if (k === i) { s.classList.remove('active'); void s.offsetWidth; s.classList.add('active'); }
+      else s.classList.remove('active');
+    });
+    dots.forEach(function(d, k){ d.className = k === i ? 'now' : (k < i ? 'done' : ''); });
+    cur.textContent = String(i + 1).padStart(2, '0');
+    sect.textContent = slides[i].dataset.sect || '';
+    if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+    renderNotes();
+    if (i === 0) hero();
+  }
+  function next(){ go(i + 1); }
+  function prev(){ go(i - 1); }
+
+  document.getElementById('znext').addEventListener('click', next);
+  document.getElementById('zprev').addEventListener('click', prev);
+
+  document.addEventListener('keydown', function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === ' ' || k === 'Enter' || k === 'PageDown'){ e.preventDefault(); next(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp'){ e.preventDefault(); prev(); }
+    else if (k === 'Home'){ go(0); }
+    else if (k === 'End'){ go(slides.length - 1); }
+    else if (k === '0'){ go(8); }                       // 0 jumps straight to the demo (slide 9)
+    else if (/^[1-9]$/.test(k)){ go(parseInt(k, 10) - 1); }
+    else if (k === 'n' || k === 'N'){ document.getElementById('notes').classList.toggle('on'); renderNotes(); }
+    else if (k === '?' || k === '/'){ document.getElementById('help').classList.toggle('on'); }
+    else if (k === 't' || k === 'T'){ resetClock(); }
+    else if (k === 'Escape'){
+      document.getElementById('notes').classList.remove('on');
+      document.getElementById('help').classList.remove('on');
+    }
+  });
+
+  function renderNotes(){
+    if (!document.getElementById('notes').classList.contains('on')) return;
+    var sec  = parseInt(slides[i].dataset.sec || '60', 10);
+    var pace = sec >= 120 ? '~' + Math.round(sec / 60) + ' min' : sec + 's';
+    document.getElementById('ntitle').textContent = (slides[i].dataset.sect || '') + '  ·  suggested ' + pace;
+    document.getElementById('ntext').textContent = slides[i].dataset.notes || '';
+  }
+
+  /* ── 20-minute pace clock ── */
+  var t0 = null, BUDGET = 20 * 60;
+  function resetClock(){ t0 = Date.now(); }
+  setInterval(function(){
+    if (t0 === null) return;
+    var el = document.getElementById('clock');
+    var s  = Math.floor((Date.now() - t0) / 1000);
+    el.querySelector('b').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    el.classList.toggle('over', s > BUDGET);
+  }, 1000);
+  function startClock(){ if (t0 === null) resetClock(); }
+  document.addEventListener('keydown', startClock, {once:true});
+  deck.addEventListener('click', startClock, {once:true});
+
+  /* ── demo slide: click a query to copy it ── */
+  var toast = document.getElementById('toast'), toastT;
+  function flash(msg){
+    toast.textContent = msg;
+    toast.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ toast.classList.remove('on'); }, 1700);
+  }
+  // clipboard API needs a secure context; a file:// deck falls back to a temp selection
+  function fallback(q, done){
+    var ta = document.createElement('textarea');
+    ta.value = q;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:absolute;left:-9999px;top:0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); }
+    catch (err) { flash('copy blocked — select it manually'); }
+    document.body.removeChild(ta);
+  }
+  deck.addEventListener('click', function(e){
+    var b = e.target.closest('[data-copy]');
+    if (!b) return;
+    var q = b.dataset.copy;
+    var done = function(){
+      b.classList.add('copied');
+      setTimeout(function(){ b.classList.remove('copied'); }, 1500);
+      flash('copied  “' + q + '”');
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(q).then(done, function(){ fallback(q, done); });
+    } else fallback(q, done);
+  });
+
+  /* ── hero: type the query ── */
+  var reduce   = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var typedEl  = document.getElementById('typed');
+  var caretEl  = document.getElementById('caret');
+  var heroDone = false;
+  function hero(){
+    if (heroDone) return;
+    heroDone = true;
+    var q = 'pnf';
+    if (reduce){ typedEl.textContent = q; caretEl.style.display = 'none'; return; }
+    var n = 0;
+    (function tick(){
+      typedEl.textContent = q.slice(0, ++n);
+      if (n < q.length) setTimeout(tick, 190);
+      else setTimeout(function(){ caretEl.style.opacity = '.35'; }, 700);
+    })();
+  }
+
+  function fromHash(){ return Math.max(0, (parseInt(location.hash.slice(1), 10) || 1) - 1); }
+  window.addEventListener('hashchange', function(){ if (fromHash() !== i) go(fromHash()); });
+  go(fromHash());
+})();
+</script>
+</body>
+</html>
