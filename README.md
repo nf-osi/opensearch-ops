@@ -301,6 +301,33 @@ python3 build_site.py                              # -> site/
 python3 -m http.server -d site                     # open http://localhost:8000
 ```
 
+## Index health monitoring (fallback verification + repair)
+
+The platform's own weekly automated index rebuild can still leave an index failed or
+incomplete (stack issues, transient errors) without any status endpoint surfacing it — the
+first sign is usually someone noticing bad results in the UI. [`monitor/check_index.py`](monitor/check_index.py)
+is the fallback safety net: for every `nf-` `SearchIndex`, it checks that the index is
+**queryable** (a `match_all` query completes) and that its document count roughly matches a
+**live `SELECT COUNT(*)`** on the source table parsed out of the index's own `definingSQL`
+(both run anonymously, same as indexing itself, so the two counts should track each other
+within `--tolerance`, default 10%).
+
+```bash
+python3 monitor/check_index.py                  # check all nf- indices
+python3 monitor/check_index.py syn75081636       # check just nf-tools
+python3 monitor/check_index.py --repair          # ...and rebuild any unhealthy index found
+```
+
+`--repair` reuses [`config/config.py`](config/config.py)'s rebuild logic (touch the entity to
+fire a full rebuild) and needs the same `$NF_SERVICE_TOKEN` as `config.py register`/`apply`.
+Exit code is non-zero if any checked index is unhealthy, for CI alerting.
+
+[`.github/workflows/index-monitor.yml`](.github/workflows/index-monitor.yml) runs this daily:
+check → (if unhealthy and `NF_SERVICE_TOKEN` is configured as a repo secret) repair → re-check
+→ open/update a tracking GitHub issue (label `index-health`) on failure, or close it once
+healthy again. The check-only path needs no secrets; auto-repair is opt-in via the
+`NF_SERVICE_TOKEN` secret.
+
 ## Rechecking SearchIndex object inventory
 
 No auth token needed — these objects are PUBLIC, so `entity/children` and

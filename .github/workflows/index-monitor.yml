@@ -1,0 +1,129 @@
+# Fallback verification + repair for nf- SearchIndex objects (issue #8).
+#
+# The platform's own weekly automated rebuild can still leave an index failed
+# or incomplete (stack issues, transient errors). This job is the safety net:
+# it runs monitor/check_index.py on a schedule to confirm every nf- index is
+# queryable and holds roughly the expected number of documents, alerts via a
+# tracking GitHub issue on failure, and (if NF_SERVICE_TOKEN is configured)
+# attempts a self-repair rebuild before re-checking.
+#
+# Reads (querying, entity/table lookups) are anonymous and need no secrets —
+# the check-only path works out of the box. To enable auto-repair: add repo
+# secret NF_SERVICE_TOKEN (a Sage employee/org-admin token with modify scope
+# on the SearchIndex entities, same one config/config.py uses).
+name: index-monitor
+
+on:
+  schedule:
+    - cron: '17 13 * * *'  # daily, off the hour
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: index-monitor
+  cancel-in-progress: false
+
+env:
+  ALERT_LABEL: index-health
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # job-level (not step-level) so it's visible to later steps' `if:` conditions
+      NF_SERVICE_TOKEN: ${{ secrets.NF_SERVICE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check index health
+        id: check
+        continue-on-error: true
+        run: python3 monitor/check_index.py --out report.json
+
+      - name: Attempt repair
+        id: repair
+        if: steps.check.outcome == 'failure' && env.NF_SERVICE_TOKEN != ''
+        continue-on-error: true
+        run: python3 monitor/check_index.py --repair --out report.json
+
+      - name: Wait for rebuild
+        if: steps.repair.outcome == 'success' || steps.repair.outcome == 'failure'
+        run: sleep 45  # observed rebuild completion time is well under 30s
+
+      - name: Re-check after repair
+        id: recheck
+        if: steps.repair.outcome == 'success' || steps.repair.outcome == 'failure'
+        continue-on-error: true
+        run: python3 monitor/check_index.py --out report.json
+
+      - name: Ensure alert label exists
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "$ALERT_LABEL" --repo "$GITHUB_REPOSITORY" \
+            --description "Automated search index health alerts" --color B60205 2>/dev/null || true
+
+      - name: Find existing alert issue
+        id: find_issue
+        if: always()
+        run: |
+          num=$(gh issue list --repo "$GITHUB_REPOSITORY" --label "$ALERT_LABEL" --state open --json number --jq '.[0].number // empty')
+          echo "number=$num" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Open or update alert
+        if: steps.check.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repair_outcome="${{ steps.repair.outcome }}"
+          recheck_outcome="${{ steps.recheck.outcome }}"
+          if [ "$repair_outcome" = "skipped" ]; then
+            status_line="No NF_SERVICE_TOKEN configured, so no repair was attempted — set the secret to enable auto-repair, or fix manually with config/config.py apply --rebuild."
+          elif [ "$recheck_outcome" = "success" ]; then
+            status_line="Repair rebuild triggered and the index(es) now check healthy."
+          else
+            status_line="Repair was attempted but the index(es) are still unhealthy after the rebuild — needs a human look."
+          fi
+          {
+            echo "Scheduled index health check failed on $(date -u +%Y-%m-%dT%H:%M:%SZ)."
+            echo
+            echo "$status_line"
+            echo
+            echo '<details><summary>report.json</summary>'
+            echo
+            echo '```json'
+            cat report.json
+            echo '```'
+            echo '</details>'
+            echo
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > alert_body.md
+          if [ -n "${{ steps.find_issue.outputs.number }}" ]; then
+            gh issue comment "${{ steps.find_issue.outputs.number }}" --repo "$GITHUB_REPOSITORY" --body-file alert_body.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "Search index health check failing" \
+              --label "$ALERT_LABEL" --body-file alert_body.md
+          fi
+
+      - name: Close alert if healthy
+        if: steps.check.outcome == 'success' && steps.find_issue.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ steps.find_issue.outputs.number }}" --repo "$GITHUB_REPOSITORY" \
+            --body "Index health check passed on $(date -u +%Y-%m-%dT%H:%M:%SZ) — closing."
+          gh issue close "${{ steps.find_issue.outputs.number }}" --repo "$GITHUB_REPOSITORY"
+
+      - name: Fail the job if still unhealthy
+        if: steps.check.outcome == 'failure' && steps.recheck.outcome != 'success'
+        run: exit 1
