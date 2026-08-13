@@ -180,6 +180,8 @@ def main():
                      help=f"allowed relative drift between totalHits and source row count (default {DEFAULT_TOLERANCE})")
     ap.add_argument("--repair", action="store_true",
                      help="trigger a rebuild (entity touch) for any unhealthy index found; needs a modify-scope token")
+    ap.add_argument("--dry-run", action="store_true",
+                     help="with --repair, print what would be rebuilt without making the write")
     ap.add_argument("--token")
     ap.add_argument("--staging", action="store_true",
                      help=f"hit the staging repo API ({STAGING_BASE}) instead of prod")
@@ -207,11 +209,12 @@ def main():
 
     if unhealthy and args.repair:
         token = get_token(args.token)
-        print(f"\nRepair: triggering rebuild for {len(unhealthy)} unhealthy index(es)")
+        verb = "would trigger" if args.dry_run else "triggering"
+        print(f"\nRepair: {verb} rebuild for {len(unhealthy)} unhealthy index(es)")
         for r in unhealthy:
             try:
-                rebuild(r["id"], token, dry=False, base=base)
-                r["repair_triggered"] = True
+                rebuild(r["id"], token, dry=args.dry_run, base=base)
+                r["repair_triggered"] = not args.dry_run
             except SystemExit as e:
                 print(f"  could not repair {r['name']}: {e}")
                 r["repair_triggered"] = False
