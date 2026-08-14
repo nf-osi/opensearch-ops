@@ -53,15 +53,20 @@ jobs:
         continue-on-error: true
         run: python3 monitor/check_index.py --repair --out report.json
 
-      - name: Wait for rebuild
-        if: steps.repair.outcome == 'success' || steps.repair.outcome == 'failure'
-        run: sleep 45  # observed rebuild completion time is well under 30s
-
-      - name: Re-check after repair
+      - name: Wait for the rebuild, then re-check
         id: recheck
         if: steps.repair.outcome == 'success' || steps.repair.outcome == 'failure'
         continue-on-error: true
-        run: python3 monitor/check_index.py --out report.json
+        run: |
+          # Rebuilds are async with no status endpoint, so poll rather than guess a duration.
+          deadline=$(( SECONDS + 600 ))
+          until python3 monitor/check_index.py --out report.json; do
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "still unhealthy 10 min after the repair rebuild"
+              exit 1
+            fi
+            sleep 30
+          done
 
       - name: Ensure alert label exists
         if: always()
