@@ -121,7 +121,7 @@ jobs:
           fi
 
       - name: Close alert if healthy
-        if: steps.check.outcome == 'success' && steps.find_issue.outputs.number != ''
+        if: (steps.check.outcome == 'success' || steps.recheck.outcome == 'success') && steps.find_issue.outputs.number != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
