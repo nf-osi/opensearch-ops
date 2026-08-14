@@ -102,7 +102,7 @@ jobs:
             echo '<details><summary>report.json</summary>'
             echo
             echo '```json'
-            cat report.json
+            cat report.json 2>/dev/null || echo '(no report.json - the check died before it could write one; see the workflow log)'
             echo '```'
             echo '</details>'
             echo
