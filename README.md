@@ -310,17 +310,27 @@ is the fallback safety net: for every `nf-` `SearchIndex`, it checks that the in
 **queryable** (a `match_all` query completes) and that its document count roughly matches a
 **live `SELECT COUNT(*)`** on the source table parsed out of the index's own `definingSQL`
 (both run anonymously, same as indexing itself, so the two counts should track each other
-within `--tolerance`, default 10%).
+closely).
+A row gap is tolerated up to `max(--grace rows, --tolerance x source rows)`, default
+`max(3, 2%)` - the absolute floor keeps tiny indices from alerting on normal indexing lag,
+and the low relative rate keeps a large index from quietly losing hundreds of rows.
 
 ```bash
 python3 monitor/check_index.py                  # check all nf- indices
-python3 monitor/check_index.py syn75081636       # check just nf-tools
-python3 monitor/check_index.py --repair          # ...and rebuild any unhealthy index found
+python3 monitor/check_index.py syn75081636       # check just nf-tools (name also works)
+python3 monitor/check_index.py --repair          # ...and rebuild any repairable index found
 ```
+
+Statuses: `OK`; `EMPTY`/`MISMATCH`/`UNQUERYABLE` (broken index, a rebuild may fix it, so
+`--repair` acts on these); `UNVERIFIED` (the check could not be *run*: `definingSQL` did not
+parse, the count query failed, or the source reports 0 rows while the index holds documents;
+alerts, but `--repair` skips it because a rebuild would not help); `ERROR` (entity unreadable).
+An index we could not verify is never reported as healthy.
 
 `--repair` reuses [`config/config.py`](config/config.py)'s rebuild logic (touch the entity to
 fire a full rebuild) and needs the same `$NF_SERVICE_TOKEN` as `config.py register`/`apply`.
-Exit code is non-zero if any checked index is unhealthy, for CI alerting.
+Exit code is non-zero if any checked index is unhealthy, for CI alerting, and `--out` is
+always written, including on a fatal error, so CI never builds an alert out of a missing file.
 
 [`.github/workflows/index-monitor.yml`](.github/workflows/index-monitor.yml) runs this daily:
 check → (if unhealthy and `NF_SERVICE_TOKEN` is configured as a repo secret) repair → re-check

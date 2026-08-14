@@ -19,15 +19,16 @@ import json, sys, time, urllib.request, urllib.error
 BASE = "https://repo-prod.prod.sagebase.org/repo/v1"
 STAGING_BASE = "https://repo-staging.prod.sagebase.org/repo/v1"
 NF_TOOLS = "syn75081636"  # nf-tools SearchIndex
+HTTP_TIMEOUT_S = 30  # per-request socket timeout; without one a wedged endpoint blocks forever
 
-def _call(ep, method="GET", body=None, token=None, base=None):
+def _call(ep, method="GET", body=None, token=None, base=None, timeout_s=HTTP_TIMEOUT_S):
     data = json.dumps(body).encode() if body is not None else None
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(f"{base or BASE}/{ep}", data=data, method=method, headers=headers)
     try:
-        resp = urllib.request.urlopen(req)
+        resp = urllib.request.urlopen(req, timeout=timeout_s)
         raw = resp.read()
         return resp.status, (json.loads(raw) if raw else {})
     except urllib.error.HTTPError as e:
@@ -36,7 +37,7 @@ def _call(ep, method="GET", body=None, token=None, base=None):
 
 def search(search_index_id, search_query,
            response_parts=("HITS", "TOTAL_HITS", "SELECT_COLUMNS"),
-           timeout_s=30, token=None, poll_s=0.5):
+           timeout_s=30, token=None, poll_s=0.5, base=None):
     """Run an async SearchIndex query and return the SearchQueryResults dict.
 
     search_query: raw OpenSearch DSL, e.g. {"query": {"match": {"description": {"query": "schwann"}}}, "size": 10}
@@ -50,13 +51,13 @@ def search(search_index_id, search_query,
     }
     if response_parts:
         payload["responseParts"] = list(response_parts)
-    code, body = _call("search/query/async/start", "POST", payload, token)
+    code, body = _call("search/query/async/start", "POST", payload, token, base=base)
     if code != 201 and code != 200:
         raise RuntimeError(f"start failed ({code}): {body}")
     tok = body["token"]
     deadline = time.time() + timeout_s
     while time.time() < deadline:
-        code, body = _call(f"search/query/async/get/{tok}", token=token)
+        code, body = _call(f"search/query/async/get/{tok}", token=token, base=base)
         if code == 202 or (isinstance(body, dict) and body.get("jobState") == "PROCESSING"):
             time.sleep(poll_s)
             continue
