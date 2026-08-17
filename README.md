@@ -322,9 +322,10 @@ python3 monitor/check_index.py --repair          # ...and rebuild any repairable
 ```
 
 Statuses: `OK`; `EMPTY`/`MISMATCH`/`UNQUERYABLE` (broken index, a rebuild may fix it, so
-`--repair` acts on these); `UNVERIFIED` (the check could not be *run*: `definingSQL` did not
-parse, the count query failed, or the source reports 0 rows while the index holds documents;
-alerts, but `--repair` skips it because a rebuild would not help); `ERROR` (entity unreadable).
+`--repair` acts on these — a source reporting 0 rows while the index holds documents counts as
+a `MISMATCH`); `UNVERIFIED` (the check could not be *run*: `definingSQL` did not parse or the
+count query failed; alerts, but `--repair` skips it because a rebuild would not help);
+`ERROR` (entity unreadable).
 An index we could not verify is never reported as healthy.
 
 `--repair` reuses [`config/config.py`](config/config.py)'s rebuild logic (touch the entity to

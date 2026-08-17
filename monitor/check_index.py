@@ -15,7 +15,8 @@ Checks per index:
     source table parsed out of the index's own `definingSQL` (both run
     anonymously, same as the index's own anonymous indexing process, so the
     two counts should track each other closely). An index with 0 documents
-    against a non-empty source is always a failure; otherwise a row gap of
+    against a non-empty source is always a failure, and so is the reverse -
+    documents against a source that reports 0 rows; otherwise a row gap of
     up to max(--grace rows, --tolerance x source rows) is allowed, since
     indexing lags the source table slightly under normal operation.
 
@@ -24,10 +25,9 @@ Statuses, and what each one means for repair:
   EMPTY / MISMATCH / UNQUERYABLE        broken index; a rebuild may fix it, so
                                         --repair acts on these
   UNVERIFIED                            the check could not be *run* (definingSQL
-                                        did not parse, count query failed, source
-                                        reports 0 rows while the index holds
-                                        documents). Alerts, but a rebuild would not
-                                        fix it, so --repair skips it.
+                                        did not parse, count query failed). Alerts,
+                                        but a rebuild would not fix it, so --repair
+                                        skips it.
   ERROR                                 could not read the SearchIndex entity
 
 An unverifiable index is deliberately NOT reported as healthy: "we could not
@@ -173,14 +173,15 @@ def check_index(idx, base, tolerance, grace=GRACE_ROWS):
 
     total_hits = report["totalHits"]
     if expected == 0:
-        # Nothing to compare against: either the source really is empty (fine, and the
-        # index should be too) or the count query is lying to us (not fine - don't call
-        # an index healthy on the strength of a count we don't believe).
+        # An empty source and an empty index agree, so that's fine. Documents against an
+        # empty source do not: either the index is stale (holding rows the source no longer
+        # has) or the source is a table we cannot count correctly. Both are failures, and a
+        # rebuild resolves the first and is harmless for the second, so this is REPAIRABLE.
         if total_hits:
-            report["status"] = "UNVERIFIED"
+            report["status"] = "MISMATCH"
             report["issues"].append(
                 f"source ({source_id}) reports 0 rows but the index holds {total_hits} "
-                "documents; count check is not trustworthy"
+                "documents; the index is stale or the source is not countable"
             )
         return report
 
