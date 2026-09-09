@@ -1,7 +1,7 @@
 {
   "organizationName": "org.synapse.nf",
   "name": "nf_tools_columns",
-  "description": "Per-column analyzer assignments for the nf-tools SearchIndex (syn75081636, source syn51730943). Roles: IDENTIFIER for id-like fields (preserve punctuation, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields (stemming + NF synonym expansion at search time); KEYWORD for demographic/internal-flag facet fields with no free-text search role (exact match). resourceType and cellLineCategory are deliberately NOT KEYWORD despite being facet-like: they're also searched as natural-language terms (e.g. 'hybridoma cell line', 'melanoma cell line' in benchmark/tools/fields.yaml), and KEYWORD's exact-match-only behavior broke those queries entirely (confirmed 2026-07-07 benchmark regression) — they fall through to the config defaultAnalyzer (STANDARD) instead, like resourceName, species, and other free-text/multi-value/date columns. Columns absent from the index are silently skipped at build time.",
+  "description": "Per-column analyzer assignments for the nf-tools SearchIndex (syn75081636, source syn51730943). Roles: IDENTIFIER for id-like fields (punctuation preserved, no stemming); nf_scientific_synonyms for free-text scientific/discovery fields; KEYWORD only for internal quality flags with no free-text search role. Anything a user might type as natural language is deliberately NOT KEYWORD and falls through to the defaultAnalyzer (STANDARD), because KEYWORD is exact and case-sensitive: resourceType/cellLineCategory for that reason on 2026-07-07, and sex/race/age on 2026-09-09 after lowercase 'black' and 'female' were measured at 0 hits against capitalised values (#23). age is a DOUBLE, so no text analyzer applies. geneticDisorder and manifestation are the unified columns the 2026-08 table revision moved to, replacing diseaseType and the cellLine*/animalModel* variants (#22). NOTE: description is capped near 1000 chars server-side; longer is rejected as a bogus name-collision error.",
   "overrides": [
     { "columnName": "resourceId", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
     { "columnName": "rrid", "analyzer": { "$ref": "org.sagebionetworks-IDENTIFIER" } },
@@ -10,18 +10,12 @@
 
     { "columnName": "description", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
     { "columnName": "synonyms", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
-    { "columnName": "diseaseType", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "geneticDisorder", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
+    { "columnName": "manifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
     { "columnName": "tumorType", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
     { "columnName": "targetAntigen", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
-    { "columnName": "cellLineGeneticDisorder", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
-    { "columnName": "cellLineManifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
-    { "columnName": "animalModelGeneticDisorder", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
-    { "columnName": "animalModelOfManifestation", "analyzer": { "$ref": "org.synapse.nf-nf_scientific_synonyms" } },
 
     { "columnName": "completenessCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
-    { "columnName": "availabilityCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
-    { "columnName": "sex", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
-    { "columnName": "race", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } },
-    { "columnName": "age", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
+    { "columnName": "availabilityCategory", "analyzer": { "$ref": "org.sagebionetworks-KEYWORD" } }
   ]
 }

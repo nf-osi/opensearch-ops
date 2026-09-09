@@ -1,8 +1,9 @@
-# NF search benchmark — strategies & results
+# NF search benchmark — strategies & levers
 
-This is the stakeholder-facing summary of how different search query strategies perform
-on the **`nf-tools`** index (the NF Research Tools Central registry, ~1,216 tools:
-antibodies, cell lines, animal models, and protocols).
+This is the stakeholder-facing summary of the search query strategies we test on the
+**`nf-tools`** index (the NF Research Tools Central registry: antibodies, cell lines, animal
+models, and protocols) and which levers move results. How each strategy currently scores is
+on the dashboard, not here — see [Results](#results).
 
 ## What we are measuring
 
@@ -37,69 +38,111 @@ Each strategy is a different recipe for turning what the user typed into a searc
 differ in **which fields they look at**, **how much each field counts** ("boosting"), and
 **how forgiving they are** about word order and spelling.
 
-The fields searched are: `resourceName`, `synonyms`, `rrid`, `targetAntigen`,
-`diseaseType`, and `description`. A boost is written `field^N` — e.g. `resourceName^5`
-means a match in the tool name counts five times as much as an unboosted field.
+The curated field list and its weights live in [`fields.yaml`](fields.yaml); read them
+there rather than here, so the two cannot drift. A boost is written `field^N` — e.g.
+`resourceName^5` means a match in the tool name counts five times as much as an unboosted
+field.
 
 | Strategy | What it does | Best for | Trade-off |
 | --- | --- | --- | --- |
-| **frontend_default** | **Exactly what the live Synapse frontend sends today**: a bare `multi_match` over all fields with `fuzziness: AUTO`, no boosts, no explicit type. | The baseline. | Carries every weakness below at once (no boosts, fuzzy noise); included to measure, not to recommend. |
-| **simple_query_string** | A forgiving "Google-style" query across all fields, equally weighted. Supports operators the user might type (`+`, `-`, quotes). Never errors on odd syntax. | A safe general-purpose default. | No field prioritization — a description match competes equally with a name match. |
+| **production_current** | **What the nf-tools page actually sends today** — best-fields over production's own six boosted columns, no fuzziness, transcribed from `resources.ts` and compiled from the `production:` block in [`fields.yaml`](fields.yaml). Includes the routing rule that diverts quoted phrases and Synapse ids to `simple_query_string`. | **The control for this table.** A gain over this row is a gain over what users get right now. | Searches six columns; blind to the discovery columns the wider strategies reach. |
+| **frontend_default** | **The Synapse front-end's platform default** — what a portal gets when it sets no search config: a bare `multi_match` over all fields with `fuzziness: AUTO`, no boosts, no explicit type (plus the same quoted / Synapse-id routing). NF tools does not run this; it ships its own recipe, so here it is a reference point rather than the control. It *is* the control for the 12 NF indexes that ship no config. | Measuring what "no configuration at all" buys. | Carries every weakness below at once (no boosts, fuzzy noise); included to measure, not to recommend. Its one structural advantage is coverage: with no field list it searches every column, including ones `fields.yaml` omits. |
+| **simple_query_string** | A forgiving "Google-style" query across the curated fields, equally weighted. Supports operators the user might type (`+`, `-`, quotes). Never errors on odd syntax. | A safe general-purpose default. | No field prioritization — a description match competes equally with a name match. |
+| **simple_query_string_boosted** | The same clause with **our boosts** applied. This is the exact shape production falls back to whenever a query contains a quoted phrase or a Synapse id, so it is the only strategy that mirrors that path in isolation. | Exact-phrase and identifier lookups, where typo tolerance does more harm than good. | Operator syntax is interpreted, so a stray `+` or `-` changes the query rather than being tokenised away. |
 | **multi_match_best** | Searches all fields equally and scores each result by its single best-matching field ("best fields"). | General search where the strongest single signal should win. | Equal field weighting; doesn't reward a tool that matches in several fields. |
-| **multi_match_boosted** | Same as best-fields but with **our boosts** (`resourceName^5`, `synonyms^4`, `rrid^4`, `targetAntigen^2`, …) so name/synonym/RRID matches outrank description matches. | Pushing the obvious canonical match to the top. | If the boosts are mis-tuned they can *demote* a correct match found in a lower-weighted field (we see this below). |
+| **multi_match_boosted** | Same as best-fields but with **our boosts** (see [`fields.yaml`](fields.yaml)) so name/synonym/RRID matches outrank description matches. | Pushing the obvious canonical match to the top. | If the boosts are mis-tuned they can *demote* a correct match found in a lower-weighted field. |
 | **multi_match_cross** | "Cross fields" — treats the searched fields as one combined field, so a query whose words are spread across several fields (e.g. part in name, part in synonym) still matches well. Uses the same boosts. | Queries where terms are scattered across fields. | Stricter about every term matching somewhere; can miss loosely-related hits. |
-| **boosted_fuzzy** | The boosted strategy plus **typo tolerance** (`fuzziness: AUTO`) so "schwan" still finds "Schwann". | Misspellings and near-misses. | Fuzziness adds noise — on identifier-heavy data (RRIDs, clone names) it pulls in wrong matches and **hurt both precision and recall** here. |
+| **boosted_fuzzy** | The boosted strategy plus **typo tolerance** (`fuzziness: AUTO`) so "schwan" still finds "Schwann". | Misspellings and near-misses. | Fuzziness adds noise — on identifier-heavy data (RRIDs, clone names) it pulls in wrong matches, hurting both precision and recall here. |
 | **phrase_prefix** | Treats the last word as a prefix, like live typeahead ("neurofib…" matches "neurofibromin"). | Autocomplete / as-you-type search boxes. | Phrase semantics are stricter on word order; weaker for unordered keyword queries. |
 
 These strategies are the main lever this harness exists to test, alongside index-side
 config (custom analyzers and the `org.synapse.nf` synonym sets, not yet enabled).
 
-## Latest results
+## Results
 
-**Run:** 2026-06-22 · k=10 · 48 cases (12 known-item, 36 topical) · **15-field** config
-([`fields.yaml`](fields.yaml)). `rt_ms` is round-trip latency (median / p95); it includes
-client poll interval + async-queue wait, so compare on the **median**, use p95 for tail cost.
+Scores are not reproduced in this document. They change with every run, and a number copied
+into prose goes stale the moment the next run lands. The dashboard reads the committed runs
+directly and is the only place results are stated:
 
-| strategy | MRR | Recall@10 | Hit@1 | Hit@10 | rt_med | rt_p95 |
-| --- | --- | --- | --- | --- | --- | --- |
-| multi_match_cross | **0.744** | **0.693** | **0.667** | **0.896** | 1185 | 1727 |
-| frontend_default | 0.659 | 0.642 | 0.583 | 0.792 | 1672 | 3572 |
-| multi_match_boosted | 0.654 | 0.630 | 0.583 | 0.812 | 1179 | 1869 |
-| multi_match_best | 0.645 | 0.651 | 0.562 | 0.833 | 1187 | 2188 |
-| simple_query_string | 0.631 | 0.644 | 0.542 | 0.812 | 1180 | 1680 |
-| boosted_fuzzy | 0.627 | 0.597 | 0.521 | 0.812 | 1188 | 1733 |
-| phrase_prefix | 0.541 | 0.480 | 0.458 | 0.688 | 1174 | 2210 |
+**<https://nf-osi.github.io/opensearch-ops/>** — recipe leaderboard, where correct answers
+land, quality against latency, the lookup/discovery split, per-case ranks, and the searches
+that currently fail.
 
-### Summary
+Locally: `python3 build_site.py && python3 -m http.server -d site`. The runs behind it are
+committed as JSON in [`results/`](results/); [`site.yaml`](../../site.yaml) decides which of
+them are published.
 
-- **`multi_match_cross` is the strongest strategy** — it leads every quality metric (MRR
-  0.744, Recall@10 0.693, Hit@1 0.667, Hit@10 0.896). Treating the searched fields as one
-  combined field, with name/synonym boosted above the disease/organism/category fields, both
-  ranks the right answer near the top and surfaces the most relevant results.
-- **Recall driven by fields defined in strategy.** The boosted/best strategies search a
-  curated 15-field set ([`fields.yaml`](fields.yaml)) covering names, synonyms, RRIDs, and the
-  discovery columns (`cellLineManifestation`, `species`, `cellLineCategory`, `resourceType`,
-  `vectorType`, …). `frontend_default` searches *all* fields, which is why its recall (0.642)
-  is respectable, but the noise from boilerplate columns leaves its ranking (MRR 0.659) below
-  the more refined strategies.
-- **Latency: a curated field list is fast and consistent.** The curated-field strategies run
-  at **~1180ms median** (p95 1680–2210). Searching all fields (`frontend_default`) is the
-  outlier at **1672ms median / 3572ms p95** — ~40% slower at the median, ~2× at the tail.
-  Among the curated strategies the median barely varies; query type only nudges the p95 tail
-  (`phrase_prefix`/`multi_match_best` highest, `simple_query_string`/`cross` lowest).
-- **`phrase_prefix` is the weakest** (MRR 0.541): multi-word discovery queries punish
-  phrase/word-order strictness. `boosted_fuzzy` also sits low — fuzziness adds noise on this
-  identifier-heavy data (RRIDs, clone names) without a recall payoff.
-- **Six queries are true recall gaps** (`recall_gap_current: true` — no relevant result in the
-  top 20): `pnf`, `melanoma-cell-line`, `metabolic-mouse-model`, `cafe-au-lait-spots`,
-  `nf1-cell-line-black`, `nf1-bacterial-vector`. They hinge on low-signal or sparsely-annotated
-  fields (race, the metabolic/café-au-lait manifestations, bacterial-expression vector type, the
-  `pnf` abbreviation). The levers are the bound `nf_tools_search_config` (analyzer routing +
+### What the runs have shown that is not a number
+
+Qualitative findings only — for the current standing of any strategy, read the dashboard.
+
+- **Recall follows the field list.** The boosted and best-field strategies search a curated
+  set ([`fields.yaml`](fields.yaml)) covering names, synonyms, RRIDs, and the discovery
+  columns (`species`, `cellLineCategory`, `resourceType`, `vectorType`, …).
+  `frontend_default` searches *all* fields, so it recalls respectably but carries noise from
+  boilerplate columns into its ranking.
+
+  > [!NOTE]
+  > Runs before 2026-09-09 understate this. Five names in `fields.yaml` — including the
+  > disease and manifestation columns this finding used to credit — did not exist on the
+  > index, so the curated strategies were searching 10 fields, not 15, and no strategy but
+  > `frontend_default` saw `manifestation` or `geneticDisorder` at all. Fixed in #22 and
+  > re-scored on 2026-09-09; the dashboard reflects the corrected list.
+
+- **A field list is a ceiling, not just a ranking.** `quoted-pdx-phrase` is the clearest
+  case: all 12 patient-derived xenografts carry the literal phrase in
+  `pdmModelSystemType`, one of the columns the 2026-08 table revision added. The platform
+  default finds every one of them because it sends no field list; every strategy that does
+  send one — production included — scores zero, purely because the column is not in it.
+  Widening `fields.yaml` is a different lever from re-weighting it, and this is the case
+  that separates them.
+- **Binding the search config cost more than it bought.** `nf_tools_search_config` was
+  bound to the index on 2026-09-09 and unbound the same day. Measured across two bound
+  states, MRR fell for seven of nine strategies and rose for none. The per-case split is
+  consistent: the abbreviation and discovery gaps the config was built for improve sharply
+  — `pnf` and `cnf` go from missing to rank 1 — while distinctive-name lookups
+  (`nf1-flox`, `nf1-grd`, `mpnst`, `lambda-greek-symbol`) fall just as sharply. The
+  plausible mechanism is that broader matching dilutes the signal a rare token carries,
+  but that is inference from the case split, not something isolated per analyzer: probes
+  intended to confirm stemming on individual columns did not discriminate between the
+  bound and unbound index. The verdict is also specific to this case mix — roughly
+  two-thirds known-item — and a discovery-weighted golden set could reverse it. The index
+  runs unbound today, so the platform default is measured with no customization at either
+  layer.
+
+  > [!NOTE]
+  > A rebuild triggered by a config change does not alter the document count, so polling
+  > `match_all` cannot tell you whether one has finished. Use a query whose result differs
+  > between the two analyzer states — the KEYWORD columns are the reliable probe
+  > (`race:black` returns 0 under KEYWORD, 9 without it).
+
+- **Analyzer reach and ranking are different problems.** `nf1-cell-line-black` is the
+  worked example. Its `race` column was both KEYWORD-analyzed (exact, case-sensitive) and
+  missing from the field list; both were fixed, `black` against `race` alone now returns
+  the whole pool at ranks 1 and 6-9, and the case's score did not move. The query's
+  generic tokens swamp the one unboosted signal that answers it. Making a column
+  reachable is a precondition for ranking it, not a substitute. The same holds in
+  aggregate: adding `race`, `sex` and `investigatorName` to the searched fields moved no
+  strategy by more than 0.001 MRR, with the index state held constant. Widening the field
+  list buys recall only where the added column is what the query is actually about.
+
+- **Fuzziness is a poor fit for this index.** NF tool data is identifier-heavy (RRIDs like
+  `CVCL_8478`, clone names like `ipNF95.11b`), where fuzzy matching pulls in wrong hits
+  without a recall payoff.
+- **Phrase and word-order strictness hurt discovery.** Multi-word topical queries punish
+  `phrase_prefix`, which is built for as-you-type rather than whole-query search.
+- **Boosting moves topical queries, not known-item ones.** Over-boosting the name field can
+  demote a correct synonym hit; see [Where field boosting actually matters](#where-field-boosting-actually-matters).
+- **Six queries are true recall gaps** (`recall_gap_current: true` in the golden set): `pnf`,
+  `melanoma-cell-line`, `metabolic-mouse-model`, `cafe-au-lait-spots`, `nf1-cell-line-black`,
+  `nf1-bacterial-vector`. They hinge on low-signal or sparsely-annotated fields (race, the
+  metabolic and café-au-lait manifestations, bacterial-expression vector type, the `pnf`
+  abbreviation). The levers are the bound `nf_tools_search_config` (analyzer routing +
   synonyms, e.g. a `pnf`→plexiform synonym) and registry annotation (tagging the café-au-lait
   models) — not query-strategy tuning.
-- **`k=10` undersells the discovery cases.** Many topical queries have `expected_pool` in the
-  tens-to-hundreds (e.g. melanoma 238) but a 3–5 item ideal head, so Recall@10 is a floor. nDCG
-  over the ranked heads would discriminate better — a future harness addition.
+- **`k=10` undersells the discovery cases.** Many topical queries have an `expected_pool` far
+  larger than their three-to-five item ideal head, so Recall@10 is a floor. nDCG over the
+  ranked heads would discriminate better — a future harness addition.
 
 ## Levers and expected return
 
@@ -123,10 +166,10 @@ hit (some runs have seen this).
 
 | Lever | Layer | Expected return | Measured | Notes |
 | --- | --- | --- | --- | --- |
-| **Fields searched** (which columns the query covers) | frontend query (hard-coded in SRC) | **High** | Curated 15-field set currently produces the best strategy (`multi_match_cross`). | The frontend hard-codes an all-fields query; realizing results curated `fields` is an update in frontend src. |
-| **Query type** (best_fields / cross_fields / phrase) | frontend query (hard-coded in SRC) | **Medium** | `cross_fields` is the strongest type (MRR 0.744); `best_fields` 0.645; `phrase_prefix` the weakest (0.541) — a ~0.2 MRR spread. | `cross_fields` pairs best with the curated boosted fields. |
-| **Field boosted** (`field^N`) | frontend query (hard-coded in SRC) | **Small–Medium** | Boosting modestly beats equal weighting (`multi_match_boosted` 0.654 vs `multi_match_best` 0.645) and combines with `cross_fields` for the top score; it moves topical/ambiguous queries, ~0 on known-item. | Over-boosting the name field can demote a correct synonym hit. |
-| **Fuzziness** (currently `AUTO`) | frontend query (hard-coded in SRC) | **Small** (from turning it off) | `boosted_fuzzy` is among the weakest (MRR 0.627, Recall@10 0.597); on identifier-heavy data (RRIDs, clone names) fuzziness adds noise with no recall payoff. | Cheapest, safest change |
+| **Fields searched** (which columns the query covers) | frontend query (hard-coded in SRC) | **High** | Yes — the curated field set carries the strongest strategies. | The platform default hard-codes an all-fields query; adopting a curated `fields` list is a frontend src change. |
+| **Query type** (best_fields / cross_fields / phrase) | frontend query (hard-coded in SRC) | **Medium** | Yes — query type spreads the field wider than boosting does, with `cross_fields` ahead and `phrase_prefix` behind. | `cross_fields` pairs best with the curated boosted fields. |
+| **Field boosted** (`field^N`) | frontend query (hard-coded in SRC) | **Small–Medium** | Yes — boosting modestly beats equal weighting and combines with `cross_fields`; it moves topical and ambiguous queries, and does nothing for known-item lookups. | Over-boosting the name field can demote a correct synonym hit. |
+| **Fuzziness** (currently `AUTO`) | frontend query (hard-coded in SRC) | **Small** (from turning it off) | Yes — the fuzzy strategies sit among the weakest; on identifier-heavy data (RRIDs, clone names) fuzziness adds noise with no recall payoff. | Cheapest, safest change |
 | **Analyzers / synonyms** | config (index) | **Unknown — potentially high for the recall gaps** | Not yet measured: config is created but unbound. | Each iteration is a full delete-recreate-reindex, highest cost-per-experiment. |
 
 

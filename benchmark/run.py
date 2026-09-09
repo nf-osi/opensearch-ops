@@ -26,33 +26,85 @@ import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))  # repo root, for query.py
-from query import search, hit_dict  # noqa: E402
+from query import search, hit_dict, _call  # noqa: E402
 
 
 def load_strategies(table_dir):
-    """Load STRATEGIES from the table's strategies.py, falling back to the
-    shared benchmark/strategies.py if the table doesn't define its own."""
+    """Load the strategy module for a table: its own strategies.py if it has one, else the
+    shared benchmark/strategies.py. Returns the module, so callers get both `STRATEGIES`
+    and `compile_production` from whichever file is in force."""
     for path in (os.path.join(table_dir, "strategies.py"),
                  os.path.join(HERE, "strategies.py")):
         if os.path.exists(path):
             spec = importlib.util.spec_from_file_location("strategies", path)
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-            return mod.STRATEGIES
+            return mod
     sys.exit(f"no strategies.py found in {table_dir} or {HERE}")
 
 
-def load_fields(table_dir):
-    """Load the table's match fields (with `^N` boosts) from benchmark/<table>/fields.yaml.
+DEFAULT_CONTROL = "frontend_default"
 
-    Returns the list as-is, e.g. ["resourceName^5", ...]; strategies that want unboosted
-    matching strip the `^weight` themselves. Falls back to ["*"] (all fields, no boost)
-    when the table has no fields.yaml."""
+
+def load_field_config(table_dir):
+    """Load benchmark/<table>/fields.yaml -> (fields, production_spec, control).
+
+    `fields` is the match list with `^N` boosts as-is, e.g. ["resourceName^5", ...];
+    strategies that want unboosted matching strip the `^weight` themselves. Falls back to
+    ["*"] (all fields, no boost) when the table has no fields.yaml.
+
+    `production` is the optional block transcribing what the portal actually sends for this
+    table (its SearchQueryConfig); when present it is compiled into a `production_current`
+    strategy. `control` names the strategy this table is measured against — which is
+    `production_current` for a table whose portal customizes its search, and
+    `frontend_default` (the platform default) for one that does not."""
     path = os.path.join(table_dir, "fields.yaml")
-    if os.path.exists(path):
-        cfg = yaml.safe_load(open(path)) or {}
-        return cfg.get("fields") or ["*"]
-    return ["*"]
+    if not os.path.exists(path):
+        return ["*"], None, DEFAULT_CONTROL
+    cfg = yaml.safe_load(open(path)) or {}
+    return (cfg.get("fields") or ["*"],
+            cfg.get("production"),
+            cfg.get("control") or DEFAULT_CONTROL)
+
+
+def index_binding(index_id):
+    """The SearchConfiguration id bound to this SearchIndex, or None if it is uncustomized.
+
+    Read anonymously off the entity, the same field `config.py apply/unbind` writes. This
+    is recorded on every run because index configuration is a property of the INDEX, not
+    of a strategy: one run scores every strategy against whatever analyzers are bound at
+    the time, and that state is otherwise invisible in the results file.
+    """
+    try:
+        code, ent = _call(f"entity/{index_id}")
+        return ent.get("searchConfigurationId") if code < 400 else None
+    except Exception:
+        return None                          # never let a provenance read break a run
+
+
+def warn_if_bound(index_id, strategies, config_id):
+    """`frontend_default` is the PLATFORM default — what a portal gets with no
+    customization. That means no customized query AND no bound search configuration. Run
+    it against an index with a config bound and you get the default query on a customized
+    index, which is a different measurement and generally a worse one.
+
+    This cannot be fixed inside the run: every strategy shares one index state, so a run
+    cannot hold a bound and an unbound measurement at once. The fix is procedural — score
+    the platform default with the config unbound:
+
+        python3 config/config.py unbind --index <id>      # then wait for the rebuild
+        python3 benchmark/run.py <table> --label unbound
+        python3 config/config.py apply <config-id> --index <id>
+
+    and point site.yaml's `graft:` at that run so the dashboard reads the honest number.
+    """
+    if not config_id or "frontend_default" not in strategies:
+        return
+    print(f"\n  WARNING: {index_id} has SearchConfiguration {config_id} bound, so "
+          f"`frontend_default` here is\n"
+          f"  the default QUERY on a CUSTOMIZED index — not the platform default. For a true\n"
+          f"  platform-default number, unbind first (config.py unbind), score it, then re-bind:\n"
+          f"  see warn_if_bound() in this file and `graft:` in site.yaml.\n")
 
 
 def reciprocal_rank(ranked_ids, relevant):
@@ -93,8 +145,15 @@ def hit_id(hit, id_field):
 def run(golden, strategies, fields, k, poll_s):
     index = golden["index"]
     id_field = golden.get("id_field", "resourceId")
+    config_id = index_binding(index)
+    warn_if_bound(index, strategies, config_id)
     out = {"index": index, "index_name": golden.get("index_name"), "k": k,
-           "id_field": id_field, "strategies": {}, "per_case": {}}
+           "id_field": id_field,
+           # which SearchConfiguration was bound while this run was scored (None = the
+           # index was uncustomized). Without it a results file cannot say which index
+           # state it measured, and two runs are not comparable unless this matches.
+           "search_config_id": config_id,
+           "strategies": {}, "per_case": {}}
     for sname, sfn in strategies.items():
         case_scores = []
         rts = []
@@ -178,13 +237,27 @@ def main():
 
     golden = yaml.safe_load(open(golden_path))
     k = args.k or golden.get("k", 10)
-    all_strategies = load_strategies(table_dir)
+    strategy_mod = load_strategies(table_dir)
+    all_strategies = dict(strategy_mod.STRATEGIES)
+    fields, production, control = load_field_config(table_dir)
+    if production is not None:
+        all_strategies["production_current"] = strategy_mod.compile_production(production)
+    if control not in all_strategies:
+        sys.exit(f"fields.yaml names control {control!r}, which is not a strategy "
+                 f"(have: {', '.join(sorted(all_strategies))})")
     strategies = all_strategies
     if args.strategy:
-        strategies = {n: all_strategies[n] for n in args.strategy}
-    fields = load_fields(table_dir)
+        unknown = [n for n in args.strategy if n not in all_strategies]
+        if unknown:
+            sys.exit(f"unknown strategy for {args.table}: {', '.join(unknown)} "
+                     f"(have: {', '.join(sorted(all_strategies))}). Note production_current "
+                     f"exists only for a table whose fields.yaml has a `production:` block.")
+        # Always score the control, so every run can be read as a delta against it.
+        wanted = list(dict.fromkeys(args.strategy + [control]))
+        strategies = {n: all_strategies[n] for n in wanted}
 
     out = run(golden, strategies, fields, k, args.poll)
+    out["control"] = control
     out["label"] = args.label
     out["run_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     print(f"\nnf index: {out['index_name']} ({out['index']})  |  k={k}  |  "

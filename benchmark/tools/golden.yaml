@@ -58,7 +58,7 @@
 
 index: syn75081636
 index_name: nf-tools
-version: 2026.07.30
+version: '2026.09.09'
 k: 10
 # id_field: which column the `relevant` ids below come from, i.e. what the runner
 # matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
@@ -780,7 +780,22 @@ cases:
     expected_pool: 5
     entity_types: [Cell Line]
     recall_gap_current: true   # verified live 2026-07-10: 0/5 in top 20 — race is a weak/low-signal field for free-text search
-    notes: "Eval CL-004. Ground truth = race='Black' AND cellLineGeneticDisorder HAS ('Neurofibromatosis type 1') (re-verified live 2026-07-10: 5 rows, not 6 — the 5 listed below are the complete pool, not just the head)."
+    notes: >-
+      Eval CL-004. Ground truth = race='Black' AND geneticDisorder HAS ('Neurofibromatosis
+      type 1') (re-verified live 2026-07-10: 5 rows, not 6 — the 5 listed below are the
+      complete pool, not just the head; the genetic-disorder column was renamed from
+      cellLineGeneticDisorder in the 2026-08 table revision, see #22).
+      Root cause re-diagnosed 2026-09-09 and it is NOT what it looked like. Two suspected
+      blockers were removed that day — `race` carried a KEYWORD analyzer so lowercase
+      'black' scored 0 (#23), and `race` was not in fields.yaml at all — and fixing both
+      changed this case's score by nothing. Measured after the fix: 'black' against `race`
+      alone returns all 5 at ranks 1,6,7,8,9, so the column is fully reachable now. The
+      real query still fails because 'nf1', 'cell', 'line' and 'patient' match ~1,134
+      resources between them and an unboosted `race` hit cannot outweigh boosted matches
+      elsewhere — the best relevant row lands at rank 14, outside k=10. Even 'nf1 black'
+      returns nothing relevant in the top 20. This is the same generic-token dilution as
+      melanoma-cell-line, not an analyzer or field-coverage gap, and it will not yield to
+      either lever.
     relevant:
       - 7ef2fd6f-9ba6-4e30-94fc-d4ffd61de6e6   # icNF00.10a (Cell Line)
       - ad2e271b-55ac-44ae-b39d-f1a6d76e1dc3   # cNF00.10a (Cell Line)
@@ -1049,3 +1064,72 @@ cases:
       human cell line, not a pig.
     relevant:
       - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model), p.Arg1947*(R1947*) minipig
+
+  # ---------------------------------------------------------------------------
+  # Quoted-phrase cases (issue #18). The frontend routes any query containing a
+  # double-quoted phrase — and any query containing a Synapse id — to
+  # `simple_query_string` instead of the configured queryStrategy
+  # (buildQueryClause, SearchQueryUseQueryOptions.ts:146). Until these were added,
+  # 0 of 178 golden cases across all five tables contained a double quote, so that
+  # branch was never exercised and a regression in it could not be detected.
+  #   source: manual
+  # nf-tools has no Synapse-id case: its resourceIds are UUIDs, so there is nothing
+  # for a user to paste. The id path is covered on nf-studies (synid-exact-lookup).
+
+  - id: quoted-mpnst-model
+    query: '"malignant peripheral nerve sheath tumor model"'
+    type: known-item
+    source: manual
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 2
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: >-
+      Quoting works, and this case measures it. The same words unquoted match 57 resources
+      (every model whose text carries 'tumor', 'nerve' or 'model' separately) and rank these
+      two first only on term overlap; quoted, the phrase clause returns exactly these two.
+      Probed live 2026-09-09 against prod with production_current's field list. The two rows
+      are genuine duplicates in the registry (same name, two resourceIds) — both are correct
+      answers, which is why expected_pool is 2 and not 1.
+    relevant:
+      - b566507a-ceaf-58a3-a953-3d94b55c1ac0   # C57BL/6 Neurofibromatosis Type 1 Malignant Peripheral Nerve Sheath Tumor Model
+      - 060e787d-8615-57ba-b7ba-609e997862e8   # C57BL/6 Neurofibromatosis Type 1 Malignant Peripheral Nerve Sheath Tumor Model
+
+  - id: quoted-pdx-phrase
+    query: '"patient-derived xenograft"'
+    type: topical
+    source: manual
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 12
+    entity_types: [Patient-Derived Model]
+    recall_gap_current: true
+    notes: >-
+      The counter-case to quoted-mpnst-model, and the cleanest field-list case in the set.
+      Ground truth = pdmModelSystemType = 'PDX (Patient-Derived Xenograft)' (12 rows, the
+      complete pool, not a head). The phrase IS in the data — it is the literal value of
+      `pdmModelSystemType`, a column added in the 2026-08 table revision — so the platform
+      default, which sends no field list and therefore searches everything, retrieves all
+      12 (ranks 3-14 of 14; Recall@10 = 0.67, held off rank 1 only by two red herrings whose
+      description uses the phrase: NCC-MPNST3-X2 c8a807e4 and UCD65 07d262bf). Every
+      strategy with an explicit field list, production_current included, scores ZERO here:
+      not because the data is missing but because fields.yaml does not list the column.
+      The exception is multi_match_cross, which ignores the quotes and matches the two rows
+      whose resourceName contains 'xenografts'. Probed live 2026-09-09.
+      Shares its pool with the `pdx` case above, which measures the SHORTHAND and does not
+      fail — the abbreviation is in the names, the expansion is only in the new column.
+      Read the two together; do not read their recall as independent evidence.
+    relevant:
+      - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX)
+      - 9a8e2ef3-2527-5ca5-8be3-be305783590a   # JH-2-009 (PDX)
+      - ed753700-b096-5b6f-878c-76b21cd0b2a6   # JH-2-013 (PDX)
+      - b0bf3254-ba2d-5ed0-9df1-b473f5237607   # JH-2-015 (PDX)
+      - 63e1afa6-0f36-5ad9-8659-9e3e4897e5bd   # JH-2-023 (PDX)
+      - 0a2a48e9-cfc3-5337-b5f6-e5aee18e7113   # JH-2-031 (PDX)
+      - 8e681594-c7c1-5809-86e2-0c16cd9a2493   # JH-2-055-b (PDX)
+      - 8133c2c7-7948-5c98-96d3-abc577e8bfad   # JH-2-079-c (PDX)
+      - 75944a7c-dca5-5796-913c-2585330ab1cc   # MN-2 (PDX)
+      - a4a33fb7-5dc0-5632-a437-c8fe1e38d4f7   # NF1 MPNST PDX4 (PDX)
+      - e080df79-e33c-56de-9299-07dd79ddee51   # human neurofibroma xenografts (PDX)
+      - 571cb9d8-dee4-506e-988c-3c45a80ab776   # vestibular schwannoma xenografts (PDX)

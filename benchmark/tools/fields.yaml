@@ -18,9 +18,39 @@
 # and every strategy here is one of the fixed shapes.
 #
 # NOTE: a multi_match/simple_query_string with an explicit `fields` list searches ONLY
-# these columns — the ~30 columns NOT listed below are invisible to every strategy except
+# these columns — the other 58 columns are invisible to every strategy except
 # `frontend_default` (which sends no field list and so searches all fields). Commented
 # entries below are candidates you can uncomment to widen coverage.
+#
+# Column names audited 2026-09-09 against the source table's column model
+# (`/entity/syn51730943/column`, 70 columns), which is authoritative: the index is
+# `SELECT * FROM syn51730943`, so a name absent there is a silent no-op in every query.
+
+# ---------------------------------------------------------------- the control
+# Which strategy this table is measured against. nf-tools is the one NF index whose portal
+# page sets a SearchQueryConfig, so its control is what that config sends (below), NOT the
+# platform default — comparing a candidate to `frontend_default` here would claim credit
+# for a change production already shipped. The 12 indexes with no config keep
+# `control: frontend_default` (the default when this key is absent).
+control: production_current
+
+# What the nf-tools portal page actually sends today. Transcribed from
+# apps/portals/nf/src/config/resources.ts:49 `toolsSearchQueryConfig` (wired at
+# synapseConfigs/tools.tsx:121), synapse-web-monorepo @ ec83a0164ae (2026-09-03).
+# run.py compiles this into the `production_current` strategy, including the
+# quoted-phrase / Synapse-id routing to simple_query_string that runs ahead of the
+# queryStrategy switch. Re-check against resources.ts whenever the portal is redeployed;
+# these boosts are deliberately NOT the same as `fields:` below — the delta between them
+# is the headroom the benchmark exists to measure.
+production:
+  query_strategy: MULTI_MATCH_BEST_FIELDS   # no fuzziness: the config sets none
+  fields:
+    - "resourceName^5"
+    - "synonyms^4"
+    - "rrid^4"
+    - "targetAntigen^2"
+    - "geneticDisorder"
+    - "description"
 
 fields:
   # identity / names — strongest signal
@@ -29,42 +59,89 @@ fields:
   - "rrid^4"
   # antibody target
   - "targetAntigen^3"
-  # disease / phenotype / manifestation — discovery
-  - "cellLineManifestation^3"
-  - "animalModelOfManifestation^3"
-  - "diseaseType^2"
+  # disease / phenotype / manifestation — discovery.
+  # `manifestation` and `geneticDisorder` are the unified columns the source table moved to;
+  # they replace the per-resource-type names (cellLineManifestation, animalModelOfManifestation,
+  # diseaseType, cellLineGeneticDisorder, animalModelGeneticDisorder) this file used to list,
+  # none of which exist on syn51730943 any more.
+  - "manifestation^3"
+  - "geneticDisorder^2"
   - "tumorType^2"
-  - "cellLineGeneticDisorder^2"
-  - "animalModelGeneticDisorder^2"
   # organism / kind / modality — discovery
   - "species^2"
   - "cellLineCategory^2"
   - "resourceType^2"
   - "vectorType^2"
+  # people — investigator search (#19/#20). Sparse (~5% of rows carry a name), but when a
+  # user types a surname it is the only column that can answer, and a surname is a
+  # distinctive token so the collision risk that keeps race/sex at weight 1 does not apply.
+  # Boosted to 2 as a starting point, not a tuned value — #20 is where the right weight
+  # gets established, and it needs the #19 golden cases to measure against. `institution`
+  # is the obvious companion and is still on the candidate list below.
+  - "investigatorName^2"
+  # donor demographics — unboosted. Narrow, sparsely filled columns (race ~11%, sex on most
+  # cell lines) that only matter when the user names them, e.g. the nf1-cell-line-black case
+  # ('nf1 cell line black patient'). Left at weight 1 deliberately: boosting them would let a
+  # stray 'male'/'female' token outrank a name match on the ~200 rows carrying each value.
+  # Reachable only since #23 dropped their KEYWORD override — under KEYWORD they were exact
+  # and case-sensitive, so a lowercase query scored 0 no matter what this list said.
+  - "race"
+  - "sex"
   # free text — weight 1
   - "description"
 
 # Candidate fields NOT currently searched — uncomment (with a boost) to include.
-# Plausibly useful for discovery, left out of the default set pending SME review:
-#   - "specimenTissueType"          # tissue of origin
+# The source table gained ~24 columns in the 2026-08 revision (new resource types: PDX/PDM
+# models, organoids, computational tools/software, clinical assessments), so this list is
+# longer than it was. Grouped by what they'd buy; left out of the default set pending SME
+# review, because adding a field changes every boosted/cross score.
+#
+# Free text — the biggest single omission:
+#   - "aiSummary"                   # LARGETEXT per-resource summary, NEW in the revision.
+#                                   # Parallel to `description` and populated where description
+#                                   # is not (description is ~64% filled). frontend_default
+#                                   # already searches it; our strategies do not. Decide first.
+#
+# Anatomy / specimen:
+#   - "organ"                       # NEW; enumeration
+#   - "tissue"                      # NEW; replaces the cell-line tissue-of-origin role
+#   - "specimenTissueType"
 #   - "specimenPreparationMethod"
 #   - "specimenType"
 #   - "specimenFormat"
 #   - "biobankName"
+#
+# Resource-type descriptors (NEW — these are how the new types are discoverable at all):
+#   - "modelType"                   # enumeration
+#   - "softwareType"                # enumeration
+#   - "computationalToolType"
+#   - "computationalToolLanguage"
+#   - "computationalToolPlatformSupport"
+#   - "organoidType" / "organoidModelType" / "organoidDerivationSource" / "organoidCellTypes"
+#   - "cultureSystem"
+#   - "pdmModelSystemType" / "pdmHostStrain" / "engraftmentSite"
+#   - "clinicalAssessmentType" / "clinicalAssessmentTargetPopulation"
+#   - "clinicalAssessmentDiseaseSpecific"
+#
+# Per-type detail (pre-existing):
 #   - "insertName"                  # genetic-reagent insert
 #   - "insertSpecies"
+#   - "selectableMarker"            # NEW; genetic reagent
+#   - "resistance"                  # NEW; genetic reagent
 #   - "backgroundStrain"            # animal-model strain
 #   - "backgroundSubstrain"
+#   - "animalState"                 # NEW; enumeration
 #   - "reactiveSpecies"             # antibody reactivity
 #   - "hostOrganism"                # antibody host
-#   - "investigatorName"            # people search (sparse: ~5% filled)
-#   - "institution"
-#   - "race"                        # demographic; relates to the nf1-cell-line-black gap
-#   - "sex"
+#   - "conjugate"                   # NEW; antibody
+#
+# People:
+#   - "institution"                 # companion to investigatorName; affiliation search
 #
 # Deliberately excluded (not useful as free-text match targets):
-#   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL
-#   boilerplate / contact .. howToAcquire, usageRequirements, contact
+#   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL, downloadURL
+#   boilerplate / contact .. howToAcquire, usageRequirements, contact, licenseType
 #   dates / age ............ dateAdded, dateModified, latestPublicationDate, age
-#   faceting-only flags .... completenessCategory, availabilityCategory,
-#                            criticalInfoCategory, otherInfoCategory, observationCategory
+#   faceting-only flags .... completenessCategory, availabilityCategory, criticalInfoCategory,
+#                            otherInfoCategory, observationCategory, availability,
+#                            availabilityStatus
