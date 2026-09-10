@@ -8,13 +8,13 @@ export const STRATEGY_LABELS = {
   frontend_default: {
     name: "Platform default",
     tag: "default",
-    blurb: "The Synapse front-end's built-in query, applied to any portal that has not customized its search: every field, equal weight, typo tolerance, no boosts.",
+    blurb: "The portal default where nothing is customized: the Synapse front-end's built-in query — every field, equal weight, typo tolerance, no boosts — on an index with no search configuration bound, so no custom analyzers or synonym sets either.",
     bestFor: "The control every recipe here is measured against — a platform-wide fallback, not a choice NF made.",
   },
   production_current: {
     name: "In production",
     tag: "live",
-    blurb: "The query this portal page actually issues right now, transcribed from its search config in synapse-web-monorepo — including the rule that sends quoted phrases and Synapse ids down a separate exact-match path.",
+    blurb: "The query this portal page actually issues right now, transcribed from its custom search config — including the rule that sends quoted phrases and Synapse ids down a separate exact-match path.",
     bestFor: "The control for an index whose portal has customized its search: any gain a recipe shows here is a gain over what users get today, not over a default nobody runs.",
   },
   simple_query_string_boosted: {
@@ -60,6 +60,45 @@ export const STRATEGY_LABELS = {
     bestFor: "Autocomplete / as-you-type search boxes.",
   },
 };
+
+// The three reference points every figure on the results page is read against, named as
+// arms of an experiment rather than in search-engine terms. `tone` is the ROLE
+// (charts.js) whose colour the arm's mark wears in every chart; `gist` is the one clause
+// the collapsed card shows; `aka` is the wording the figures use, so a card can be found
+// from a legend. Order is control -> deployed ->
+// best, which is also the order the charts plot them.
+export const REFERENCE_POINTS = [
+  {
+    tone: "baseline",
+    gist: "no custom config",
+    role: "Control arm",
+    name: "Platform default",
+    aka: "“Platform default”; “today” in two-point figures",
+    what: "The portal default for any portal with no custom config — no query tuning, and no index-side settings such as custom analyzers or synonyms. All fields, equal weight, typo tolerance, no boosts.",
+    why: "The fixed control. Gains on this page are measured against it unless a figure says otherwise.",
+    caveat: "Present on every index. A platform fallback, not a choice NF made.",
+  },
+  {
+    tone: "production",
+    gist: "what users get now",
+    role: "Deployed arm",
+    name: "In production",
+    aka: "“In production”; “portal today” in glossaries",
+    what: "The query this portal issues today, transcribed from this index’s custom search config. Quoted phrases and Synapse ids take a separate exact-match path.",
+    why: "What users get now. A recipe above it would change production results; one below it would be a regression if promoted.",
+    caveat: "Only on indexes with a custom search config. Elsewhere it is the same query as the platform default.",
+  },
+  {
+    tone: "best",
+    gist: "highest MRR this run",
+    role: "Best arm tested",
+    name: "Best experiment",
+    aka: "“Best recipe tested”; “Best on MRR” in single-metric figures",
+    what: "The highest-MRR arm in this run. Arms vary in query shape, in field boosts, and in the index’s own search configuration.",
+    why: "The measured upper bound so far, and the promotion candidate. Not deployed.",
+    caveat: "Best on the pooled average, which can hide losses on a search type. A reference arm can itself be the best arm.",
+  },
+];
 
 // Plain-language metric definitions (from RESULTS.md). `dir` = which direction is better.
 export const METRIC_LABELS = {

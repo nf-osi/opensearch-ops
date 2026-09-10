@@ -11,7 +11,7 @@
 
 import { hbar, dumbbell, scatter, rankstack, heatmap, legend, tableTwin, defsTwin, rankBucket,
          ROLE, RANK_BANDS, fmtNum, fmtMs } from "./charts.js";
-import { strategyLabel, METRIC_LABELS, CASE_TYPE_LABELS } from "./labels.js";
+import { strategyLabel, METRIC_LABELS, CASE_TYPE_LABELS, REFERENCE_POINTS } from "./labels.js";
 import { anchorLink, setRoute, scrollToSection } from "./route.js";
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -37,15 +37,21 @@ const day = (iso) => (iso ? String(iso).slice(0, 10) : "—");
 
 /** A section shell: eyebrow + heading + optional lede, then a body to fill.
  *  `slug` makes the section addressable as #/results/<index>/<slug>. */
-function block(host, { eyebrow, title, lede, slug }) {
+function block(host, { eyebrow, title, lede, cta, slug, eyebrowTone }) {
   const sec = el("section", "block");
   if (slug) sec.id = slug;
   const head = el("header", "block-head");
-  if (eyebrow) head.appendChild(el("p", "block-eyebrow", eyebrow));
+  if (eyebrow) head.appendChild(el("p", `block-eyebrow${eyebrowTone ? ` is-${eyebrowTone}` : ""}`, eyebrow));
   const h = el("h2", null, title);
   if (slug) h.appendChild(anchorLink(slug, { table: state.table }));
   head.appendChild(h);
-  if (lede) head.appendChild(el("p", "block-lede", lede));
+  if (lede) {
+    const p = el("p", "block-lede", lede);
+    // The one instruction in the lede is set bold: on a page this dense, "pick an index"
+    // is an action, and it reads as prose if it is styled like the sentence around it.
+    if (cta) p.appendChild(el("strong", "block-cta", cta));
+    head.appendChild(p);
+  }
   const body = el("div", "block-body");
   sec.append(head, body);
   host.appendChild(sec);
@@ -152,6 +158,7 @@ function ranCaseIds(data, run) {
 export async function initResults(route = {}) {
   MANIFEST = await fetch("data/manifest.json").then((r) => r.json());
   renderHero();
+  renderReferencePoints();
   renderPortfolio();
   await showRoute(route, { scroll: true });
   $("#builtStamp").textContent = MANIFEST.generated_at ? `Built ${MANIFEST.generated_at}` : "";
@@ -216,13 +223,23 @@ function renderHero() {
     : `${MANIFEST.coverage.n_cases} golden searches are curated across ${MANIFEST.coverage.n_benchmarked} indexes. Run benchmark/run.py and commit the results to fill this in.`));
 
   if (!nToday) return;
-  const tile = (role, label, value, delta, sub, tone) => {
-    const t = el("div", `stat stat-${role}`);
-    t.appendChild(el("p", "stat-label", label));
-    t.appendChild(el("p", "stat-value", value));
-    if (delta) t.appendChild(el("p", `stat-delta${tone ? ` is-${tone}` : ""}`, delta));
-    t.appendChild(el("p", "stat-sub", sub));
-    return t;
+
+  /* A rail, not three cards. These are context for a headline that already states the
+     finding, so they get hairline dividers and no card chrome — the section's only boxes
+     should be the ones you can act on. Each item's full explanation is on its `title`;
+     the line under the rail carries what the numbers themselves cannot say. */
+  const railItem = ({ tone, label, value, notes = [], help }) => {
+    const it = el("div", `rail-item${tone ? ` is-${tone}` : ""}`);
+    if (help) it.title = help;
+    const lab = el("p", "rail-label");
+    const dot = el("span", "rail-dot");
+    dot.setAttribute("aria-hidden", "true");
+    lab.append(dot, document.createTextNode(label));
+    it.append(lab, el("p", "rail-value", value));
+    for (const n of notes.filter(Boolean)) {
+      it.appendChild(el("p", `rail-note${n.tone ? ` is-${n.tone}` : ""}`, n.text));
+    }
+    return it;
   };
   // Round-trip is measured client-side per case, so there is no pooled median to read off
   // the aggregates — take the per-index medians weighted by the cases each run covered.
@@ -235,37 +252,135 @@ function renderHero() {
     return n ? acc / n : null;
   };
   const rtToday = rt("baseline_key"), rtBest = rt("best_key");
-  const figs = el("div", "hero-figs");
-  // The headline already carries the pooled gain, so the first tile answers a different
-  // question: is the gain broad, or one index dragging the pool? Counted per index rather
-  // than pooled, because an index already at its best is the useful negative result.
+  // The headline carries the pooled gain, so the first item answers a different question:
+  // is the gain broad, or one index dragging the pool? Counted per index rather than
+  // pooled, because an index already at its best is the useful negative result.
   const withRun = scored.filter((t) => t.latest.baseline_key && t.latest.best_key);
   const headroom = withRun.filter((t) =>
     (t.latest.strategies[t.latest.best_key]?.mrr ?? 0) >
     (t.latest.strategies[t.latest.baseline_key]?.mrr ?? 0) + 1e-9);
   const atBest = withRun.filter((t) => !headroom.includes(t)).map((t) => t.index_name);
-  figs.append(
-    tile("best", "Indexes with gains", `${headroom.length} of ${withRun.length}`,
-      headroom.length ? `best gain +${fmtNum(Math.max(...headroom.map((t) =>
-        t.latest.strategies[t.latest.best_key].mrr - t.latest.strategies[t.latest.baseline_key].mrr)))} MRR` : null,
-      atBest.length
-        ? `Scored indexes where some tested recipe can beat the deafult. ${atBest.join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best recipe tested. Gains are not uniform; not every index can benefit from customization.`
-        : `Every scored index has a tested recipe that beats the default.`),
-    tile("baseline", "Searches that miss entirely", String(today.miss),
-      `${pct(today.miss, nToday)} of ${nToday} curated searches`,
-      `No correct result anywhere in the top ${scored[0].latest.k} on the platform default. The best recipe tested misses ${best.miss} (${pct(best.miss, nBest)}).`,
-      "quiet"),
+  const bestGain = headroom.length ? Math.max(...headroom.map((t) =>
+    t.latest.strategies[t.latest.best_key].mrr - t.latest.strategies[t.latest.baseline_key].mrr)) : null;
+
+  const rail = el("div", "hero-rail");
+  rail.append(
+    railItem({
+      tone: "best", label: "Indexes with gains", value: `${headroom.length} of ${withRun.length}`,
+      notes: [bestGain != null ? { text: `best gain +${fmtNum(bestGain)} MRR` } : null],
+      help: "Scored indexes where some tested recipe beats the control on MRR.",
+    }),
+    railItem({
+      tone: "baseline", label: "Searches that miss entirely", value: String(today.miss),
+      notes: [
+        { text: `${pct(today.miss, nToday)} of ${nToday} curated searches`, tone: "quiet" },
+        { text: `best arm misses ${best.miss} (${pct(best.miss, nBest)})`, tone: "quiet" },
+      ],
+      help: `No correct result anywhere in the top ${scored[0].latest.k} on the platform default.`,
+    }),
   );
   if (rtBest != null && rtToday != null) {
     const faster = rtToday - rtBest;
-    // as a share of the default, to read the same way as the +N points above
+    // as a share of the default, to read the same way as the points gained above
     const shift = Math.round((Math.abs(faster) / rtToday) * 100);
-    figs.appendChild(tile("best", "Best recipe latency", fmtMs(rtBest),
-      shift < 1 ? null : `${faster > 0 ? "−" : "+"}${shift}% vs the platform default`,
-      `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default measures ${fmtMs(rtToday)}.`,
-      faster > 0 ? null : "worse"));
+    rail.appendChild(railItem({
+      tone: "best", label: "Best recipe latency", value: fmtMs(rtBest),
+      notes: [shift < 1 ? null : { text: `${faster > 0 ? "−" : "+"}${shift}% vs the platform default`, tone: faster > 0 ? null : "worse" }],
+      help: `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default measures ${fmtMs(rtToday)}.`,
+    }));
   }
-  host.appendChild(figs);
+  host.appendChild(rail);
+  host.appendChild(el("p", "hero-rail-note", atBest.length
+    ? `Pooled across the ${scored.length} scored indexes and measured against the platform default. ${atBest.join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best recipe tested — gains are not uniform, and not every index benefits from customization.`
+    : `Pooled across the ${scored.length} scored indexes and measured against the platform default. Every scored index has a tested recipe that beats its control.`));
+}
+
+// ------------------------------------------------------- reference points (reading guide)
+/* Three arms recur in every figure below, and their names are only obvious to someone who
+   already knows the codebase. Stated once, up front, in experiment terms — control /
+   deployed / best tested — so a reader meets them before the first chart uses them, and
+   in the same colours the marks wear. Copy lives in labels.js beside the strategy blurbs.
+
+   Laid out as the lifecycle rather than as three loose definitions, because the arms are
+   one sequence: NF moved off the platform default by deploying a configuration, and a
+   best arm is what a future deployment would promote. Card order still matches the order
+   the charts plot them, so the two connectors run in opposite directions — settled
+   transitions grey and solid, the prospective one teal and dashed. */
+const FLOW_STEPS = [
+  { label: "deployed as", back: false },      // platform default -> in production
+  { label: "promotion candidate", back: true },  // best experiment -> in production
+];
+
+/** A connector between two stage cards. Decorative arrow, meaningful label: the label
+ *  alone has to read sensibly in DOM order, since the direction is carried visually. */
+function flowConnector({ label, back }) {
+  const c = el("div", `flow-arrow${back ? " is-back" : ""}`);
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 40 16");
+  svg.setAttribute("aria-hidden", "true");
+  svg.innerHTML = '<path class="flow-shaft" d="M2 8h30"/><path d="M27.5 3.5 32 8l-4.5 4.5"/>';
+  c.append(svg, el("span", "flow-arrow-label", label));
+  return c;
+}
+
+function renderReferencePoints() {
+  const host = $("#reference");
+  host.replaceChildren();
+  const body = block(host, {
+    slug: "reference",
+    eyebrow: "How to read this",
+    title: "Three reference points",
+    lede: `Every recipe is scored as one arm of an experiment over a fixed set of searches with known-correct answers. Three arms are named, appear in every figure, and always carry these colours.`,
+  });
+
+  const track = el("div", "flow-track");
+  track.setAttribute("role", "group");
+  track.setAttribute("aria-label", "Search configuration lifecycle: platform default, in production, best experiment");
+  REFERENCE_POINTS.forEach((rp, i) => {
+    if (i > 0) track.appendChild(flowConnector(FLOW_STEPS[i - 1]));
+    // Collapsed, a node is a legend entry: colour, role, name, one clause. The prose a
+    // first-time reader needs is one click away rather than three paragraphs down the
+    // page — the flow and the colour mapping are what have to be always visible.
+    // rp.tone is the chart ROLE, so the node's rail and dot are coloured by the same
+    // stylesheet rules that colour the marks — no second copy of the mapping here.
+    const node = el("details", `flow-node is-${rp.tone}`);
+    const sum = document.createElement("summary");
+    const head = el("div", "ref-head");
+    const dot = el("span", "ref-dot");
+    dot.setAttribute("aria-hidden", "true");
+    head.append(dot, el("span", "ref-role", rp.role));
+    const text = el("div", "flow-node-text");
+    text.append(head, el("h3", "ref-name", rp.name), el("p", "flow-node-gist", rp.gist));
+    const chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    chev.setAttribute("class", "disclosure-icon");
+    chev.setAttribute("viewBox", "0 0 24 24");
+    chev.setAttribute("aria-hidden", "true");
+    chev.innerHTML = '<path d="M9 6l6 6-6 6"/>';
+    sum.append(text, chev);
+    const bodyEl = el("div", "flow-node-body");
+    // the exact words the figures use, so a node is findable from a legend and back
+    const aka = el("p", "ref-aka");
+    aka.appendChild(el("span", "ref-aka-label", "In figures"));
+    aka.append(document.createTextNode(rp.aka));
+    const why = el("p", "ref-why");
+    why.appendChild(el("span", "ref-why-label", "Interpretation"));
+    why.append(document.createTextNode(rp.why));
+    bodyEl.append(aka, el("p", "ref-what", rp.what), why, el("p", "ref-caveat", rp.caveat));
+    node.append(sum, bodyEl);
+    track.appendChild(node);
+  });
+  body.appendChild(track);
+
+  // The arrows state the direction; this states it in words, for anyone reading the cards
+  // as a list. Both connectors point at production because that is the deployed state.
+  body.appendChild(el("p", "flow-note",
+    "Both arrows point at production: the platform default is what NF deployed a configuration to replace, and a best arm is what the next deployment would promote. Promotion is a separate decision — nothing on this page changes what users see."));
+
+  const nConfigured = MANIFEST.coverage?.n_configured;
+  if (nConfigured != null) {
+    body.appendChild(el("p", "fine",
+      `${nConfigured} of ${MANIFEST.coverage.n_indexes} nf- indexes have a custom search config; on the other ${MANIFEST.coverage.n_indexes - nConfigured}, “In production” and the platform default are the same query.`));
+  }
 }
 
 // ---------------------------------------------------------------- portfolio
@@ -276,39 +391,52 @@ function renderPortfolio() {
     slug: "portfolio",
     eyebrow: "Portfolio",
     title: "Every NF search index",
-    lede: `${MANIFEST.coverage.n_benchmarked} of ${MANIFEST.coverage.n_indexes} nf- indexes have a golden set; ${MANIFEST.coverage.n_configured} have a search config committed in config/. Pick an index to see its results in detail.`,
+    lede: `${MANIFEST.coverage.n_benchmarked} of ${MANIFEST.coverage.n_indexes} nf- indexes have a golden set; ${MANIFEST.coverage.n_configured} have a custom search config. `,
+    cta: "Pick an index to see its results in detail.",
   });
 
-  // index cards — the selector for the detail section below
+  /* Only an index you can open gets a card. An index with no golden set has nothing to
+     show and nothing to select, so eight of them as cards made the picker the loudest
+     thing on the page — they become a chip list instead, which still states coverage. */
   const cards = el("div", "index-cards");
+  const unscored = [];
   for (const row of MANIFEST.registry) {
     const t = row.table ? MANIFEST.tables.find((x) => x.table === row.table) : null;
-    const card = el(t ? "button" : "div", `index-card${t ? "" : " is-empty"}`);
-    if (t) {
-      card.type = "button";
-      card.dataset.table = t.table;
-      card.addEventListener("click", () => selectTable(t.table));
-    }
+    if (!t) { unscored.push(row); continue; }
+    const card = el("button", "index-card");
+    card.type = "button";
+    card.dataset.table = t.table;
+    card.addEventListener("click", () => selectTable(t.table));
     card.appendChild(el("p", "ic-name", row.index_name));
     const meta = el("p", "ic-meta");
     meta.appendChild(el("span", "ic-id", row.index));
     if (row.configured) meta.appendChild(el("span", "ic-flag", "config"));
     card.appendChild(meta);
-    if (t?.latest) {
+    if (t.latest) {
       const b = t.latest.buckets[t.latest.baseline_key];
       const n = b ? Object.values(b).reduce((s, v) => s + v, 0) : 0;
       card.appendChild(el("p", "ic-stat", n ? `${pct(b.top, n)} answered first` : "run committed"));
       if (b) card.appendChild(rankStrip(b, n));
       card.appendChild(el("p", "ic-sub", `${t.n_cases} cases · run ${day(t.latest.run_at)}`));
-    } else if (t) {
+    } else {
       card.appendChild(el("p", "ic-stat is-quiet", "not scored yet"));
       card.appendChild(el("p", "ic-sub", `${t.n_cases} golden cases ready`));
-    } else {
-      card.appendChild(el("p", "ic-stat is-quiet", "no golden set"));
     }
     cards.appendChild(card);
   }
   body.appendChild(cards);
+
+  if (unscored.length) {
+    const band = el("p", "index-chips");
+    band.appendChild(el("span", "chips-label", `No golden set yet (${unscored.length})`));
+    for (const row of unscored) {
+      const chip = el("span", `chip${row.configured ? " has-config" : ""}`, row.index_name);
+      // the card carried the synID and the config flag; the chip carries them on hover
+      chip.title = row.configured ? `${row.index} · has a custom search config` : row.index;
+      band.appendChild(chip);
+    }
+    body.appendChild(band);
+  }
 
   // The cards carry rank strips, which are the same four bands the per-search-type figure
   // plots — so they get the same legend rather than leaving the colours unexplained.
@@ -376,7 +504,10 @@ async function selectTable(table, { silent = false } = {}) {
   state.runLabel = null;
   state.filters = { type: "all", source: "all", failing: false };
   for (const card of document.querySelectorAll(".index-card")) {
-    card.classList.toggle("is-on", card.dataset.table === table);
+    const on = card.dataset.table === table;
+    card.classList.toggle("is-on", on);
+    // the cards are a picker for the detail section below; say so to assistive tech too
+    if (card.dataset.table) card.setAttribute("aria-current", on ? "true" : "false");
   }
   if (!CACHE.has(table)) {
     CACHE.set(table, await fetch(`data/${table}.json`).then((r) => r.json()));
@@ -394,7 +525,8 @@ function renderDetail() {
 
   const body = block(host, {
     slug: "index",
-    eyebrow: "Index detail",
+    eyebrow: "Selected index",
+    eyebrowTone: "current",
     title: data.index_name,
     lede: `${data.cases.length} golden searches · scored on the top ${data.k} results · matched against ${data.fields.length === 1 && data.fields[0] === "*" ? "every field" : `${data.fields.length} curated fields`}.`,
   });
