@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
-"""Benchmark query strategies against a SearchIndex using a golden relevance set.
+"""Benchmark query strategies against a SearchIndex and golden relevance set.
 
-For every (case x strategy) it runs the query, records the ranked resourceIds,
-and scores them against the case's relevant set. Per-strategy aggregates:
+Each case/strategy pair records ranked IDs and relevance metrics. Aggregates include:
 
   MRR        mean reciprocal rank of the first relevant hit
   Recall@k   mean fraction of relevant docs found in the top k
   Hit@1      fraction of cases whose #1 result is relevant
   Hit@k      fraction of cases with >=1 relevant doc in the top k
-  rt_ms      mean round-trip ms (includes client poll interval; rough)
+  rt_ms      mean round-trip time in ms (includes client polling)
 
-Results are printed as a markdown table and written to results/<label>.json so
-runs can be diffed as the index config (analyzers, synonyms, boosts) changes.
+Results are printed as Markdown and saved to `results/<label>.json`. Each result records
+the dataset fingerprint, query configuration, and bound SearchConfiguration for comparison.
 
 Benchmarks live in per-table subfolders: benchmark/<table>/{golden.yaml,
 strategies.py, results/}. Pass the table as the first argument (default: tools).
@@ -21,7 +20,7 @@ Usage:
                            [--strategy multi_match_boosted ...]
   python3 benchmark/run.py tools --label kg-eval
 """
-import argparse, importlib.util, json, os, sys, time
+import argparse, hashlib, importlib.util, json, os, sys, time
 import yaml
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -30,9 +29,10 @@ from query import search, hit_dict, _call  # noqa: E402
 
 
 def load_strategies(table_dir):
-    """Load the strategy module for a table: its own strategies.py if it has one, else the
-    shared benchmark/strategies.py. Returns the module, so callers get both `STRATEGIES`
-    and `compile_production` from whichever file is in force."""
+    """Load table-specific strategies, falling back to shared strategies.
+
+    The module provides `STRATEGIES` and `compile_production`.
+    """
     for path in (os.path.join(table_dir, "strategies.py"),
                  os.path.join(HERE, "strategies.py")):
         if os.path.exists(path):
@@ -47,33 +47,62 @@ DEFAULT_CONTROL = "frontend_default"
 
 
 def load_field_config(table_dir):
-    """Load benchmark/<table>/fields.yaml -> (fields, production_spec, control).
+    """Load `fields.yaml` as `(fields, production, control, from_yaml)`.
 
-    `fields` is the match list with `^N` boosts as-is, e.g. ["resourceName^5", ...];
-    strategies that want unboosted matching strip the `^weight` themselves. Falls back to
-    ["*"] (all fields, no boost) when the table has no fields.yaml.
-
-    `production` is the optional block transcribing what the portal actually sends for this
-    table (its SearchQueryConfig); when present it is compiled into a `production_current`
-    strategy. `control` names the strategy this table is measured against — which is
-    `production_current` for a table whose portal customizes its search, and
-    `frontend_default` (the platform default) for one that does not."""
+    Fields retain their boosts; absent configuration defaults to `["*"]`. `production`,
+    when present, defines `production_current`; `control` identifies the baseline strategy.
+    """
     path = os.path.join(table_dir, "fields.yaml")
     if not os.path.exists(path):
-        return ["*"], None, DEFAULT_CONTROL
+        return ["*"], None, DEFAULT_CONTROL, False
     cfg = yaml.safe_load(open(path)) or {}
     return (cfg.get("fields") or ["*"],
             cfg.get("production"),
-            cfg.get("control") or DEFAULT_CONTROL)
+            cfg.get("control") or DEFAULT_CONTROL,
+            True)
+
+
+def golden_fingerprint(golden):
+    """Return the golden version and a hash of score-relevant case content.
+
+    The hash covers the ID field plus each case's ID, query, type, and sorted relevant IDs.
+    It makes comparisons robust to unversioned content changes while excluding metadata
+    unused by scoring. Index and `k` are recorded separately as run parameters.
+    """
+    cases = sorted(
+        [{"id": c["id"], "query": c["query"], "type": c.get("type"),
+          "relevant": sorted(c.get("relevant", []))} for c in golden.get("cases", [])],
+        key=lambda c: c["id"])
+    canon = json.dumps({"id_field": golden.get("id_field", "resourceId"), "cases": cases},
+                       sort_keys=True, separators=(",", ":"))
+    return {
+        "version": golden.get("version"),
+        "hash": hashlib.sha256(canon.encode()).hexdigest()[:12],
+        "n_cases": len(cases),
+    }
+
+
+def field_config_fingerprint(fields, production, from_yaml):
+    """Return the query configuration and its fingerprint.
+
+    The fingerprint covers sorted fields and `production`; fields are retained in source
+    order for display. `from_yaml` distinguishes an explicit configuration from the
+    all-fields fallback.
+    """
+    canon = json.dumps({"fields": sorted(fields), "production": production},
+                       sort_keys=True, separators=(",", ":"))
+    return {
+        "fields": fields,
+        "production": production,
+        "hash": hashlib.sha256(canon.encode()).hexdigest()[:12],
+        "from_fields_yaml": from_yaml,
+    }
 
 
 def index_binding(index_id):
-    """The SearchConfiguration id bound to this SearchIndex, or None if it is uncustomized.
+    """Return the SearchConfiguration bound to an index, if any.
 
-    Read anonymously off the entity, the same field `config.py apply/unbind` writes. This
-    is recorded on every run because index configuration is a property of the INDEX, not
-    of a strategy: one run scores every strategy against whatever analyzers are bound at
-    the time, and that state is otherwise invisible in the results file.
+    Index configuration is shared by all strategies and is recorded with each run.
     """
     try:
         code, ent = _call(f"entity/{index_id}")
@@ -83,20 +112,10 @@ def index_binding(index_id):
 
 
 def warn_if_bound(index_id, strategies, config_id):
-    """`frontend_default` is the PLATFORM default — what a portal gets with no
-    customization. That means no customized query AND no bound search configuration. Run
-    it against an index with a config bound and you get the default query on a customized
-    index, which is a different measurement and generally a worse one.
+    """Warn if `frontend_default` is evaluated on a configured index.
 
-    This cannot be fixed inside the run: every strategy shares one index state, so a run
-    cannot hold a bound and an unbound measurement at once. The fix is procedural — score
-    the platform default with the config unbound:
-
-        python3 config/config.py unbind --index <id>      # then wait for the rebuild
-        python3 benchmark/run.py <table> --label unbound
-        python3 config/config.py apply <config-id> --index <id>
-
-    and point site.yaml's `constant:` at that run so the dashboard reads the honest number.
+    A platform-default measurement requires both the default query and no bound search
+    configuration. Score it in a separate unbound run, then restore the configuration.
     """
     if not config_id or "frontend_default" not in strategies:
         return
@@ -105,6 +124,43 @@ def warn_if_bound(index_id, strategies, config_id):
           f"  the default QUERY on a CUSTOMIZED index — not the platform default. For a true\n"
           f"  platform-default number, unbind first (config.py unbind), score it, then re-bind:\n"
           f"  see warn_if_bound() in this file and `constant:` in site.yaml.\n")
+
+
+def warn_if_golden_drift(resdir, label, fp):
+    """Warn when existing result files use a different golden fingerprint.
+
+    Historical results remain valid, so this condition is informational rather than an
+    error.
+    """
+    if not os.path.isdir(resdir):
+        return
+    stale = []
+    for name in sorted(os.listdir(resdir)):
+        if not name.endswith(".json") or name == f"{label}.json":
+            continue
+        try:
+            other = json.load(open(os.path.join(resdir, name)))
+        except (ValueError, OSError):
+            continue                         # build_site.py is what reports unreadable runs
+        og = other.get("golden") or {}
+        if og.get("hash") != fp["hash"]:
+            stale.append((name, og))
+    if not stale:
+        return
+    rel = os.path.relpath(resdir, os.path.dirname(HERE))
+    print(f"\n  WARNING: other runs in {rel}/ are not known to share this run's golden\n"
+          f"  (this: {fp['version'] or 'unversioned'} / {fp['hash']}, {fp['n_cases']} cases), "
+          f"so comparing them —\n"
+          f"  in the dashboard's run switcher, or via a site.yaml `constant:` splice — is not\n"
+          f"  apples-to-apples:")
+    for name, og in stale:
+        if og:
+            print(f"    {name}: {og.get('version') or 'unversioned'} / {og.get('hash')} "
+                  f"({og.get('n_cases')} cases)")
+        else:
+            print(f"    {name}: no dataset fingerprint (scored before run.py recorded one)")
+    print("  Re-score each against the current golden under its own label, or keep it as a\n"
+          "  historical record and read it as one.\n")
 
 
 def reciprocal_rank(ranked_ids, relevant):
@@ -131,11 +187,9 @@ def score_case(ranked_ids, relevant, k):
 
 
 def hit_id(hit, id_field):
-    """The stable identifier for a hit, per the golden's id_field.
+    """Return a hit identifier using the golden's configured ID field.
 
-    `id_field` is the column whose value the golden's `relevant` ids come from
-    (e.g. resourceId for nf-tools; varies by portal/table). Use "rowId" to key on
-    the index's own per-row id, which is always present and needs no column.
+    `rowId` uses the index row identifier; other values name a hit column.
     """
     if id_field == "rowId":
         return hit.get("rowId")
@@ -185,10 +239,11 @@ def run(golden, strategies, fields, k, poll_s):
 
 
 def rt_stats(rts):
-    """Round-trip latency spread for a strategy. Median/p95 are more meaningful than
-    mean here: each rt includes the client poll interval and time queued behind other
-    async jobs, so the mean is skewed by occasional stalls. Compare strategies on the
-    median; watch p95 for tail cost (e.g. fuzzy/cross fanning out)."""
+    """Return round-trip latency statistics for a strategy.
+
+    Prefer median and p95 when comparing strategies because polling and queueing can skew
+    the mean.
+    """
     s = sorted(rts)
     n = len(s)
     if not n:
@@ -239,7 +294,7 @@ def main():
     k = args.k or golden.get("k", 10)
     strategy_mod = load_strategies(table_dir)
     all_strategies = dict(strategy_mod.STRATEGIES)
-    fields, production, control = load_field_config(table_dir)
+    fields, production, control, from_yaml = load_field_config(table_dir)
     if production is not None:
         all_strategies["production_current"] = strategy_mod.compile_production(production)
     if control not in all_strategies:
@@ -256,15 +311,32 @@ def main():
         wanted = list(dict.fromkeys(args.strategy + [control]))
         strategies = {n: all_strategies[n] for n in wanted}
 
+    resdir = os.path.join(table_dir, "results")
+    # Which dataset this run scores, checked against what is already in results/ BEFORE
+    # scoring: a golden edit that makes this run incomparable to its siblings is worth
+    # knowing now rather than after several hundred queries.
+    gfp = golden_fingerprint(golden)
+    fcfp = field_config_fingerprint(fields, production, from_yaml)
+    if not gfp["version"]:
+        print(f"\n  WARNING: {os.path.relpath(golden_path, os.path.dirname(HERE))} has no "
+              f"`version:` — the run records only the content hash {gfp['hash']}.\n")
+    warn_if_golden_drift(resdir, args.label, gfp)
+
     out = run(golden, strategies, fields, k, args.poll)
     out["control"] = control
     out["label"] = args.label
     out["run_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    # the dataset scored, not just how many cases it had: without this a results file
+    # cannot say whether it is comparable to the one next to it (see golden_fingerprint)
+    out["golden"] = gfp
+    # …and the query-side config it scored them with, so the boosts a number came from stay
+    # attached to it after fields.yaml moves on (see field_config_fingerprint)
+    out["field_config"] = fcfp
     print(f"\nnf index: {out['index_name']} ({out['index']})  |  k={k}  |  "
-          f"{len(golden['cases'])} cases  |  label={args.label}\n")
+          f"{gfp['n_cases']} cases  |  golden {gfp['version'] or 'unversioned'}/{gfp['hash']}"
+          f"  |  boosts {fcfp['hash']}  |  label={args.label}\n")
     print(fmt_table(out))
 
-    resdir = os.path.join(table_dir, "results")
     os.makedirs(resdir, exist_ok=True)
     path = os.path.join(resdir, f"{args.label}.json")
     json.dump(out, open(path, "w"), indent=2)

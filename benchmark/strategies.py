@@ -1,20 +1,9 @@
-"""Shared query strategies for the benchmark harness (all tables).
+"""Shared, table-independent query strategies for the benchmark harness.
 
-A strategy is a function mapping (query_text, size, fields) -> a raw OpenSearch
-`searchQuery` DSL object (the value of SearchIndexQuery.searchQuery). The strategy
-*functions* are table-agnostic; `fields` is the table's match list with per-field boosts
-(`["resourceName^5", "synonyms^4", ...]`), loaded by run.py from
-`benchmark/<table>/fields.yaml` (falling back to ["*"] — all fields, no boosts — when a
-table has none). The equal-weight strategies strip the `^weight` themselves via
-`_unboosted()`; the boosted strategies pass `fields` through as-is.
-
-Two of the entries are controls rather than candidates: `frontend_default` is the platform
-default a portal gets with no `SearchQueryConfig`, and `production_current` — compiled per
-table by `compile_production()` from the `production:` block in fields.yaml — is what a
-portal that HAS one actually sends. Which of the two is a given table's control is declared
-by `control:` in its fields.yaml and recorded in the run JSON; see run.py.
-
-All clauses use the verbose object form because Synapse's JSON adapter rejects shorthand.
+Strategies map `(query_text, size, fields)` to a SearchIndex `searchQuery` DSL object.
+Fields are loaded from each table's `fields.yaml`; equal-weight strategies remove boosts.
+`frontend_default` and compiled `production_current` serve as controls. Verbose clause
+objects are required by Synapse's JSON adapter.
 """
 import re
 
@@ -47,22 +36,11 @@ def routes_to_simple_query_string(q):
 
 
 def frontend_default(q, size, fields):
-    """The Synapse frontend's PLATFORM default — what a portal gets when it has not set a
-    `SearchQueryConfig`: a bare multi_match with fuzziness AUTO, NO field list (all fields,
-    equal weight), no boosts, no explicit type (best_fields default) — EXCEPT for quoted
-    and Synapse-id queries, which route to a bare simple_query_string (see above).
+    """Return the Synapse frontend's uncustomized query.
 
-    This is the control for the 12 NF indexes that ship no config. It is NOT the control
-    for nf-tools, which does set one — see `compile_production` / the `production:` block
-    in fields.yaml. Intentionally ignores `fields`.
-
-    IMPORTANT — "no customization" includes the INDEX, not just the query. Scoring this
-    against a SearchIndex with a SearchConfiguration bound measures the default query on a
-    CUSTOMIZED index, which is a different and usually worse number. Index state is shared
-    by every strategy in a run, so this cannot be corrected within one run. To get a true
-    platform default, unbind first (`config.py unbind`), score, then re-bind, and pin that
-    row into the published run via site.yaml's `constant:`. run.py records the bound config
-    id on every run and warns when this strategy is scored against a bound index.
+    Uses fuzzy `multi_match` across all fields, except quoted phrases and Synapse IDs use
+    `simple_query_string`. It ignores `fields`. A platform-default benchmark also requires
+    an index without a bound SearchConfiguration; `run.py` warns otherwise.
     """
     if routes_to_simple_query_string(q):
         return {"query": {"simple_query_string": {"query": q}}, "size": size}
@@ -123,16 +101,10 @@ _QUERY_STRATEGY_CLAUSE = {
 
 
 def compile_production(spec):
-    """Compile a table's `production:` block (fields.yaml) into a strategy function.
+    """Compile a table's `production:` specification into a strategy.
 
-    The block records what the portal actually sends for this table — its
-    `SearchQueryConfig` (queryStrategy / fieldBoosts / fuzziness) transcribed from
-    synapseConfigs. The compiled strategy pins those fields rather than the benchmark's
-    own `fields` list, so it stays a faithful control even as fields.yaml is tuned, and it
-    applies the quoted-phrase / Synapse-id routing above.
-
-    A table with no `production:` block has no such customization; its control is
-    `frontend_default` (which is exactly the MULTI_MATCH branch).
+    The returned strategy uses the configured query strategy, fields, and fuzziness rather
+    than benchmark fields, and applies frontend phrase and Synapse-ID routing.
     """
     strategy = spec.get("query_strategy", "MULTI_MATCH")
     if strategy not in _QUERY_STRATEGY_CLAUSE:
