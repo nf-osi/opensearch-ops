@@ -19,6 +19,11 @@ import { strategyLabel, METRIC_LABELS, toolTypeIcon } from "./labels.js";
 // Shared SearchIndex collection project (children = every portal's index). See README.
 const PROJECT = "syn74909065";
 const TOOLS_INDEX = "syn75081636";  // nf-tools — the only index with per-type icons
+// The lab's landing index. nf-tools has the largest golden set and is the one portal that
+// ships its own SearchQueryConfig, so `production_current` exists and every recipe is
+// comparable against what users actually get — the most useful place to arrive. Falls back
+// to the first curated table if it is ever unpublished.
+const LAB_DEFAULT_TABLE = "tools";
 const DISCOVERED = new Map();  // synID -> name, for indexes listed from the project
 
 const METRIC_KEYS = ["mrr", "recall_at_k", "hit_at_1", "hit_at_k", "rt_ms_median", "rt_ms_p95"];
@@ -71,8 +76,9 @@ async function init() {
   setupBenchmarkControls();
   setupIndexSelector(manifest);
 
-  // load the default (first curated) table, else prompt for a custom index
-  const first = (manifest.tables || [])[0];
+  // load the landing table, else prompt for a custom index
+  const tables = manifest.tables || [];
+  const first = tables.find((t) => t.table === LAB_DEFAULT_TABLE) || tables[0];
   if (first) await loadTable(first.table);
   else { $("#indexPick").value = "custom"; $("#customWrap").hidden = false; setStatus("pick or paste a SearchIndex to begin"); }
 }
