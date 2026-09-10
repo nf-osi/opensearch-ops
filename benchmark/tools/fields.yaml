@@ -72,19 +72,18 @@ fields:
   - "cellLineCategory^2"
   - "resourceType^2"
   - "vectorType^2"
-  # people — investigator search (#19/#20). Sparse (~5% of rows carry a name), but when a
-  # user types a surname it is the only column that can answer, and a surname is a
-  # distinctive token so the collision risk that keeps race/sex at weight 1 does not apply.
-  # Boosted to 2 as a starting point, not a tuned value — #20 is where the right weight
-  # gets established, and it needs the #19 golden cases to measure against. `institution`
-  # is the obvious companion and is still on the candidate list below.
-  - "investigatorName^2"
+  # TUNED to 5 on 2026-09-09 — Swept 1..5 on resourceName and 2/5/8 here against the
+  # full 66-case nf-tools golden: raising this field 2 -> 5 improves investigator-related queries
+  # that also include a resource type such as "mouse", with no downsite; ^8 overshoots (0.737 / 0.687), 
+  # so 5 is the measured optimum. Better than initial intuitive fix: lowering `resourceName`
+  # from ^5 is does not help until until ^2, and by then it costs the known-item and topical cases. 
+  # With competing signals, what decides the outcome is the ratio between the two fields, 
+  # not resourceName's absolute weight.
+  - "investigatorName^5"
   # donor demographics — unboosted. Narrow, sparsely filled columns (race ~11%, sex on most
   # cell lines) that only matter when the user names them, e.g. the nf1-cell-line-black case
   # ('nf1 cell line black patient'). Left at weight 1 deliberately: boosting them would let a
   # stray 'male'/'female' token outrank a name match on the ~200 rows carrying each value.
-  # Reachable only since #23 dropped their KEYWORD override — under KEYWORD they were exact
-  # and case-sensitive, so a lowercase query scored 0 no matter what this list said.
   - "race"
   - "sex"
   # free text — weight 1
@@ -93,8 +92,8 @@ fields:
 # Candidate fields NOT currently searched — uncomment (with a boost) to include.
 # The source table gained ~24 columns in the 2026-08 revision (new resource types: PDX/PDM
 # models, organoids, computational tools/software, clinical assessments), so this list is
-# longer than it was. Grouped by what they'd buy; left out of the default set pending SME
-# review, because adding a field changes every boosted/cross score.
+# longer than it was. Left out of the default set pending SME
+# review, since adding a field changes every boosted/cross score.
 #
 # Free text — the biggest single omission:
 #   - "aiSummary"                   # LARGETEXT per-resource summary, NEW in the revision.
