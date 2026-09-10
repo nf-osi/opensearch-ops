@@ -834,6 +834,25 @@ svg.viz { display: block; overflow: visible; }
 .defs-role-best { border-left-color: var(--series-1); }
 .defs-note { display: block; margin-top: 2px; color: var(--faint); }
 
+/* ---------- contribute ----------
+   The golden set is the one part of this dashboard an outsider can improve, so the ask
+   sits at the end of the section that explains it. Primary is the issue (no git needed);
+   the YAML edit is offered quietly beside it. */
+.contrib { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0 0; }
+.contrib-btn {
+  display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+  font: 600 14px "Public Sans", sans-serif; border-radius: var(--radius);
+  padding: 10px 18px; transition: .18s ease;
+  background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+}
+.contrib-btn:hover { background: #000; transform: translateY(-1px); }
+.contrib-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.contrib-btn.is-quiet {
+  background: var(--card); color: var(--ink); border-color: var(--rule);
+}
+.contrib-btn.is-quiet:hover { background: var(--paper-2); border-color: var(--faint); }
+.gh-mark { width: 16px; height: 16px; flex: none; }
+
 /* ---------- glossary drawer ----------
    A reference panel, not a dialog: on a wide viewport it overlays the right margin and
    leaves the page fully usable, so a name can be looked up without losing the figure it

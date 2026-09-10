@@ -1245,6 +1245,57 @@ function gapCard(c, id, run, rank) {
 }
 
 // -- golden set provenance --------------------------------------------------
+const REPO = "https://github.com/nf-osi/opensearch-ops";
+const GH_MARK = '<svg class="gh-mark" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">'
+  + '<path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.55v-2.1'
+  + 'c-3.2.7-3.88-1.54-3.88-1.54-.52-1.34-1.28-1.7-1.28-1.7-1.05-.72.08-.7.08-.7 1.16.08 1.77 '
+  + '1.19 1.77 1.19 1.03 1.76 2.7 1.25 3.36.96.1-.75.4-1.25.73-1.54-2.55-.29-5.24-1.28-5.24-5.68'
+  + ' 0-1.25.45-2.28 1.19-3.08-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.8'
+  + ' 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.8 1.19 1.83 1.19 3.08 0 4.41-2.69'
+  + ' 5.39-5.25 5.67.41.36.77 1.06.77 2.14v3.17c0 .3.21.67.8.55C20.71 21.39 24 17.08 24 12 24 5.73'
+  + ' 18.27.5 12 .5z"/></svg>';
+
+/** Two ways to contribute, because the audience splits. An issue needs no git and no
+ *  YAML — it is the path for the person who knows what the search should find. The edit
+ *  link opens golden.yaml in GitHub's editor, which forks and raises the PR for anyone
+ *  who would rather write the case themselves. Both land in the same review. */
+function contributeRow(data) {
+  const wrap = el("div", "contrib");
+  const q = (o) => Object.entries(o).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  const issue = `${REPO}/issues/new?` + q({
+    title: `Benchmark (${data.index_name}): propose a search`,
+    body: [
+      "### The search",
+      "What would a researcher type? (Or name the existing case you want revised.)",
+      "",
+      "### What it should find",
+      "The results that ought to come back — names, RRIDs or Synapse ids.",
+      "",
+      "### How you know",
+      "A paper, a link, or the reasoning. This is what makes the case defensible.",
+      "",
+      "---",
+      `Index: ${data.index_name} (${data.index})`,
+      `Golden set: benchmark/${state.table}/golden.yaml`,
+      "Opened from the benchmark dashboard.",
+    ].join("\n"),
+  });
+  const link = (href, label, cls) => {
+    const a = el("a", cls);
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.innerHTML = GH_MARK;                        // static markup, no interpolation
+    a.append(document.createTextNode(label));
+    return a;
+  };
+  wrap.append(
+    link(issue, "Propose a search or a fix", "contrib-btn"),
+    link(`${REPO}/edit/main/benchmark/${state.table}/golden.yaml`, "Edit the golden set", "contrib-btn is-quiet"),
+  );
+  return wrap;
+}
+
 function goldenSection(host, data) {
   const body = block(host, {
     slug: "golden-set",
@@ -1282,6 +1333,7 @@ function goldenSection(host, data) {
     body.appendChild(el("p", "fine",
       `${pooled.length} cases carry an SME estimate of how many results truly match. Those cases list ${listed} relevant results against an estimated pool of ${expected}, so their Recall@${data.k} is a floor: a recipe can be penalised for missing results the golden set never named.`));
   }
+  body.appendChild(contributeRow(data));
 }
 
 // -- field config -----------------------------------------------------------
