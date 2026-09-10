@@ -211,44 +211,48 @@ summary and interpretation guidance.
 
 ## Interactive site
 
-[web/](web/) is a static browser application with benchmark reporting and a search laboratory.
-It has no build dependencies or backend.
+[web/](web/) is the Synapse Portal Search Lab: a static browser application with no build
+dependencies and no backend, querying the public repo-prod API from the page. Two tabs:
 
-- **Benchmark results:** reports committed runs, portfolio coverage, strategy ranking, quality
-  and latency, query-category splits, per-case ranks, failures, and field boosts.
-- **Search lab:** compares query recipes, edits field boosts, and scores recipes against a
-  golden set in the browser.
+- **Search playground:** runs a query through two recipes side by side and compares the ranked
+  results, with badges for how far each hit moved between them.
+- **Benchmark scoreboard:** scores the selected recipes over the table's golden set live in the
+  browser, or shows the scoreboard embedded at build time.
 
-The index picker lists every SearchIndex in `syn74909065`. For uncurated indexes, it discovers
-columns through `SELECT_COLUMNS` and generates field boosts from field names and types. Curated
-indexes use versioned boosts and support scoring; other indexes are playground-only. The browser
-ports the Python strategy and scoring logic, with parity checks against `benchmark/run.py`.
+A sidebar edits per-field boosts, which apply to the boosted recipes in both tabs; only free-text
+columns (`STRING`, `STRING_LIST`, `LARGETEXT`, `MEDIUMTEXT`) are eligible match targets. The site
+can adjust query-time recipes only — analyzer and synonym changes need a configuration change and
+a Sage-admin rebuild.
 
-URLs are linkable (`#/<tab>/<index>/<section>`); for example,
-`#/results/tools/failures` opens the nf-tools failure section. The site can adjust query-time
-recipes only. Analyzer and synonym changes require index configuration and a Sage-admin rebuild.
+The index picker lists every SearchIndex in `syn74909065` and also takes a pasted synId. A
+curated table loads its golden set and versioned boosts from `site/data/<table>.json` and can be
+scored; any other index has its columns discovered live through `SELECT_COLUMNS` and its boosts
+generated from column names and types, so it is playground-only.
+
+> [!NOTE]
+> The browser recipes in [web/strategies.js](web/strategies.js) mirror only a subset of
+> [benchmark/strategies.py](benchmark/strategies.py) — they currently omit `production_current`,
+> `simple_query_string_boosted`, and the quoted-phrase / Synapse-ID routing. An in-browser score
+> is therefore not a substitute for a `run.py` run.
 
 ### Build and publication
 
 [build_site.py](build_site.py) creates the ignored `site/` directory, copying [web/](web/) and
 writing:
 
-- `site/data/<table>.json`: golden cases, field configuration, and committed results.
-- `site/data/manifest.json`: index inventory, configuration/benchmark coverage, and headline
-  metrics.
+- `site/data/<table>.json`: the table's golden cases, its `fields.yaml` boosts, and a slim
+  scoreboard read from `benchmark/<table>/results/latest.json` when that file exists.
+- `site/data/manifest.json`: the table-to-SearchIndex inventory the index picker reads.
 
-[site.yaml](site.yaml) defines publication:
+Both are generated from the same YAML the harness reads, so the golden set and boosts stay
+single-sourced. `latest.json` is the only result file embedded — other runs in `results/` are
+kept for comparison but not published, and a table without a `latest.json` simply ships with no
+precomputed scoreboard.
 
-| Key | Purpose |
-| --- | --- |
-| `headline` | Run of record for each table. |
-| `extra_runs` | Additional published comparison runs. |
-| `excluded` | Unpublished result files and their reason. |
-| `constant` | A strategy row taken from a run with another index state. |
-
-Only committed runs named in `site.yaml` are published. The build reports skipped, missing,
-uncommitted, and incompatible runs. CI runs the benchmark and site build, then publishes `site/`
-to GitHub Pages.
+[.github/workflows/benchmark.yml](.github/workflows/benchmark.yml) is a manually triggered
+workflow that runs the benchmark, builds the site, and deploys it to GitHub Pages. Note that it
+scores under its own label rather than `latest`, so it publishes the committed scoreboard rather
+than the run it just made.
 
 ```bash
 pip install pyyaml
