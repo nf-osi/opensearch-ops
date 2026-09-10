@@ -44,7 +44,25 @@ control: production_current
 # is the headroom the benchmark exists to measure.
 production:
   query_strategy: MULTI_MATCH_BEST_FIELDS   # no fuzziness: the config sets none
-  fields:
+  # Fill of the columns this list already searches (non-null rows of 1218, 2026-09-09).
+# Read it as reach: `tumorType` is in the list but can only ever answer 2% of rows,
+# while `resourceName` is the only column present on every single one.
+#   resourceName            1218   100%
+#   resourceType            1216   100%
+#   geneticDisorder          802    66%
+#   species                  792    65%
+#   rrid                     733    60%
+#   cellLineCategory         664    55%
+#   sex                      664    55%
+#   manifestation            607    50%
+#   description              602    49%
+#   synonyms                 452    37%
+#   targetAntigen            262    22%
+#   investigatorName         199    16%
+#   race                     140    11%
+#   vectorType               122    10%
+#   tumorType                 28     2%
+fields:
     - "resourceName^5"
     - "synonyms^4"
     - "rrid^4"
@@ -90,56 +108,80 @@ fields:
   - "description"
 
 # Candidate fields NOT currently searched — uncomment (with a boost) to include.
+#
+# `fill` on each line = rows with a non-null value / 1218 rows total, counted from the
+# SOURCE table (syn51730943) on 2026-09-09. It is the ceiling on what adding that column
+# can do: a field filled on 0.2% of rows cannot answer more than 0.2% of the registry, no
+# matter how it is boosted. Fill is necessary but not sufficient — `modelType` is only 2%
+# filled and still made things worse (see the note on it below).
 # The source table gained ~24 columns in the 2026-08 revision (new resource types: PDX/PDM
 # models, organoids, computational tools/software, clinical assessments), so this list is
 # longer than it was. Left out of the default set pending SME
 # review, since adding a field changes every boosted/cross score.
 #
-# Free text — the biggest single omission:
-#   - "aiSummary"                   # LARGETEXT per-resource summary, NEW in the revision.
-#                                   # Parallel to `description` and populated where description
-#                                   # is not (description is ~64% filled). frontend_default
-#                                   # already searches it; our strategies do not. Decide first.
+# Free text:
+#   - "aiSummary"                   # DO NOT ADD — the column is EMPTY. Measured 2026-09-09:
+#                                   # 0 of 1218 rows carry a value, and the index itself
+#                                   # reports 0 docs where the field exists. 
+#                                   # Revisit only if the registry starts populating it.
 #
 # Anatomy / specimen:
-#   - "organ"                       # NEW; enumeration
-#   - "tissue"                      # NEW; replaces the cell-line tissue-of-origin role
-#   - "specimenTissueType"
-#   - "specimenPreparationMethod"
-#   - "specimenType"
-#   - "specimenFormat"
-#   - "biobankName"
+#   - "organ"                       # fill 135/1218 = 11% · NEW; enumeration.
+#                                   # STRONGEST REMAINING CANDIDATES — measured
+#                                   # 2026-09-09, 77% of organ values (104/135) and 93% of
+#                                   # tissue values (181/194) do NOT appear in any column this
+#                                   # list already searches.
+#                                   # BLOCKED ON THE GOLDEN, not on the weights: no case in
+#                                   # golden.yaml asks an anatomy question yet.
+#                                   # Known risks: "Primary tumor"
+#                                   # (62) and "Tumor" (4) put the generic token `tumor` in a
+#                                   # second field, and "Blood" (78) is an ordinary word — this
+#                                   # is the known dilution shape that already breaks the "<X> cell
+#                                   # line" queries.
+#   - "tissue"                      # fill 185/1218 = 15% · NEW; replaces the cell-line
+#                                   # tissue-of-origin role. See the organ note above — the two
+#                                   # should be evaluated together.
+#   - "specimenTissueType"          # fill 4/1218 = 0.3%
+#   - "specimenPreparationMethod"   # fill 3/1218 = 0.2%
+#   - "specimenType"                # fill 4/1218 = 0.3%
+#   - "specimenFormat"              # fill 4/1218 = 0.3%
+#   - "biobankName"                 # fill 4/1218 = 0.3%
 #
 # Resource-type descriptors (NEW — these are how the new types are discoverable at all):
-#   - "modelType"                   # enumeration
-#   - "softwareType"                # enumeration
-#   - "computationalToolType"
-#   - "computationalToolLanguage"
-#   - "computationalToolPlatformSupport"
-#   - "organoidType" / "organoidModelType" / "organoidDerivationSource" / "organoidCellTypes"
-#   - "cultureSystem"
-#   - "pdmModelSystemType" / "pdmHostStrain" / "engraftmentSite"
-#   - "clinicalAssessmentType" / "clinicalAssessmentTargetPopulation"
-#   - "clinicalAssessmentDiseaseSpecific"
+#   - "modelType"                   # fill 29/1218 = 2% · enumeration
+#   - "softwareType"                # fill 3/1218 = 0.2% · enumeration
+#   - "computationalToolType"       # fill 3/1218 = 0.2%
+#   - "computationalToolLanguage"   # fill 2/1218 = 0.2%
+#   - "computationalToolPlatformSupport" # fill 3/1218 = 0.2%
+#   - "organoidType" / "organoidModelType" / "organoidDerivationSource" / "organoidCellTypes" # fill 2/1218 = 0.2% / 5/1218 = 0.4% / 5/1218 = 0.4% / 5/1218 = 0.4%
+#   - "cultureSystem"               # fill 5/1218 = 0.4%
+#   - "pdmModelSystemType" / "pdmHostStrain" / "engraftmentSite" # fill 24/1218 = 2% / 11/1218 = 0.9% / 11/1218 = 0.9%
+#   - "clinicalAssessmentType" / "clinicalAssessmentTargetPopulation" # fill 4/1218 = 0.3% / 4/1218 = 0.3%
+#   - "clinicalAssessmentDiseaseSpecific" # fill 4/1218 = 0.3%
 #
 # Per-type detail (pre-existing):
-#   - "insertName"                  # genetic-reagent insert
-#   - "insertSpecies"
-#   - "selectableMarker"            # NEW; genetic reagent
-#   - "resistance"                  # NEW; genetic reagent
-#   - "backgroundStrain"            # animal-model strain
-#   - "backgroundSubstrain"
-#   - "animalState"                 # NEW; enumeration
-#   - "reactiveSpecies"             # antibody reactivity
-#   - "hostOrganism"                # antibody host
-#   - "conjugate"                   # NEW; antibody
+#   - "insertName"                  # fill 122/1218 = 10% · genetic-reagent insert
+#   - "insertSpecies"               # fill 122/1218 = 10%
+#   - "selectableMarker"            # fill 22/1218 = 2% · NEW; genetic reagent
+#   - "resistance"                  # DO NOT ADD — also empty, 0 of 1218 rows
+#                                   # (measured 2026-09-09).
+#   - "backgroundStrain"            # fill 80/1218 = 7% · animal-model strain
+#   - "backgroundSubstrain"         # fill 37/1218 = 3%
+#   - "animalState"                 # fill 126/1218 = 10% · NEW; enumeration
+#   - "reactiveSpecies"             # fill 262/1218 = 22% · antibody reactivity
+#   - "hostOrganism"                # fill 262/1218 = 22% · antibody host
+#   - "conjugate"                   # fill 261/1218 = 21% · NEW; antibody
 #
 # People:
-#   - "institution"                 # companion to investigatorName; affiliation search
+#   - "institution"                 # fill 194/1218 = 16% · companion to investigatorName; affiliation search
 #
 # Deliberately excluded (not useful as free-text match targets):
 #   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL, downloadURL
-#   boilerplate / contact .. howToAcquire, usageRequirements, contact, licenseType
+#   boilerplate / contact .. howToAcquire (fill 99%), usageRequirements (62%),
+#                            contact (0.1%), licenseType (0.2%). howToAcquire is the
+#                            most-filled text column in the table after resourceName,
+#                            and it is the ONLY place some tools name their originating
+#                            investigator — but see the note below before adding it.
 #   dates / age ............ dateAdded, dateModified, latestPublicationDate, age
 #   faceting-only flags .... completenessCategory, availabilityCategory, criticalInfoCategory,
 #                            otherInfoCategory, observationCategory, availability,
