@@ -8,7 +8,7 @@
 // which the lab's index picker reuses) and then handles everything on the lab tab.
 
 import { search, hitDict, hitId, indexName, indexColumns, listSearchIndexes } from "./synapse.js";
-import { initResults, showRoute } from "./bench.js";
+import { initResults, showRoute, glossaryOnTab } from "./bench.js";
 import { parseHash, setRoute, onRoute, scrollToSection } from "./route.js";
 import { rankstack, tableTwin, rankBucket, ROLE } from "./charts.js";
 import { STRATEGIES, STRATEGY_ORDER, BOOSTED_KEYS, makeProductionCurrent } from "./strategies.js";
@@ -194,6 +194,9 @@ function showTab(name, { scroll = true, silent = false } = {}) {
     t.setAttribute("aria-selected", String(on));
   });
   $$(".panel-tab").forEach((p) => { const on = p.id === name; p.classList.toggle("is-active", on); p.hidden = !on; });
+  // the glossary drawer is fixed to the viewport from <body>, so it does not hide with
+  // the panel it belongs to — tell it which tab is on screen
+  glossaryOnTab(name);
   // switching tabs drops any section anchor — it named a section on the tab we just left
   if (!silent) setRoute({ tab: name, section: null }, { push: true });
   if (scroll) window.scrollTo({ top: 0, behavior: "smooth" });
@@ -509,7 +512,8 @@ function renderBench(bench, note) {
   const head = METRIC_KEYS.map((key) => {
     const m = METRIC_LABELS[key];
     const cls = sortState.key === key ? `sorted${sortState.reverse ? " reverse" : ""}` : "";
-    return `<th data-key="${key}" title="${esc(m.help)}" class="${cls}">${esc(m.name.replace("@k", `@${k}`))}</th>`;
+    const help = `${m.help.replace("{k}", k)} ${m.dir === "up" ? "Higher" : "Lower"} is better.`;
+    return `<th data-key="${key}" title="${esc(help)}" class="${cls}">${esc(m.name.replace("@k", `@${k}`))}</th>`;
   }).join("");
 
   const body = rows.map(([name, a]) => {

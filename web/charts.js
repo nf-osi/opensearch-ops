@@ -292,20 +292,24 @@ export function tableTwin({ summary, head, rows, align = [] }) {
   return d;
 }
 
-/** The glossary twin: the same disclosure affordance as tableTwin, for the short-hand
- *  labels a figure uses. items: [{term, tag, definition, note, role}] — `role` optionally
- *  tags a term as the control or the winner so the list ties back to the legend. */
-export function defsTwin({ summary, items }) {
-  const d = document.createElement("details");
-  d.className = "viz-twin viz-defs";
-  const s = document.createElement("summary");
-  s.textContent = summary || "What these names mean";
-  const scroll = document.createElement("div");
-  scroll.className = "viz-twin-scroll";
+/** The glossary list: the short-hand labels a figure uses, defined.
+ *  items: [{term, tag, definition, note, roles, termRole}]. `termRole` tints the term the
+ *  way roleCls tints a category label in a plot, so an entry ties back to its mark by
+ *  colour; `roles` adds a badge for anything colour cannot say. Both are optional.
+ *
+ *  Returns the list only — the host decides where it lives. It used to be a disclosure
+ *  under the leaderboard, which meant scrolling back up to look a name up; it now fills a
+ *  drawer that stays open while you read the rest of the page. */
+export function defsList(items) {
   const dl = document.createElement("dl");
+  dl.className = "defs-list";
   for (const it of items) {
     const dt = document.createElement("dt");
-    dt.textContent = it.term;
+    // the term is a span, not the dt's own text, so the tint cannot bleed into the chips
+    const term = document.createElement("span");
+    term.className = roleCls(it.termRole, "defs-term");
+    term.textContent = it.term;
+    dt.appendChild(term);
     if (it.tag) {
       const chip = document.createElement("span");
       chip.className = "defs-tag";
@@ -315,11 +319,7 @@ export function defsTwin({ summary, items }) {
     for (const role of it.roles || (it.role ? [it.role] : [])) {
       const r = document.createElement("span");
       r.className = `defs-role defs-role-${role}`;
-      // `promoted` is badge-only: no mark wears it (see bench.js), it says the row is
-      // what the index actually serves today
-      r.textContent = { baseline: "platform default", production: "portal today",
-                        promoted: "in production", superseded: "pre-promotion",
-                        best: "best" }[role] || role;
+      r.textContent = { best: "best" }[role] || role;
       dt.appendChild(r);
     }
     const dd = document.createElement("dd");
@@ -332,9 +332,7 @@ export function defsTwin({ summary, items }) {
     }
     dl.append(dt, dd);
   }
-  scroll.appendChild(dl);
-  d.append(s, scroll);
-  return d;
+  return dl;
 }
 
 // ------------------------------------------------------------------ hbar

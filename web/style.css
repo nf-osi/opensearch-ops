@@ -801,17 +801,22 @@ svg.viz { display: block; overflow: visible; }
 /* ---------- definition twins ---------- */
 /* Same disclosure affordance as the table twin, for the short-hand recipe names the
    figures are labelled with. Two columns on wide viewports, stacked on narrow. */
-.viz-defs dl { margin: 0; }
-.viz-defs dt {
+.defs-list { margin: 0; }
+.defs-list dt {
   font: 600 12.5px "Public Sans", sans-serif; color: var(--ink);
   display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
   padding-top: 10px; border-top: 1px solid var(--rule-soft);
 }
-.viz-defs dl > dt:first-child { padding-top: 0; border-top: 0; }
-.viz-defs dd {
+.defs-list > dt:first-child { padding-top: 0; border-top: 0; }
+.defs-list dd {
   margin: 3px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--muted);
   max-width: 74ch;
 }
+/* The term wears its mark's role colour, the same two the plot tints a category label
+   with (and the same text-safe steps — the raw fills fail contrast as text). Only the
+   controls are tinted: colouring every entry would make the colour mean nothing. */
+.defs-term.is-baseline { color: var(--series-2-ink); }
+.defs-term.is-production { color: var(--series-3-ink); }
 .defs-tag {
   font: 600 10.5px "IBM Plex Mono", monospace; letter-spacing: .02em;
   color: var(--teal-deep); background: var(--paper-2);
@@ -826,10 +831,73 @@ svg.viz { display: block; overflow: visible; }
   color: var(--ink); background: var(--paper-2);
   border-left: 3px solid var(--muted-mark);
 }
-.defs-role-baseline { border-left-color: var(--series-2); }
-.defs-role-production { border-left-color: var(--series-3); }
 .defs-role-best { border-left-color: var(--series-1); }
 .defs-note { display: block; margin-top: 2px; color: var(--faint); }
+
+/* ---------- glossary drawer ----------
+   A reference panel, not a dialog: on a wide viewport it overlays the right margin and
+   leaves the page fully usable, so a name can be looked up without losing the figure it
+   was read from. The tab is a child of the panel and sits 34px to its left, so at rest
+   the panel is off-screen and only the tab shows — one control that slides out. */
+.drawer {
+  position: fixed; top: 0; right: 0; z-index: 40;
+  width: min(390px, 92vw); height: 100vh;
+  transform: translateX(100%); transition: transform .24s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;                       /* only the tab and the panel take clicks */
+}
+.drawer.is-open { transform: none; }
+.drawer-tab {
+  position: absolute; top: 32vh; left: -34px; pointer-events: auto;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 34px; min-height: 168px; padding: 14px 0; cursor: pointer; appearance: none;
+  border: 1px solid var(--teal-line); border-right: 0; background: var(--teal-wash);
+  color: var(--teal-deep); border-radius: var(--radius) 0 0 var(--radius);
+  font: 700 13px "Public Sans", sans-serif; letter-spacing: .04em;
+  writing-mode: vertical-rl; transition: .15s; box-shadow: var(--shadow);
+}
+.drawer-tab::before { content: "«"; writing-mode: horizontal-tb; font-size: 15px; }
+.drawer.is-open .drawer-tab::before { content: "»"; }
+.drawer-tab:hover { background: var(--teal); color: #fff; border-color: var(--teal); }
+.drawer-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.drawer-panel {
+  pointer-events: auto; height: 100%; display: flex; flex-direction: column;
+  background: var(--card); border-left: 1px solid var(--rule);
+  box-shadow: -20px 0 50px -34px rgba(16, 32, 30, .55);
+}
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--rule-soft);
+}
+.drawer-title {
+  font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em;
+  color: var(--ink); margin: 0;
+}
+.drawer-close {
+  appearance: none; border: 1px solid var(--rule); background: var(--paper);
+  color: var(--teal-deep); width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+  font: 400 18px "Public Sans", sans-serif; line-height: 1; display: grid; place-items: center;
+  transition: .15s; flex: none;
+}
+.drawer-close:hover { border-color: var(--teal); background: var(--teal-wash); }
+.drawer-sub { font-size: 12.5px; color: var(--faint); margin: 0; padding: 10px 18px 0; line-height: 1.45; }
+.drawer-body { flex: 1; overflow: auto; padding: 4px 18px 22px; }
+/* group headings inside the drawer: the same mono eyebrow the page uses for section
+   labels, so a scroll through the panel reads as sections rather than one long list */
+.drawer-group-title {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); margin: 18px 0 2px; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.drawer-body > .drawer-group-title:first-child { margin-top: 10px; padding-top: 0; border-top: 0; }
+
+/* On a narrow viewport the panel covers the content, so it behaves like a sheet: a scrim
+   appears and takes the dismiss click. Wide viewports never see it. */
+.drawer-scrim {
+  position: fixed; inset: 0; z-index: 39; background: rgba(22, 32, 30, .3);
+  opacity: 0; transition: opacity .2s ease;
+}
+.drawer-scrim.is-on { opacity: 1; }
+@media (min-width: 901px) { .drawer-scrim { display: none !important; } }
 
 /* ---------- filters & segmented controls ---------- */
 .filters {
@@ -874,12 +942,6 @@ svg.viz { display: block; overflow: visible; }
   stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
 }
 
-/* the deployed arm, badged in the leaderboard glossary — no mark wears this role, so it
-   borrows the accent rather than a series colour */
-.defs-role-promoted { border-left-color: var(--green); }
-/* a row that used to be production and no longer is: the neutral mark, like any other
-   arm tested, because that is what it now is */
-.defs-role-superseded { border-left-color: var(--muted-mark); }
 
 /* ---------- failure cards ---------- */
 /* Legacy-gap groups: a closed gap and an open one are different news, so each grid gets

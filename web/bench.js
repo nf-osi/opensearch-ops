@@ -9,7 +9,7 @@
 //                quality vs latency, case-type split, per-case ranks, the searches that
 //                fail, how the golden set was built, and the field boosts in play.
 
-import { hbar, dumbbell, range, rankstack, heatmap, legend, tableTwin, defsTwin, rankBucket,
+import { hbar, dumbbell, range, rankstack, heatmap, legend, tableTwin, defsList, rankBucket,
          ROLE, RANK_BANDS, fmtNum, fmtMs } from "./charts.js";
 import { strategyLabel, METRIC_LABELS, CASE_TYPE_LABELS, REFERENCE_POINTS } from "./labels.js";
 import { anchorLink, setRoute, scrollToSection } from "./route.js";
@@ -32,6 +32,11 @@ function el(tag, cls, text) {
 const isMs = (key) => key.startsWith("rt_ms");
 const fmtMetric = (key, v) => (isMs(key) ? fmtMs(v) : fmtNum(v));
 const metricName = (key, k) => METRIC_LABELS[key].name.replace("@k", `@${k}`);
+/** A metric's definition, with the index's own k filled in. */
+const metricText = (key, k) => METRIC_LABELS[key].help.replace("{k}", k);
+/** …plus which way is good, for the places with no direction chip beside them (a figure
+ *  note, a stat tile). The glossary uses metricText: its chip carries the direction. */
+const metricHelp = (key, k) => `${metricText(key, k)} ${METRIC_LABELS[key].dir === "up" ? "Higher" : "Lower"} is better.`;
 const pct = (n, d) => (d ? `${Math.round((n / d) * 100)}%` : "—");
 const day = (iso) => (iso ? String(iso).slice(0, 10) : "—");
 
@@ -201,9 +206,92 @@ function ranCaseIds(data, run) {
   return data.cases.map((c) => c.id).filter((id) => seen.has(id));
 }
 
+// ------------------------------------------------------------- glossary drawer
+/* Non-modal on purpose: the point is to read a definition while looking at the figure it
+   came from, so opening it neither traps focus nor blocks the page. Focus does move to
+   the panel on open and back to the tab on close, and the panel is inert while shut so it
+   stays out of the tab order. */
+/* Open/closed is remembered, and reconciled against two other facts: whether this index
+   has anything to define, and whether the results tab is the one on screen. syncGlossary
+   is the only writer of the DOM state so those three can never disagree. */
+const gl = { items: null, onResults: true, want: false };
+const GL_KEY = "nf-search-glossary-open";
+function wireGlossary() {
+  Object.assign(gl, {
+    root: $("#glossary"), tab: $("#glossaryTab"), panel: $("#glossaryPanel"),
+    close: $("#glossaryClose"), sub: $("#glossarySub"), body: $("#glossaryBody"),
+    scrim: $("#glossaryScrim"),
+  });
+  if (!gl.root) return;
+  gl.tab.addEventListener("click", () => openGlossary(!gl.want));
+  gl.close.addEventListener("click", () => openGlossary(false));
+  gl.scrim.addEventListener("click", () => openGlossary(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && gl.want) openGlossary(false);
+  });
+  try { gl.want = localStorage.getItem(GL_KEY) === "1"; } catch { gl.want = false; }
+  syncGlossary();                       // no focus move: nobody asked for it at load
+}
+
+/** Called by app.js when the tab changes. The panel is fixed to the viewport from
+ *  <body>, so it cannot ride along with #results being hidden — it has to be told. */
+export function glossaryOnTab(tab) {
+  gl.onResults = tab === "results";
+  syncGlossary();
+}
+
+function openGlossary(open, { focus = true } = {}) {
+  if (!gl.root) return;
+  gl.want = open;
+  try { localStorage.setItem(GL_KEY, open ? "1" : "0"); } catch { /* private mode */ }
+  syncGlossary();
+  if (focus && !gl.root.hidden) (open ? gl.close : gl.tab).focus({ preventScroll: true });
+}
+
+/** The one writer of the drawer's DOM state. */
+function syncGlossary() {
+  if (!gl.root) return;
+  const available = gl.onResults && !!gl.items?.length;
+  const open = available && gl.want;
+  gl.root.hidden = !available;
+  gl.root.classList.toggle("is-open", open);
+  gl.tab.setAttribute("aria-expanded", String(open));
+  gl.panel.inert = !open;                        // shut: out of the tab order entirely
+  gl.scrim.hidden = !open;
+  gl.scrim.classList.toggle("is-on", open);
+}
+
+/** Fill the drawer for the index on screen, or hide the tab when there is nothing to
+ *  define. `groups` is [{title, items}] — recipes and metrics are separate lists because
+ *  they answer different questions ("what did this row do?" vs "what is this number?").
+ *  Content is refreshed even while open, so switching index updates the panel under the
+ *  reader rather than closing it, and `want` is left alone so an index with nothing to
+ *  define hides the tab without forgetting that the drawer was open. */
+function setGlossary(groups, sub) {
+  if (!gl.root) return;
+  const shown = (groups || []).filter((g) => g.items?.length);
+  gl.items = shown;
+  syncGlossary();
+  if (!shown.length) return;
+  gl.sub.textContent = sub || "";
+  gl.body.replaceChildren(...shown.flatMap((g) =>
+    [el("p", "drawer-group-title", g.title), defsList(g.items)]));
+}
+
+/** Plain-language definitions for the scores the figures are labelled with. Same source
+ *  as the figure notes (labels.js), so a metric is described one way on the whole site. */
+function metricDefs(run) {
+  return METRIC_KEYS.map((key) => ({
+    term: metricName(key, run.k),
+    tag: METRIC_LABELS[key].dir === "up" ? "higher better" : "lower better",
+    definition: metricText(key, run.k),
+  }));
+}
+
 // ---------------------------------------------------------------- boot
 export async function initResults(route = {}) {
   MANIFEST = await fetch("data/manifest.json").then((r) => r.json());
+  wireGlossary();
   renderHero();
   renderReferencePoints();
   renderPortfolio();
@@ -603,6 +691,7 @@ function renderDetail() {
 
   if (!chosen) {
     body.appendChild(noRunNotice(data));
+    setGlossary(null);                  // nothing scored, so nothing to define
     goldenSection(host, data);
     fieldSection(host, data);
     return;
@@ -708,10 +797,13 @@ function leaderboardSection(host, data, run) {
       const t = el("div", "stat stat-neutral");
       t.appendChild(el("p", "stat-label", metricName(key, run.k)));
       t.appendChild(el("p", "stat-value", fmtMetric(key, run.strategies[run.keys[0]][key])));
-      t.appendChild(el("p", "stat-sub", METRIC_LABELS[key].help));
+      t.appendChild(el("p", "stat-sub", metricHelp(key, run.k)));
       tiles.appendChild(t);
     }
     sec.appendChild(tiles);
+    // one recipe needs no list to tell it from others, but its six scores still do
+    setGlossary([{ title: "Metrics", items: metricDefs(run) }],
+                `What each score reported for ${data.index_name} means.`)
     host.appendChild(sec);
     return;
   }
@@ -725,7 +817,7 @@ function leaderboardSection(host, data, run) {
   }));
   const { plot } = figure(sec, {
     title: metricName(state.rankBy, run.k),
-    note: METRIC_LABELS[state.rankBy].help,
+    note: metricHelp(state.rankBy, run.k),
   });
   const dir = METRIC_LABELS[state.rankBy].dir === "up" ? -1 : 1;
   const ordered = [...run.keys].sort((a, b) =>
@@ -780,27 +872,24 @@ function leaderboardSection(host, data, run) {
     rows: ordered.map((key) => [strategyLabel(key).name,
       ...METRIC_KEYS.map((m) => fmtMetric(m, run.strategies[key][m]))]),
   }));
-  // The bars are labelled with short names; this is where those names are defined, in the
-  // same order the chart plots them so the two can be read side by side.
-  plot.parentElement.appendChild(defsTwin({
-    summary: "What these recipe names mean",
-    items: ordered.map((key) => {
+  // The bars are labelled with short names; the drawer defines them, in the same order
+  // the chart plots them so the two can be read side by side.
+  const recipeDefs = ordered.map((key) => {
       const l = strategyLabel(key);
-      // A recipe can hold two roles at once — production_current winning the run is the
-      // outcome worth seeing, and showing only the bar's colour would hide half of it.
+      // One badge only: every other role a row can hold is already its name, and this
+      // block is shared by every index — which recipe won THIS run is the one thing the
+      // term cannot say.
       const roles = [];
-      if (key === PLATFORM_DEFAULT_KEY && promo?.key !== key) roles.push(ROLE.BASELINE);
-      if (key === PRODUCTION_KEY) roles.push(ROLE.PRODUCTION);
-      // badge-only role: no mark wears it, it states that this row is what is deployed
-      if (promo && key === promo.key && key !== PRODUCTION_KEY) roles.push("promoted");
-      if (promo && key === promo.stale) roles.push("superseded");
       if (key === run.best_key) roles.push(ROLE.BEST);
-      const note = promo && key === promo.stale
-        ? `Measured before the promotion${promo.at ? ` of ${promo.at}` : ""}; this is the configuration production replaced, not what it sends now.`
-        : l.bestFor;
-      return { term: l.name, tag: l.tag, roles, definition: l.blurb, note };
-    }),
-  }));
+      // same tint the plot gives this recipe's category label, including the deployed
+      // arm on a promoted index — colour is how an entry ties back to its mark
+    return { term: l.name, tag: l.tag, roles, termRole: labelRoleOf(key, run),
+             definition: l.blurb, note: l.bestFor };
+  });
+  setGlossary(
+    [{ title: "Recipes", items: recipeDefs }, { title: "Metrics", items: metricDefs(run) }],
+    `The ${ordered.length} recipes scored on ${data.index_name}, in the order the leaderboard ranks them, and what each score means.`,
+  );
   host.appendChild(sec);
 }
 

@@ -37,6 +37,8 @@
   <div class="wrap" id="reference"></div>
   <div class="wrap" id="portfolio"></div>
   <div class="wrap" id="detail"></div>
+
+
 </section>
 
 <!-- ================================ SEARCH LAB =============================== -->
@@ -144,6 +146,27 @@
   </aside>
   </div>
 </section>
+
+<!-- Glossary: the figures are labelled with short recipe names and scored in metrics named
+     by acronym, and looking either up should not mean losing your place. The tab is part of
+     the panel, so it slides out with it.
+
+     A direct child of <body>, NOT of #results: .panel-tab animates `transform`, and a
+     transformed ancestor becomes the containing block for a position:fixed descendant —
+     which would anchor this to the section instead of the viewport. bench.js hides it when
+     the results tab is not the one on screen. -->
+<aside class="drawer" id="glossary" aria-label="Glossary" hidden>
+  <button type="button" class="drawer-tab" id="glossaryTab" aria-expanded="false" aria-controls="glossaryPanel">Glossary</button>
+  <div class="drawer-panel" id="glossaryPanel">
+    <header class="drawer-head">
+      <p class="drawer-title">Glossary</p>
+      <button type="button" class="drawer-close" id="glossaryClose" aria-label="Close glossary">×</button>
+    </header>
+    <p class="drawer-sub" id="glossarySub"></p>
+    <div class="drawer-body" id="glossaryBody"></div>
+  </div>
+</aside>
+<div class="drawer-scrim" id="glossaryScrim" hidden></div>
 
 <footer class="foot wrap">
   <p>
