@@ -74,11 +74,14 @@ an ancestor of the SearchIndex and cannot provide an inherited configuration.
 > only public `OPEN_DATA` rows. Query-time changes do not require rebuilding.
 
 > [!NOTE]
-> Six NF indexes are currently registered and configured: `nf-tools` (configuration `9`, via a
-> legacy inherited binding), `nf-datasets` (`11`), `nf-hackathons` (`12`), `nf-initiatives`
-> (`13`), `nf-studies` (`10`), and `nf-publications` (`14`). Use
-> [`config/config.py check`](config/config.py), [`list`](config/config.py), and
-> [`apply <id> --index <name-or-synId>`](config/config.py) to verify or change bindings.
+> Registering a configuration does not bind it. A configuration listed under `org.synapse.nf`
+> takes effect only once some index carries it in `searchConfigurationId`, so the two states
+> have to be checked separately: [`config/config.py list`](config/config.py) shows what is
+> registered, [`check`](config/config.py) shows what is actually bound, and
+> [`apply <id> --index <name-or-synId>`](config/config.py) /
+> [`unbind`](config/config.py) change it. Bindings move, so read the live entity rather than
+> any list written down here — including the benchmark's assumption that `nf-tools` is the one
+> `nf-` index with a configuration bound to it.
 
 | Object | List | Get / update |
 | --- | --- | --- |
@@ -188,8 +191,10 @@ use `frontend_default`.
 
 > [!IMPORTANT]
 > `frontend_default` represents the platform default only on an index without a bound
-> SearchConfiguration. To measure it, run the benchmark after unbinding the configuration, then
-> restore the binding and reference the unbound result through `constant:` in [site.yaml](site.yaml).
+> SearchConfiguration. To measure it, unbind with [`config/config.py unbind`](config/config.py),
+> score it under its own label, then re-bind. Keep that run as its own result file: it measured a
+> different index state, so it is not interchangeable with a run scored while the configuration
+> was bound. `run.py` warns when it scores `frontend_default` against an index that still has one.
 
 ```bash
 pip install pyyaml
@@ -197,11 +202,12 @@ python3 benchmark/run.py tools
 python3 benchmark/run.py tools --label boost-v2 --strategy multi_match_boosted
 ```
 
-Every result records a golden fingerprint, query configuration fingerprint, and bound
-`search_config_id`. This makes results comparable after golden-set, field-boost, or index-state
-changes. `run.py` and `build_site.py` warn when published or local runs have incompatible
-provenance. See [benchmark/tools/RESULTS.md](benchmark/tools/RESULTS.md) for the `nf-tools`
-strategy summary and interpretation guidance.
+Every result records a golden fingerprint, a query configuration fingerprint, and the
+`search_config_id` bound while it was scored, so a result file can say which dataset and which
+index state it measured. Before scoring, `run.py` compares the run against the other result
+files in the same `results/` directory and warns when they were not scored against the same
+golden. See [benchmark/tools/RESULTS.md](benchmark/tools/RESULTS.md) for the `nf-tools` strategy
+summary and interpretation guidance.
 
 ## Interactive site
 
