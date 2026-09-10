@@ -106,9 +106,40 @@ const PRODUCTION_KEY = "production_current";
 
 const roleOf = (key, run) => (
   key === run.best_key ? ROLE.BEST
+    : key === run.promo?.key ? ROLE.PRODUCTION
+    : key === run.promo?.stale ? ROLE.OTHER
     : key === PRODUCTION_KEY ? ROLE.PRODUCTION
     : key === PLATFORM_DEFAULT_KEY ? ROLE.BASELINE
     : ROLE.OTHER);
+
+/* Whether what is DEPLOYED is also the best arm tested. Two ways that can be true, and
+   the dashboard has to handle both: site.yaml records a promotion (`promoted:` — the only
+   way to know an index-side configuration is live, since the repo can only see that a
+   config file is committed), or the run's `production_current` arm simply wins. */
+function promotionState(data, keys, bestKey) {
+  const p = data.promoted;
+  if (p?.as && keys.includes(p.as)) {
+    return {
+      key: p.as, at: p.at, note: p.note,
+      isBest: p.as === bestKey, recorded: true,
+      /* A promotion can be recorded the moment it goes live, before `production:` is
+         re-transcribed and the table re-scored. Then the deployed arm is some experiment
+         row — measured as that shape, which is what production now sends — and the run's
+         own `production_current` row measures the configuration that was replaced. It has
+         to stop claiming production and say what it is instead. */
+      stale: p.as !== PRODUCTION_KEY && keys.includes(PRODUCTION_KEY) ? PRODUCTION_KEY : null,
+    };
+  }
+  if (bestKey && bestKey === PRODUCTION_KEY) {
+    return { key: PRODUCTION_KEY, at: null, note: null, isBest: true, recorded: false, stale: null };
+  }
+  return null;
+}
+
+/* A label can name a role its mark does not wear. When the deployed arm also wins, its
+   bar takes the best fill — but the axis label still carries the deployed tint, so a
+   reader scanning the categories can see which row is what production serves. */
+const labelRoleOf = (key, run) => (key === run.promo?.key ? ROLE.PRODUCTION : roleOf(key, run));
 
 /** Normalise one committed run into the shape the views want, resolving which recipe is
  *  the control and which won on MRR.
@@ -122,13 +153,17 @@ function readRun(data, run) {
   const keys = Object.keys(strategies);
   const ranked = [...keys].sort((a, b) => (strategies[b].mrr || 0) - (strategies[a].mrr || 0));
   const control = run.control || MANIFEST.default_baseline_key;
+  const best = ranked[0] || null;
   return {
     label: run.label, run_at: run.run_at, k: run.k || data.k,
     strategies, keys, per_case: run.per_case || {},
     // rows pinned to another run (site.yaml `constant:`) — {strategy: {from, run_at}}
     constants: run.constants || {},
     baseline_key: keys.includes(control) ? control : null,
-    best_key: ranked[0] || null,
+    best_key: best,
+    // what is deployed (site.yaml `promoted:`), resolved here so roleOf() and every view
+    // read the same answer
+    promo: promotionState(data, keys, best),
   };
 }
 
@@ -259,7 +294,9 @@ function renderHero() {
   const headroom = withRun.filter((t) =>
     (t.latest.strategies[t.latest.best_key]?.mrr ?? 0) >
     (t.latest.strategies[t.latest.baseline_key]?.mrr ?? 0) + 1e-9);
-  const atBest = withRun.filter((t) => !headroom.includes(t)).map((t) => t.index_name);
+  const atBest = withRun.filter((t) => !headroom.includes(t));
+  const atBestLabel = (t) => t.index_name + (t.promoted?.is_best
+    ? ` (promoted${t.promoted.at ? ` ${t.promoted.at}` : ""})` : "");
   const bestGain = headroom.length ? Math.max(...headroom.map((t) =>
     t.latest.strategies[t.latest.best_key].mrr - t.latest.strategies[t.latest.baseline_key].mrr)) : null;
 
@@ -291,7 +328,7 @@ function renderHero() {
   }
   host.appendChild(rail);
   host.appendChild(el("p", "hero-rail-note", atBest.length
-    ? `Pooled across the ${scored.length} scored indexes and measured against the platform default. ${atBest.join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best recipe tested — gains are not uniform, and not every index benefits from customization.`
+    ? `Pooled across the ${scored.length} scored indexes and measured against the platform default. ${atBest.map(atBestLabel).join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best arm tested — gains are not uniform, and not every index benefits from customization.`
     : `Pooled across the ${scored.length} scored indexes and measured against the platform default. Every scored index has a tested recipe that beats its control.`));
 }
 
@@ -377,10 +414,19 @@ function renderReferencePoints() {
     "Both arrows point at production: the platform default is what NF deployed a configuration to replace, and a best arm is what the next deployment would promote. Promotion is a separate decision — nothing on this page changes what users see."));
 
   const nConfigured = MANIFEST.coverage?.n_configured;
+  const promotedTables = MANIFEST.tables.filter((t) => t.promoted?.is_best);
+  const fine = el("p", "fine");
   if (nConfigured != null) {
-    body.appendChild(el("p", "fine",
-      `${nConfigured} of ${MANIFEST.coverage.n_indexes} nf- indexes have a custom search config; on the other ${MANIFEST.coverage.n_indexes - nConfigured}, “In production” and the platform default are the same query.`));
+    fine.append(document.createTextNode(
+      `${nConfigured} of ${MANIFEST.coverage.n_indexes} nf- indexes have a custom search config; on the other ${MANIFEST.coverage.n_indexes - nConfigured}, “In production” and the platform default are the same query. `));
   }
+  if (promotedTables.length) {
+    // the dashed arrow has already been walked on these indexes — the two right-hand
+    // nodes are one arm there, which is why they show no gain
+    fine.append(document.createTextNode(
+      `On ${promotedTables.length} of the ${MANIFEST.tables.filter((t) => t.latest).length} scored indexes the deployed arm is already the best tested.`));
+  }
+  if (fine.childNodes.length) body.appendChild(fine);
 }
 
 // ---------------------------------------------------------------- portfolio
@@ -410,7 +456,17 @@ function renderPortfolio() {
     card.appendChild(el("p", "ic-name", row.index_name));
     const meta = el("p", "ic-meta");
     meta.appendChild(el("span", "ic-id", row.index));
-    if (row.configured) meta.appendChild(el("span", "ic-flag", "config"));
+    if (t.promoted) {
+      // Supersedes the "config" chip: a promoted index has one by definition, and two
+      // chips beside the synID do not fit the card. The distinction the chip draws is the
+      // one that matters — committed vs actually deployed.
+      const flag = el("span", "ic-flag is-promoted", "promoted");
+      flag.title = `${strategyLabel(t.promoted.as).name} is deployed${t.promoted.at ? ` from ${t.promoted.at}` : ""}`
+        + (t.promoted.is_best ? " and is the best arm in this run." : ".");
+      meta.appendChild(flag);
+    } else if (row.configured) {
+      meta.appendChild(el("span", "ic-flag", "config"));
+    }
     card.appendChild(meta);
     if (t.latest) {
       const b = t.latest.buckets[t.latest.baseline_key];
@@ -474,7 +530,8 @@ function renderPortfolio() {
       align: [null, "num", "num", null, null],
       rows: scored.map((t) => [t.index_name, fmtNum(t.latest.strategies[t.latest.baseline_key]?.mrr),
         fmtNum(t.latest.strategies[t.latest.best_key]?.mrr),
-        strategyLabel(t.latest.best_key).name, day(t.latest.run_at)]),
+        strategyLabel(t.latest.best_key).name + (t.promoted?.is_best ? " · in production" : ""),
+        day(t.latest.run_at)]),
     }));
   }
 }
@@ -539,6 +596,10 @@ function renderDetail() {
     return;
   }
   const run = readRun(data, chosen);
+  // "What is deployed is already the best arm tested" is this index's headline finding,
+  // so it is stated above the leaderboard rather than left for a reader to infer from a
+  // bar that happens to be both the control and the winner.
+  if (run.promo?.isBest) body.appendChild(promotedBanner(data, run, run.promo));
   leaderboardSection(body, data, run);
   landingSection(body, data, run);
   tradeoffSection(body, data, run);
@@ -564,6 +625,7 @@ function identityRow(data, chosen, runs) {
   idFact.appendChild(el("span", "ident-label", "SearchIndex"));
   idFact.appendChild(link);
   wrap.append(idFact, fact("Golden set", `v${data.version || "—"}`));
+  if (data.promoted?.at) wrap.appendChild(fact("In production", data.promoted.at));
   if (chosen) {
     const ran = new Set(Object.values(chosen.per_case || {}).flatMap((pc) => Object.keys(pc)));
     wrap.appendChild(fact("Run", `${chosen.label} · ${day(chosen.run_at)}`));
@@ -582,6 +644,31 @@ function identityRow(data, chosen, runs) {
   return wrap;
 }
 
+/** The promoted-state callout: what is running, since when, and that nothing tested
+ *  beats it. Deliberately two lines — the caveats about what each row measures belong
+ *  with the figure they are about, not stacked under a headline. */
+function promotedBanner(data, run, promo) {
+  const box = el("div", "notice is-promoted");
+  const title = el("p", "notice-title");
+  const mark = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  mark.setAttribute("class", "notice-mark");
+  mark.setAttribute("viewBox", "0 0 24 24");
+  mark.setAttribute("aria-hidden", "true");
+  mark.innerHTML = '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/>';
+  title.append(mark, document.createTextNode("What is deployed is already the best arm tested"));
+  box.appendChild(title);
+
+  const p = el("p", "notice-body");
+  const name = strategyLabel(promo.key).name;
+  const when = promo.at ? `serves from ${promo.at}` : "serves today";
+  p.append(document.createTextNode(promo.recorded
+    ? `${name} is the row that measures what ${data.index_name} ${when}. No other arm in this run scores higher on ${metricName("mrr", run.k)}.`
+    : `${name} is what ${data.index_name} serves today, and it wins this run: no other arm scores higher on ${metricName("mrr", run.k)}.`));
+  box.appendChild(p);
+
+  return box;
+}
+
 function noRunNotice(data) {
   const box = el("div", "notice");
   box.appendChild(el("p", "notice-title", "No scored run committed yet"));
@@ -595,6 +682,7 @@ function noRunNotice(data) {
 
 // -- leaderboard ------------------------------------------------------------
 function leaderboardSection(host, data, run) {
+  const promo = run.promo;
   const sec = el("div", "sub");
   // One recipe is a set of numbers, not a comparison — a single bar (or a single scatter
   // point) would dress one value up as a chart.
@@ -635,18 +723,38 @@ function leaderboardSection(host, data, run) {
       label: strategyLabel(key).name,
       value: run.strategies[key][state.rankBy] || 0,
       role: roleOf(key, run),
+      labelRole: labelRoleOf(key, run),
     })),
     max: isMs(state.rankBy) ? undefined : 1,
     fmt: (v) => fmtMetric(state.rankBy, v),
     unit: metricName(state.rankBy, run.k),
   });
+  // Only legend a colour some bar actually wears. An index whose control also wins has no
+  // baseline-coloured bar, and listing one anyway sends the reader hunting for it.
+  const rolesShown = new Set(run.keys.map((key) => roleOf(key, run)));
   plot.after(legend([
-    { fill: "var(--series-2)", label: "Platform default" },
-    ...(run.keys.includes(PRODUCTION_KEY)
-      ? [{ fill: "var(--series-3)", label: "In production" }] : []),
+    ...(rolesShown.has(ROLE.BASELINE) ? [{ fill: "var(--series-2)", label: "Platform default" }] : []),
+    ...(rolesShown.has(ROLE.PRODUCTION) ? [{ fill: "var(--series-3)", label: "In production" }] : []),
     { fill: "var(--series-1)", label: `Best on ${metricName("mrr", run.k)}` },
-    { fill: "var(--muted-mark)", label: "Other recipes tested" },
+    ...(rolesShown.has(ROLE.OTHER) ? [{ fill: "var(--muted-mark)", label: "Other recipes tested" }] : []),
   ]));
+  // A promotion that no longer wins is the ordinary state after new experiments, and the
+  // chart cannot show it: the deployed row is just another bar. Name it.
+  if (promo && !promo.isBest) {
+    plot.parentElement.appendChild(el("p", "fig-note is-constant",
+      `${strategyLabel(promo.key).name} is what this index serves${promo.at ? ` from ${promo.at}` : " today"}; ${strategyLabel(run.best_key).name} scores higher in this run.`));
+  }
+  if (promo?.stale) {
+    plot.parentElement.appendChild(el("p", "fig-note is-constant",
+      `${strategyLabel(promo.stale).name} measures the configuration in place before ${promo.at || "the promotion"} — not what the portal sends now.`));
+  }
+  // The row is labelled and coloured as the platform default, and on an index whose own
+  // configuration is live it is not a platform-default measurement.
+  if (promo && promo.key === PLATFORM_DEFAULT_KEY) {
+    plot.parentElement.appendChild(el("p", "fig-note is-constant",
+      `${strategyLabel(promo.key).name} is the default query, but this index runs a custom configuration, so the row includes it — not a platform-default measurement.`));
+  }
+  if (promo?.note) plot.parentElement.appendChild(el("p", "fig-note is-constant", promo.note));
   // A held-constant row was measured in a different run, under a different index state.
   // Saying so is the whole point of pinning it rather than leaving the wrong number in.
   for (const [key, g] of Object.entries(run.constants)) {
@@ -669,10 +777,16 @@ function leaderboardSection(host, data, run) {
       // A recipe can hold two roles at once — production_current winning the run is the
       // outcome worth seeing, and showing only the bar's colour would hide half of it.
       const roles = [];
-      if (key === PLATFORM_DEFAULT_KEY) roles.push(ROLE.BASELINE);
+      if (key === PLATFORM_DEFAULT_KEY && promo?.key !== key) roles.push(ROLE.BASELINE);
       if (key === PRODUCTION_KEY) roles.push(ROLE.PRODUCTION);
+      // badge-only role: no mark wears it, it states that this row is what is deployed
+      if (promo && key === promo.key && key !== PRODUCTION_KEY) roles.push("promoted");
+      if (promo && key === promo.stale) roles.push("superseded");
       if (key === run.best_key) roles.push(ROLE.BEST);
-      return { term: l.name, tag: l.tag, roles, definition: l.blurb, note: l.bestFor };
+      const note = promo && key === promo.stale
+        ? `Measured before the promotion${promo.at ? ` of ${promo.at}` : ""}; this is the configuration production replaced, not what it sends now.`
+        : l.bestFor;
+      return { term: l.name, tag: l.tag, roles, definition: l.blurb, note };
     }),
   }));
   host.appendChild(sec);
@@ -690,7 +804,8 @@ function landingSection(host, data, run) {
   const ordered = [...run.keys].sort((a, b) =>
     (bucketsFor(run, b, ids).top - bucketsFor(run, a, ids).top));
   const lg = rankstack(plot, {
-    rows: ordered.map((key) => ({ label: strategyLabel(key).name, role: roleOf(key, run), buckets: bucketsFor(run, key, ids) })),
+    rows: ordered.map((key) => ({ label: strategyLabel(key).name, role: roleOf(key, run),
+                                  labelRole: labelRoleOf(key, run), buckets: bucketsFor(run, key, ids) })),
     k: run.k,
   });
   plot.after(lg);
@@ -726,10 +841,12 @@ function tradeoffSection(host, data, run) {
     xLabel: "median ms",
     yLabel: "MRR",
   });
+  const rolesShown = new Set(run.keys.map((key) => roleOf(key, run)));
   plot.after(legend([
-    { fill: "var(--series-2)", label: "Platform default" },
+    ...(rolesShown.has(ROLE.BASELINE) ? [{ fill: "var(--series-2)", label: "Platform default" }] : []),
+    ...(rolesShown.has(ROLE.PRODUCTION) ? [{ fill: "var(--series-3)", label: "In production" }] : []),
     { fill: "var(--series-1)", label: "Best on MRR" },
-    { fill: "var(--muted-mark)", label: "Other recipes tested" },
+    ...(rolesShown.has(ROLE.OTHER) ? [{ fill: "var(--muted-mark)", label: "Other recipes tested" }] : []),
   ]));
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — quality and latency",
@@ -750,14 +867,26 @@ function caseTypeSection(host, data, run) {
   sec.appendChild(subHead("Lookups against discovery", "search-types"));
   sec.appendChild(el("p", "sub-lede",
     "Known-item searches have one defensible right answer, so their scores are trustworthy. Topical searches are exploratory — several results are relevant, the golden set lists the ranked head of a larger pool, and recall reads as a floor rather than the whole picture."));
-  const pairKeys = [run.baseline_key, run.best_key].filter((k, i, a) => k && a.indexOf(k) === i);
+  /* Which arms to pair up per type. Without a promotion this is the control against the
+     best tested — "today" vs what could be. Once a promotion is recorded, "today" is no
+     longer the control: the deployed arm is what production serves and the superseded row
+     is what it replaced, so the pair becomes before-and-after and the labels have to say
+     so. A promoted arm that lost adds a third row, which is then the whole story. */
+  const pairKeys = [run.promo?.stale || run.baseline_key, run.promo?.key, run.best_key]
+    .filter((k, i, a) => k && a.indexOf(k) === i);
+  const roleWord = (key) => (
+    run.promo?.key === key ? "in production"
+      : run.promo?.stale === key ? "before promotion"
+      : key === run.baseline_key ? "today"
+      : "best tested");
   const rows = [];
   for (const type of types) {
     const ids = data.cases.filter((c) => c.type === type).map((c) => c.id);
     for (const key of pairKeys) {
       rows.push({
-        label: `${CASE_TYPE_LABELS[type]?.name || type} · ${key === run.baseline_key ? "today" : "best tested"}`,
+        label: `${CASE_TYPE_LABELS[type]?.name || type} · ${roleWord(key)}`,
         role: roleOf(key, run),
+        labelRole: labelRoleOf(key, run),
         buckets: bucketsFor(run, key, ids),
         type, key,
         mrr: meanOver(run.per_case[key] || {}, ids, "rr"),
@@ -769,12 +898,21 @@ function caseTypeSection(host, data, run) {
   const { plot } = figure(sec, { title: "Rank of the first correct result, by search type" });
   const lg = rankstack(plot, { rows, k: run.k });
   plot.after(lg);
+  if (run.promo?.stale) {
+    plot.parentElement.appendChild(el("p", "fig-note",
+      `Before and after the promotion, per search type: the pair is the configuration production replaced against the one it serves${run.promo.at ? ` from ${run.promo.at}` : ""}.`));
+  }
+  // the type split of a single arm — nothing beat it, so there is no pair to draw
+  if (pairKeys.length === 1) {
+    plot.parentElement.appendChild(el("p", "fig-note",
+      `One arm only: ${strategyLabel(pairKeys[0]).name} is both what this index serves and the best tested, so there is no second row to compare it with.`));
+  }
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — scores by search type",
     head: ["Search type", "Recipe", "Cases", "MRR", `Recall@${run.k}`],
     align: [null, null, "num", "num", "num"],
     rows: rows.map((r) => [CASE_TYPE_LABELS[r.type]?.name || r.type,
-      strategyLabel(r.key).name, r.n, fmtNum(r.mrr), fmtNum(r.recall)]),
+      `${strategyLabel(r.key).name} (${roleWord(r.key)})`, r.n, fmtNum(r.mrr), fmtNum(r.recall)]),
   }));
   host.appendChild(sec);
 }
@@ -819,6 +957,7 @@ function caseSection(host, data, run) {
     colKeys: run.keys,
     colLabels: run.keys.map((key) => strategyLabel(key).name),
     colRoles: run.keys.map((key) => roleOf(key, run)),
+    colLabelRoles: run.keys.map((key) => labelRoleOf(key, run)),
     cell: (id, key) => run.per_case[key]?.[id]?.first_rel_rank ?? null,
     k: run.k,
   });

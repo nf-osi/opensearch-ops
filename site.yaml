@@ -50,6 +50,65 @@ constant:
     # No numbers quoted here on purpose: both runs move whenever either is re-scored.
     frontend_default: unbound
 
+# ---------------------------------------------------------------- promoted to production
+# Which arm of a run measures what is actually DEPLOYED, when a tuning result has been
+# promoted. This cannot be derived from the repo: config/ only shows that a configuration
+# is version-controlled, not that it is bound in production (`python3 config/config.py
+# check` reports binding), and an index whose portal ships no SearchQueryConfig has no
+# `production_current` arm at all even when its index-side configuration is live.
+#
+# Recording it lets the dashboard say "this is what users get" about the right row, and
+# mark the case where the best arm tested is the one already running — the useful negative
+# result, which otherwise reads as "no gain available" with no explanation.
+#
+#   <table>:
+#     as:    <strategy key>    the run row that measures the deployed state
+#     at:    <YYYY-MM-DD>      when it went live (optional)
+#     note:  <sentence>        anything the two above cannot say (optional)
+#
+# `as:` is usually `production_current`, once `production:` in the table's fields.yaml has
+# been re-transcribed and the table re-scored. It can also name the experiment arm that
+# measures the shape just deployed — that lets a promotion be recorded the moment it goes
+# live, without waiting for a re-run. The run's own `production_current` row then measures
+# the configuration that was replaced, and the dashboard marks it as pre-promotion rather
+# than letting it keep the label.
+#
+# The build drops an entry whose `as` is not a strategy in the headline run, and says so.
+# It also compares `at:` with the run's date and warns when the two have drifted apart:
+# a run scored before the promotion cannot measure it, and once a run postdates the
+# promotion, `as:` should be back to `production_current`.
+promoted:
+  datasets:
+    # nf-datasets ships no fields.yaml and no `production:` block, so the run has no
+    # `production_current` arm — but the index itself is bound to nf_datasets_search_config
+    # (custom analyzers + synonym routing per column). The default query measured against
+    # that configuration IS what users get, so `frontend_default` is this index's
+    # production row, not its platform-default control.
+    as: frontend_default
+    # the day config/nf_datasets_search_config.json was committed (9723662) — correct this
+    # if the configuration was bound to syn75081630 on a different day
+    at: 2026-07-10
+    # `note:` is rendered on the dashboard, so keep it in the reader's terms — the
+    # maintainer's version of the last sentence is: score it unbound and splice the row in
+    # via `constant:` above, the way tools/frontend_default does.
+    note: >-
+      No query-side arm tested beats the default query running on this configuration.
+      Reporting a true platform-default number for this index would need a run measured
+      with the configuration unbound.
+
+  tools:
+    # Recorded the day the portal config changed, before `production:` in
+    # benchmark/tools/fields.yaml is re-transcribed and the table re-scored — so `as:`
+    # names the arm that measures the shape now deployed, not the production_current row,
+    # which still measures the best-fields configuration it replaced. Re-transcribe and
+    # re-run, then set `as: production_current`; the build warns once a run postdates the
+    # date below.
+    as: multi_match_cross
+    at: 2026-09-11
+    note: >-
+      Cross-fields matching over the benchmark's curated field boosts, replacing the
+      portal's best-fields configuration.
+
 # ---------------------------------------------------------------- deliberately excluded
 # Runs that exist in results/ and are NOT published, with the reason. Build
 # prints excluded runs as expected, and warns only about runs it finds in results/ that

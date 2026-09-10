@@ -59,6 +59,9 @@ golden_fingerprint, field_config_fingerprint = _golden_fingerprint()
 DEFAULT_BASELINE_KEY = "frontend_default"
 # Which runs get published, and why — see the file's own comments.
 SITE_CONFIG = "site.yaml"
+# the run row that measures a portal's own search configuration (mirrors PRODUCTION_KEY in
+# web/bench.js) — what a promotion should eventually be recorded `as:`
+PRODUCTION_KEY = "production_current"
 # Metrics the portfolio overview needs per strategy; the full per-run payload in
 # data/<table>.json keeps everything run.py recorded.
 HEADLINE_METRICS = ("mrr", "recall_at_k", "hit_at_1", "hit_at_k",
@@ -154,6 +157,7 @@ def load_site_config(path):
         "extra_runs": cfg.get("extra_runs") or {},
         "excluded": cfg.get("excluded") or {},
         "constant": cfg.get("constant") or {},
+        "promoted": cfg.get("promoted") or {},
     }
 
 
@@ -234,6 +238,58 @@ def apply_constants(runs, table, cfg, results_dir, report):
             }
             report["constants"].append(
                 f"{table}/{run['label']}: {strategy} taken from {source_label}")
+
+
+def read_promotion(table, cfg, runs, report):
+    """The site.yaml `promoted:` record for one table, validated against the headline run.
+
+    An entry naming a strategy the run does not score would put a label on a row that is
+    not there, so it is dropped and reported rather than published. Dates come back from
+    YAML as `datetime.date`; the payload carries strings."""
+    spec = (cfg["promoted"] or {}).get(table) or {}
+    if not spec:
+        return None
+    key = spec.get("as")
+    run = headline_run(runs, cfg["headline"]) if runs else None
+    if not key:
+        report["unaccounted"].append(f"{table}: `promoted:` has no `as:` — dropped")
+        return None
+    if not run or key not in (run.get("strategies") or {}):
+        report["unaccounted"].append(
+            f"{table}: `promoted: as: {key}` is not a strategy in the "
+            f"{cfg['headline']!r} run — dropped")
+        return None
+    out = {"as": key, "at": str(spec["at"]) if spec.get("at") else None,
+           "note": spec.get("note")}
+    ranked = sorted(run["strategies"].items(), key=lambda kv: kv[1].get("mrr") or 0, reverse=True)
+    # whether the deployed row is also the best row is what the dashboard leads with, so
+    # state it here rather than leaving every view to re-derive it
+    out["is_best"] = bool(ranked) and ranked[0][0] == key
+    # A promotion may be recorded the moment it goes live, naming the experiment arm that
+    # measures the newly deployed shape; the run's own production_current row then measures
+    # the configuration that was replaced. That is a deliberate, temporary state — so
+    # compare the two dates and say when it has outlived itself.
+    has_prod = PRODUCTION_KEY in (run.get("strategies") or {})
+    superseded = key != PRODUCTION_KEY and has_prod
+    run_day = (run.get("run_at") or "")[:10]
+    if out["at"] and run_day:
+        if key == PRODUCTION_KEY and run_day < out["at"]:
+            report["promotion_drift"].append(
+                f"{table}: promoted `at: {out['at']}` is after the {run['label']!r} run "
+                f"({run_day}) — that run's {PRODUCTION_KEY} row measures the configuration "
+                f"the promotion replaced. Re-score it, or point `as:` at the arm that "
+                f"measures the deployed shape.")
+        elif superseded and run_day > out["at"]:
+            report["promotion_drift"].append(
+                f"{table}: the {run['label']!r} run ({run_day}) postdates promoted "
+                f"`at: {out['at']}` — re-transcribe `production:` in "
+                f"benchmark/{table}/fields.yaml and set `as: {PRODUCTION_KEY}`, so one row "
+                f"measures what is deployed.")
+    report["promoted"].append(
+        f"{table}/{key}{' (best arm)' if out['is_best'] else ''}"
+        f"{' · ' + out['at'] if out['at'] else ''}"
+        f"{' · supersedes ' + PRODUCTION_KEY if superseded else ''}")
+    return out
 
 
 def load_runs(table_dir, table, cfg, tracked, report, current_fp, current_fcfp):
@@ -381,6 +437,7 @@ def build_table_data(golden_path, table, cfg, tracked, report):
               "last_reviewed": str(c["last_reviewed"]) if c.get("last_reviewed") else None,
               "reviewer": c.get("reviewer")}
              for c in golden.get("cases", [])]
+    runs = load_runs(table_dir, table, cfg, tracked, report, current_fp, current_fcfp)[0]
     return {
         "index": golden["index"],
         "index_name": golden.get("index_name"),
@@ -395,8 +452,9 @@ def build_table_data(golden_path, table, cfg, tracked, report):
         "production": production,
         "control": control,
         "cases": cases,
-        "runs": load_runs(table_dir, table, cfg, tracked, report, current_fp,
-                          current_fcfp)[0],
+        "runs": runs,
+        # what is actually deployed, when site.yaml records a promotion (see `promoted:`)
+        "promoted": read_promotion(table, cfg, runs, report),
         "generated_at": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
     }
 
@@ -423,6 +481,7 @@ def table_summary(table, data, headline):
         "table": table, "index": data["index"], "index_name": data["index_name"],
         "k": data["k"], "n_cases": len(data["cases"]), "types": types,
         "n_fields": len(data["fields"]), "tuned_query": bool(data["query"]),
+        "promoted": data.get("promoted"),
         "runs": [{"label": r["label"], "run_at": r["run_at"],
                   "n_strategies": len(r["strategies"])} for r in data["runs"]],
         "latest": None,
@@ -494,6 +553,10 @@ def print_report(report, cfg):
         print(f"  excluded by {SITE_CONFIG}: {', '.join(report['excluded'])}")
     for line in report["constants"]:
         print(f"  held constant: {line}")
+    for line in report["promoted"]:
+        print(f"  in production: {line}")
+    for line in report["promotion_drift"]:
+        print(f"  WARNING: {line}")
     for rel in report["missing"]:
         print(f"  note: selected run not on disk — {rel}")
     for rel in report["uncommitted"]:
@@ -520,7 +583,8 @@ def build(benchmark_dir, web_dir, out_dir, config_path):
     cfg = load_site_config(config_path)
     tracked = git_tracked(os.path.relpath(benchmark_dir, HERE))
     report = {k: [] for k in ("missing", "uncommitted", "unreadable", "excluded",
-                              "unaccounted", "constants", "unbound_default",
+                              "unaccounted", "constants", "promoted", "promotion_drift",
+                              "unbound_default",
                               "golden_drift", "boosts")}
     data_dir = os.path.join(out_dir, "data")
     os.makedirs(data_dir, exist_ok=True)

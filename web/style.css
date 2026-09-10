@@ -685,12 +685,17 @@ h2:hover > .anchor-link, h3:hover > .anchor-link,
 }
 .chip.has-config { border-color: var(--teal-line); color: var(--teal-deep); }
 .ic-name { font-weight: 600; font-size: 14.5px; margin: 0; color: var(--ink); }
-.ic-meta { display: flex; align-items: center; gap: 7px; margin: 4px 0 10px; }
+.ic-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin: 4px 0 10px; }
 .ic-id { font: 400 11px "IBM Plex Mono", monospace; color: var(--faint); }
 .ic-flag {
   font: 600 9.5px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase;
   color: var(--teal-deep); background: var(--teal-wash); border: 1px solid var(--teal-line);
   border-radius: 999px; padding: 1px 6px;
+}
+/* second chip on a card: distinct from "config" (a file exists) because this one is a
+   recorded fact about production */
+.ic-flag.is-promoted {
+  color: var(--green-deep); background: var(--green-wash); border-color: #c4ddb0;
 }
 .ic-stat { font: 600 13.5px "Public Sans", sans-serif; color: var(--ink); margin: 0 0 8px; }
 .ic-stat.is-quiet { color: var(--faint); font-weight: 500; }
@@ -856,6 +861,22 @@ svg.viz { display: block; overflow: visible; }
 .notice-title { font: 600 14px "Public Sans", sans-serif; margin: 0 0 4px; color: #5c2d10; }
 .notice-body { font-size: 13.5px; margin: 0; }
 .notice code { font-family: "IBM Plex Mono", monospace; font-size: 12px; background: #fff4ea; padding: 1px 5px; border-radius: 5px; }
+/* "What is deployed is already the best arm" is a finding, not a problem — the default
+   notice is clay because it flags something missing. This one gets the affirmative side
+   of the palette, and a mark so it reads as a state rather than a caveat. */
+.notice.is-promoted { background: var(--green-wash); border-color: #c4ddb0; color: #33501f; }
+.notice.is-promoted .notice-title { color: var(--green-deep); display: flex; align-items: center; gap: 8px; }
+.notice-mark {
+  flex: none; width: 17px; height: 17px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+/* the deployed arm, badged in the leaderboard glossary — no mark wears this role, so it
+   borrows the accent rather than a series colour */
+.defs-role-promoted { border-left-color: var(--green); }
+/* a row that used to be production and no longer is: the neutral mark, like any other
+   arm tested, because that is what it now is */
+.defs-role-superseded { border-left-color: var(--muted-mark); }
 
 /* ---------- failure cards ---------- */
 /* Legacy-gap groups: a closed gap and an open one are different news, so each grid gets

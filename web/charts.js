@@ -31,6 +31,9 @@ export const ROLE = { BASELINE: "baseline", PRODUCTION: "production", BEST: "bes
 /** Class for a category label that names a reference recipe, so the label carries the same
  *  colour as its mark. Only the two controls are tinted — tinting every row would make the
  *  colour meaningless. Used by hbar, rankstack and heatmap so all three agree. */
+/** The role a row's LABEL should carry, which is not always its mark's role: a deployed
+ *  arm that also won the run takes the best fill, and would otherwise lose the tint that
+ *  says it is what production serves. Callers pass `labelRole` to keep the two apart. */
 export function roleCls(role, base = "viz-cat") {
   if (role === ROLE.BASELINE) return `${base} is-baseline`;
   if (role === ROLE.PRODUCTION) return `${base} is-production`;
@@ -299,7 +302,11 @@ export function defsTwin({ summary, items }) {
     for (const role of it.roles || (it.role ? [it.role] : [])) {
       const r = document.createElement("span");
       r.className = `defs-role defs-role-${role}`;
-      r.textContent = { baseline: "platform default", production: "portal today", best: "best" }[role] || role;
+      // `promoted` is badge-only: no mark wears it (see bench.js), it says the row is
+      // what the index actually serves today
+      r.textContent = { baseline: "platform default", production: "portal today",
+                        promoted: "in production", superseded: "pre-promotion",
+                        best: "best" }[role] || role;
       dt.appendChild(r);
     }
     const dd = document.createElement("dd");
@@ -339,7 +346,8 @@ export function hbar(host, { rows, max, fmt = (v) => fmtNum(v), unit = "" }) {
       const bar = svgEl("path", { d: barPath(labelW, y, bw, BAR), fill: ROLE_FILL[r.role] || ROLE_FILL.other });
       interactive(bar, r.label, [{ key: ROLE_FILL[r.role], value: fmt(r.value), label: unit }]);
       svg.appendChild(bar);
-      svg.appendChild(catLabel(labelW - 10, y + BAR - 2, r.label, labelW - 16, roleCls(r.role)));
+      svg.appendChild(catLabel(labelW - 10, y + BAR - 2, r.label, labelW - 16,
+                               roleCls(r.labelRole ?? r.role)));
       svg.appendChild(txt(labelW + bw + 8, y + BAR - 2, fmt(r.value), "viz-val"));
     });
   }, { height });
@@ -455,7 +463,8 @@ export function rankstack(host, { rows, k }) {
         }
         x += full;
       });
-      svg.appendChild(catLabel(labelW - 10, y + BAR - 5, r.label, labelW - 16, roleCls(r.role)));
+      svg.appendChild(catLabel(labelW - 10, y + BAR - 5, r.label, labelW - 16,
+                               roleCls(r.labelRole ?? r.role)));
     });
   }, { height });
   return legend(bands.map((b) => ({ fill: b.fill, label: b.label })));
@@ -464,7 +473,8 @@ export function rankstack(host, { rows, k }) {
 // ------------------------------------------------------------------ heatmap
 /** Every case x every recipe; the cell carries the rank of the first correct result as
  *  magnitude (dark = near the top). cells(rowKey, colKey) -> rank|null. */
-export function heatmap(host, { rowLabels, rowKeys, colLabels, colKeys, colRoles, cell, k }) {
+export function heatmap(host, { rowLabels, rowKeys, colLabels, colKeys, colRoles,
+                                colLabelRoles, cell, k }) {
   const CELL = 22, GAP = 2, HEAD = 92, PAD_L = 8;
   const height = HEAD + rowKeys.length * CELL + 8;
   const fillFor = (rank) => `var(--rank-${rankBucket(rank, k)})`;
@@ -474,7 +484,8 @@ export function heatmap(host, { rowLabels, rowKeys, colLabels, colKeys, colRoles
     colKeys.forEach((ck, j) => {
       const x = labelW + j * colW + colW / 2;
       const t = catLabel(x, HEAD - 12, colLabels[j], HEAD - 14,
-        roleCls(colRoles?.[j], "viz-colhead"), "500 11px 'Public Sans', sans-serif", "start");
+        roleCls(colLabelRoles?.[j] ?? colRoles?.[j], "viz-colhead"),
+        "500 11px 'Public Sans', sans-serif", "start");
       t.setAttribute("transform", `rotate(-52 ${x} ${HEAD - 12})`);
       svg.appendChild(t);
     });
