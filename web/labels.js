@@ -108,10 +108,10 @@ export const REFERENCE_POINTS = [
 // end in "Higher is better" — the glossary shows it as a chip and the figure notes append
 // it (metricHelp in bench.js). `{k}` is filled with the index's own k, as in RANK_BANDS.
 export const METRIC_LABELS = {
-  mrr: { name: "MRR", dir: "up", help: "Mean Reciprocal Rank — how near the top is the first correct result? Position 1 scores 1.0, position 2 scores 0.5, position 3 scores 0.33, averaged over every search." },
-  recall_at_k: { name: "Recall@k", dir: "up", help: "Of everything that should match, what fraction appeared in the top {k}?" },
-  hit_at_1: { name: "Hit@1", dir: "up", help: "How often is the very first result correct?" },
-  hit_at_k: { name: "Hit@k", dir: "up", help: "How often does at least one correct result appear in the top {k}?" },
+  mrr: { name: "MRR", dir: "up", help: "Mean Reciprocal Rank — how near the top the first correct result appears. Position 1 scores 1.0, position 2 scores 0.5, position 3 scores 0.33, averaged over every search." },
+  recall_at_k: { name: "Recall@k", dir: "up", help: "The fraction of everything that should match which appeared in the top {k}." },
+  hit_at_1: { name: "Hit@1", dir: "up", help: "The share of searches whose first result is correct." },
+  hit_at_k: { name: "Hit@k", dir: "up", help: "The share of searches with at least one correct result in the top {k}." },
   rt_ms_median: { name: "Speed (med)", dir: "down", help: "Median wait from query to results, including network and poll time. The measure to compare recipes on." },
   rt_ms_p95: { name: "Speed (p95)", dir: "down", help: "The same wait at the 95th percentile — the slow tail." },
 };

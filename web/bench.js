@@ -383,7 +383,7 @@ function renderHero() {
   }
   host.appendChild(thesis);
   host.appendChild(el("p", "hero-sub", nToday
-    ? `${pct(today.top, nToday)} → ${pct(best.top, nBest)} of ${nToday} curated searches, a ${ptLift}-point gain across ${scored.length} of ${MANIFEST.coverage.n_indexes} nf- indexes. Experiments cover both levers, the boosted query strategy as well as the index's custom search configuration.`
+    ? `${pct(today.top, nToday)} → ${pct(best.top, nBest)} of ${nToday} curated searches, a ${ptLift}-point gain across ${scored.length} of ${MANIFEST.coverage.n_indexes} nf- indexes. Experiments cover both levers: the query, and the index's own configuration.`
     : `${MANIFEST.coverage.n_cases} golden searches are curated across ${MANIFEST.coverage.n_benchmarked} indexes. Run benchmark/run.py and commit the results to fill this in.`));
 
   if (!nToday) return;
@@ -457,8 +457,8 @@ function renderHero() {
   }
   host.appendChild(rail);
   host.appendChild(el("p", "hero-rail-note", atBest.length
-    ? `Pooled across the ${scored.length} scored indexes and measured against the platform default. ${atBest.map(atBestLabel).join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best arm tested — gains are not uniform, and not every index benefits from customization.`
-    : `Pooled across the ${scored.length} scored indexes and measured against the platform default. Every scored index has a tested recipe that beats its control.`));
+    ? `Pooled across ${scored.length} scored indexes, measured against the platform default. ${atBest.map(atBestLabel).join(", ")} ${atBest.length === 1 ? "is" : "are"} already at the best arm tested; gains are not uniform.`
+    : `Pooled across ${scored.length} scored indexes, measured against the platform default. Every one has a tested recipe that beats its control.`));
 }
 
 // ------------------------------------------------------- reference points (reading guide)
@@ -496,7 +496,7 @@ function renderReferencePoints() {
     slug: "reference",
     eyebrow: "How to read this",
     title: "Three reference points",
-    lede: `Every recipe is scored as one arm of an experiment over a fixed set of searches with known-correct answers. Three arms are named, appear in every figure, and always carry these colours.`,
+    lede: `Every recipe is an arm of one experiment, scored over the same searches with known answers. Three arms are named, and carry these colours in every figure.`,
   });
 
   const track = el("div", "flow-track");
@@ -540,7 +540,7 @@ function renderReferencePoints() {
   // The arrows state the direction; this states it in words, for anyone reading the cards
   // as a list. Both connectors point at production because that is the deployed state.
   body.appendChild(el("p", "flow-note",
-    "Both arrows point at production: the platform default is what NF deployed a configuration to replace, and a best arm is what the next deployment would promote. Promotion is a separate decision — nothing on this page changes what users see."));
+    "Both arrows point at production: the platform default is what a configuration replaced, and a best arm is what the next promotion would deploy. Nothing on this page changes what users see."));
 
   const nConfigured = MANIFEST.coverage?.n_configured;
   const promotedTables = MANIFEST.tables.filter((t) => t.promoted?.is_best);
@@ -632,7 +632,7 @@ function renderPortfolio() {
   if (anyStrip) {
     body.appendChild(legend(
       RANK_BANDS.map((b) => ({ fill: b.fill, label: b.label.replace("{k}", kLabel) })),
-      "Each bar above: where the first correct result landed, across that index's golden cases.",
+      "Each bar above: the position of the first correct result, across that index's golden cases.",
     ));
   }
 
@@ -641,7 +641,7 @@ function renderPortfolio() {
   if (scored.length) {
     const { plot } = figure(body, {
       title: "Where each index stands",
-      note: "Mean reciprocal rank of the first correct result — how near the top the right answer lands. Left dot is the platform default; right dot is the best recipe tested.",
+      note: "Position of the first correct result, as mean reciprocal rank. Left dot is the platform default, right dot the best recipe tested.",
     });
     const rows = scored.map((t) => ({
       label: t.index_name,
@@ -926,9 +926,9 @@ function leaderboardSection(host, data, run) {
 function landingSection(host, data, run) {
   const sec = el("div", "sub");
   sec.id = "rank-landings";
-  sec.appendChild(subHead("Where the right answer lands", "rank-landings"));
+  sec.appendChild(subHead("How high correct results rank", "rank-landings"));
   sec.appendChild(el("p", "sub-lede",
-    `A search is only useful if the correct result is somewhere the user will look. For each recipe: how many of the ${ranCaseIds(data, run).length} scored searches put a correct answer at position 1, in the top 3, further down the first page, or nowhere in the top ${run.k}.`));
+    `The rank of the first correct result, per recipe, across ${ranCaseIds(data, run).length} scored searches: position 1, the top 3, further down, or nowhere in the top ${run.k}.`));
   const { plot } = figure(sec, { title: `Rank of the first correct result` });
   const ids = ranCaseIds(data, run);
   const ordered = [...run.keys].sort((a, b) =>
@@ -958,7 +958,7 @@ function tradeoffSection(host, data, run) {
   sec.id = "speed";                     // unchanged: #/results/<index>/speed still resolves
   sec.appendChild(subHead("How long a search takes", "speed"));
   sec.appendChild(el("p", "sub-lede",
-    "Round-trip is the client-observed wait from query to rendered results, including the async poll — so it is mostly a property of the index and the network rather than of the query shape. Two numbers per recipe: the median wait, and the 95th percentile, which is the slow tail a user actually notices."));
+    "Round-trip is the wait from query to rendered results, measured in the browser and including the poll. It is mostly a property of the index and the network rather than of the query shape."));
 
   // Ordered by MRR, best at top, so "does the winning recipe cost anything?" is read off
   // the row order. Quality is plotted in the leaderboard; repeating it on a second axis
@@ -977,7 +977,7 @@ function tradeoffSection(host, data, run) {
   const axisFrom = Math.max(0, Math.floor((lo - (hi - lo) * 0.08) / 250) * 250);
   const { plot } = figure(sec, {
     title: `Round-trip time, median to 95th percentile`,
-    note: `One row per recipe, ordered by MRR. The solid dot is the median wait, the hollow dot the 95th percentile; the bar between them is that recipe's spread. The axis starts at ${fmtMs(axisFrom)}, not zero.`,
+    note: "One row per recipe, ordered by MRR: solid dot the median wait, hollow dot the 95th percentile.",
   });
   range(plot, {
     min: axisFrom,
@@ -1018,7 +1018,7 @@ function tradeoffSection(host, data, run) {
     plot.parentElement.appendChild(el("p", "fig-note",
       `Median round-trip differs by ${Math.round(hi - lo)} ms across ${meds.length} recipes — ${share}% of ${fmtMs(mid)}. `
       + (share < 10
-        ? "There is no speed cost to choosing on relevance here."
+        ? "Median round-trip does not separate the recipes."
         : `Slowest is ${figureName(slowest, run)} at ${fmtMs(hi)}, fastest ${figureName(fastest, run)} at ${fmtMs(lo)}.`)));
   }
 
@@ -1037,9 +1037,9 @@ function caseTypeSection(host, data, run) {
   if (types.length < 2) return;
   const sec = el("div", "sub");
   sec.id = "search-types";
-  sec.appendChild(subHead("Lookups against discovery", "search-types"));
+  sec.appendChild(subHead("Known-item against topical searches", "search-types"));
   sec.appendChild(el("p", "sub-lede",
-    "Known-item searches have one defensible right answer, so their scores are trustworthy. Topical searches are exploratory — several results are relevant, the golden set lists the ranked head of a larger pool, and recall reads as a floor rather than the whole picture."));
+    "Known-item searches have one defensible right answer, so their scores are trustworthy. Topical searches are exploratory: several results are relevant and the golden set lists only the head of a larger pool, so recall reads as a floor."));
   /* Which arms to pair up per type. Without a promotion this is the control against the
      best tested — "today" vs what could be. Once a promotion is recorded, "today" is no
      longer the control: the deployed arm is what production serves and the superseded row
@@ -1075,7 +1075,7 @@ function caseTypeSection(host, data, run) {
   // the type split of a single arm — nothing beat it, so there is no pair to draw
   if (pairKeys.length === 1) {
     plot.parentElement.appendChild(el("p", "fig-note",
-      `One arm only: ${strategyLabel(pairKeys[0]).name} is both what this index serves and the best tested, so there is no second row to compare it with.`));
+      `Single arm: ${figureName(pairKeys[0], run)} is both what this index serves and the best tested, so there is no comparison row.`));
   }
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — scores by search type",
@@ -1108,7 +1108,7 @@ function caseSection(host, data, run) {
     slug: "cases",
     eyebrow: "Case level",
     title: "Every search, every recipe",
-    lede: `The rank of the first correct result for each curated search. Dark is near the top; grey means nothing correct appeared in the top ${run.k}. The filters scope this table and the failure list below it.`,
+    lede: `Rank of the first correct result per search. Dark is near the top; grey means nothing correct in the top ${run.k}. The filters scope this table and the failure list below.`,
   });
   body.appendChild(filterRow(data, run));
 
@@ -1198,7 +1198,7 @@ function legacyGapSection(host, data, run) {
     slug: "failures",
     eyebrow: "Legacy search comparison",
     title: "Compared with known legacy search gaps",
-    lede: `Previous MySQL portal search gaps compared against "${strategyLabel(run.baseline_key).name}" so gains for moving to OpenSearch are clear.`,
+    lede: `Gaps in the previous MySQL portal search, measured against ${figureName(run.baseline_key, run)} — what moving to OpenSearch closed.`,
   });
   if (!scoped.length) {
     body.appendChild(el("p", "empty-line", data.cases.some((c) => c.recall_gap_legacy_search)
@@ -1325,7 +1325,7 @@ function goldenSection(host, data) {
     slug: "golden-set",
     eyebrow: "Ground truth",
     title: "How this golden set was built",
-    lede: "Scores are only as good as the ground truth behind them. Relevant sets are derived from the source table rather than from search results, so a case can expose a gap the search itself has.",
+    lede: "Relevant sets are derived from the source table rather than from search results, so a case can expose a gap in the search itself.",
   });
   const counts = new Map();
   for (const c of data.cases) {
@@ -1334,7 +1334,7 @@ function goldenSection(host, data) {
   }
   const { plot } = figure(body, {
     title: "Where the cases came from",
-    note: "Provenance per case, so any score can be traced back to whoever asked for the search.",
+    note: "Provenance per case, so a score traces back to whoever asked for the search.",
   });
   const rows = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   hbar(plot, {
@@ -1355,7 +1355,7 @@ function goldenSection(host, data) {
     const listed = pooled.reduce((s, c) => s + c.relevant.length, 0);
     const expected = pooled.reduce((s, c) => s + c.expected_pool, 0);
     body.appendChild(el("p", "fine",
-      `${pooled.length} cases carry an SME estimate of how many results truly match. Those cases list ${listed} relevant results against an estimated pool of ${expected}, so their Recall@${data.k} is a floor: a recipe can be penalised for missing results the golden set never named.`));
+      `${pooled.length} cases carry an SME estimate of how many results truly match: ${listed} named against an estimated pool of ${expected}. Their Recall@${data.k} is a floor — a recipe can be penalised for missing results the golden set never named.`));
   }
   body.appendChild(contributeRow(data));
 }
@@ -1366,7 +1366,7 @@ function fieldSection(host, data) {
     slug: "fields",
     eyebrow: "Configuration",
     title: "What the recipes search",
-    lede: "Boosts are the main query-time lever this harness exists to test: a match in a field weighted 5 counts five times one weighted 1. Analyzers and synonyms are index-side and need an admin rebuild.",
+    lede: "The main query-time lever: a match in a field weighted 5 counts five times one weighted 1. Analyzers and synonyms are index-side and require an admin rebuild.",
   });
   if (data.fields.length === 1 && data.fields[0] === "*") {
     body.appendChild(el("p", "empty-line",
