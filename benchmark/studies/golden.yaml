@@ -26,7 +26,7 @@
 
 index:      syn75081633
 index_name: nf-studies
-version:    2026.07.30
+version:    '2026.09.09'
 k:          10
 id_field:   studyId
 
@@ -633,3 +633,53 @@ cases:
       - syn4939894    # Imaging Biomarkers of Neurofibromatosis Type 1-Associated Optic Pathway Glioma
       - syn29867701   # Multi-parametric Imaging Biomarker Development to Predict Malignant Conversion in Patients with Neurofibromatosis Type 1
       - syn26957643   # High-Resolution Ultrasonography and Optical Frequency Domain Imaging for Measurement and Characterization of Cutaneous Neurofibromas in Patients with NF1
+
+  # ---------------------------------------------------------------------------
+  # Exact-identifier and quoted-phrase cases (issues #14, #18). buildQueryClause
+  # (SearchQueryUseQueryOptions.ts:146) routes a query containing EITHER a Synapse
+  # entity id OR a double-quoted phrase to `simple_query_string`, bypassing the
+  # configured queryStrategy, because multi_match + fuzziness AUTO handles neither.
+  # These two cases are what exercise that branch on nf-studies.
+
+  - id: synid-exact-lookup
+    query: syn4939874
+    type: known-item
+    source: sprint-review
+    source_url: https://docs.google.com/document/d/1Svq4QwwjmG6BmAlR5hG8_rtM7sIv_HUTod2hpf9igww/edit?tab=t.0#heading=h.qviaf5s7m0q2
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 1
+    recall_gap_current: false
+    notes: >-
+      Reported by @BelindaBGarana: "cannot find project despite searching exact synID"
+      (nf.synapse.org/Search/Studies?SEARCH_TERM=syn4939874). Reproduced and measured live
+      2026-09-09, and it is a ranking failure caused by fuzziness, not a recall failure.
+      Under the OLD platform default (multi_match + fuzziness AUTO) the id matches 34
+      studies — AUTO edit distance turns syn4939874 into its numeric neighbours — and the
+      study the user asked for lands at rank 4, behind syn51360851, syn22268639 and
+      syn4939912. Under simple_query_string, which applies no fuzziness, it is rank 1 of 4.
+      That is exactly the fix upstream shipped in PORTALS-4399, and this case is the
+      regression guard for it: any strategy that reaches an id query with fuzziness on will
+      show up here as MRR 0.25 instead of 1.0.
+    relevant:
+      - syn4939874   # Development of Plexiform Neurofibroma Cellular Assay for High-Throughput Screening
+
+  - id: study-title-quoted
+    query: '"Genetic Studies of Neurofibromatosis"'
+    type: known-item
+    source: confluence-search-limitations
+    source_url: https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 1
+    recall_gap_current: false
+    notes: >-
+      The quoted half of Scenario 4, whose unquoted form is the existing
+      `study-title-unquoted` case. The page's author could only find this study by wrapping
+      the title in quotes; that workaround now has a case of its own, so the pair measures
+      whether quoting still helps, still works, or has quietly stopped being routed. Both
+      forms rank the study #1 today, but they get there differently — unquoted matches 351
+      studies and wins on ranking, quoted matches 1 and wins on filtering. Ground truth =
+      studyName LIKE '%Genetic Studies%' (1 row). Probed live 2026-09-09.
+    relevant:
+      - syn11374339   # Genetic Studies of Neurofibromatosis

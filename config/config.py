@@ -230,6 +230,38 @@ def bind(config_id, index_id, token, dry, base):
           f"searchConfigurationId={body.get('searchConfigurationId')} (rebuild runs async)")
 
 
+def unbind(index_id, token, dry, base):
+    """Clear the SearchIndex entity's own searchConfigurationId, returning it to the
+    platform default analyzers.
+
+    The inverse of bind(). Written as a field OMISSION rather than an explicit null: the
+    entity PUT round-trips whatever it is given, and dropping the key is what the service
+    reads as "no binding". Like bind(), this is a normal entity update, so it also fires a
+    full rebuild — the index keeps serving throughout, briefly with partial results.
+
+    Note this does NOT unregister the SearchConfiguration; the config object stays in the
+    org and can be re-bound with `apply`. Only the index's use of it is removed.
+    """
+    print(f"  UNBIND: clear {index_id}.searchConfigurationId")
+    code, ent = _call(f"entity/{index_id}", token=token, base=base)
+    if code >= 400:
+        sys.exit(f"  could not GET entity ({code}): {ent}")
+    current = ent.get("searchConfigurationId")
+    if not current:
+        print("    already unbound — nothing to do (no write, no rebuild)")
+        return
+    if dry:
+        print(f"    would PUT entity back without searchConfigurationId "
+              f"(currently {current}, etag={ent.get('etag')}); this also triggers a rebuild")
+        return
+    ent.pop("searchConfigurationId", None)
+    code, body = _call(f"entity/{index_id}", "PUT", ent, token, base=base)
+    if code >= 400:
+        sys.exit(f"  UNBIND FAILED ({code}): {json.dumps(body)[:500]}")
+    print(f"    ok: was {current}, now {body.get('searchConfigurationId')!r}, "
+          f"etag={body.get('etag')} (rebuild runs async)")
+
+
 def rebuild(index_id, token, dry, base):
     print(f"  REBUILD: touch entity {index_id} (PUT /entity)")
     code, ent = _call(f"entity/{index_id}", token=token, base=base)
@@ -324,6 +356,18 @@ def cmd_apply(args):
     print("\nDone." + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
 
 
+def cmd_unbind(args):
+    base = STAGING_BASE if args.staging else BASE
+    token = get_token(args.token)
+    index_id = resolve_index_id(args.index, token, base)
+
+    print(f"Target: {base}  index={index_id}")
+    print("\nUnbinding:")
+    unbind(index_id, token, args.dry_run, base)
+    print("(the SearchConfiguration itself is left registered — re-bind with `apply <id>`)")
+    print("\nDone." + ("  [DRY RUN — no writes made]" if args.dry_run else ""))
+
+
 def cmd_list(args):
     base = STAGING_BASE if args.staging else BASE
     print(f"Configs registered for org '{args.org}'" + (f" (type={args.type})" if args.type else "")
@@ -395,6 +439,16 @@ def main():
                            help=f"SearchIndex to bind/rebuild — a synId or a name looked up under "
                                 f"{SEARCH_INDEX_COLLECTION} (default: {DEFAULT_INDEX}, nf-tools)")
     ap_apply.set_defaults(func=cmd_apply)
+
+    ap_unbind = sub.add_parser("unbind", help="clear a SearchIndex's binding, returning it to platform default analyzers")
+    ap_unbind.add_argument("--token")
+    ap_unbind.add_argument("--dry-run", action="store_true")
+    ap_unbind.add_argument("--staging", action="store_true",
+                            help=f"hit the staging repo API ({STAGING_BASE}) instead of prod, for testing")
+    ap_unbind.add_argument("--index", default=DEFAULT_INDEX,
+                            help=f"SearchIndex to unbind — a synId or a name looked up under "
+                                 f"{SEARCH_INDEX_COLLECTION} (default: {DEFAULT_INDEX}, nf-tools)")
+    ap_unbind.set_defaults(func=cmd_unbind)
 
     ap_list = sub.add_parser("list", help="list registered org config objects")
     ap_list.add_argument("--token")

@@ -16,25 +16,11 @@ results are in [`RESULTS.md`](RESULTS.md). This file records dataset-level prove
 | `kg-pipeline-eval` | 10 | Adapted from the [nf-osi/kg-pipeline eval](https://github.com/nf-osi/kg-pipeline/blob/develop/evaluation/main/eval_tools_ground_auto.yaml): full-sentence questions rephrased as short search-box queries, relevant sets re-derived from the source table. |
 | `confluence-search-limitations` | 7 | The "Table Search" rows of the PLFM page [Examples of Limitations of Table and Portal Search](https://sagebionetworks.jira.com/wiki/spaces/PLFM/pages/3668508678/Examples+of+Limitations+of+Table+and+Portal+Search) — terms the author recorded as failing against the legacy MySQL full-text service. `relevant` sets re-derived from the source table using the page's own decoded query links, not copied from the page. The section comment in `golden.yaml` lists those predicates and the three page rows that are out of scope here. |
 
-55 cases — 39 topical / 16 known-item.
-
-> Counts here are a snapshot, last checked 2026-07-30. `golden.yaml` is the source of
-> truth; `python3 benchmark/validate_goldens.py` prints the live case count per file.
-
 ## Coverage gaps — eval questions considered but NOT adapted
 
 From the nf-osi/kg-pipeline eval (`eval_tools_ground_auto.yaml`, reviewed 2026-06-22).
 These are nf-tools-relevant intents we could **not** turn into a golden case — recorded so
 the gap is visible and not silently re-attempted.
-
-**Out of scope (different index):** all Studies `ST-*` questions target **nf-studies**, not
-nf-tools, and are omitted entirely.
-
-**Dropped as redundant** with an existing case: `AM-001`→`optic-glioma`,
-`AM-003`→`minipig-model`, `CL-001`→`plexiform-neurofibroma`, `GR-001`→`crispr-plasmid`,
-`MUT-002`→`nf1-flox`.
-
-The rest could not be grounded, by category:
 
 ### A. Attribute not in the nf-tools schema (would need a new source column)
 
@@ -62,15 +48,14 @@ nf-tools has no per-variant column. `MUT-001` (ClinVar `NM_000267.3(NF1):c.2041C
 mutations in multiple genes), `MUT-006` (mutations shared between animal models and cell
 lines).
 
-### D. Investigator / funder lookups (metadata too sparse, or not a retrieval)
+### D. Funder lookups (not a retrieval)
 
 | Eval | Question | Why not |
 | --- | --- | --- |
-| PI-001 | tools developed by Piotr Topilko | `investigatorName` is ~5% filled and this PI isn't present; not groundable (and a sparse known-item lookup, low benchmark value). |
 | PI-002 | how many tools funded by GFF? | A count, not a result set; no funder column. |
 
 > [!NOTE]
 > Several of these (group A especially) are **metadata gaps, not search bugs** — they'd be
 > answerable if the source registry annotated the attribute. Compare `cafe-au-lait-spots`
-> in `golden.yaml`, which *was* kept: the manifestation is missing on the animal models, so
+> in `golden.yaml`: the manifestation is missing on the animal models, so
 > it surfaces as a genuine recall gap rather than being dropped.

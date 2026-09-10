@@ -18,10 +18,58 @@
 # and every strategy here is one of the fixed shapes.
 #
 # NOTE: a multi_match/simple_query_string with an explicit `fields` list searches ONLY
-# these columns — the ~30 columns NOT listed below are invisible to every strategy except
+# these columns — the other 58 columns are invisible to every strategy except
 # `frontend_default` (which sends no field list and so searches all fields). Commented
 # entries below are candidates you can uncomment to widen coverage.
+#
+# Column names audited 2026-09-09 against the source table's column model
+# (`/entity/syn51730943/column`, 70 columns), which is authoritative: the index is
+# `SELECT * FROM syn51730943`, so a name absent there is a silent no-op in every query.
 
+# ---------------------------------------------------------------- the control
+# Which strategy this table is measured against. nf-tools is the one NF index whose portal
+# page sets a SearchQueryConfig, so its control is what that config sends (below), NOT the
+# platform default — comparing a candidate to `frontend_default` here would claim credit
+# for a change production already shipped. The 12 indexes with no config keep
+# `control: frontend_default` (the default when this key is absent).
+control: production_current
+
+# What the nf-tools portal page actually sends today. Transcribed from
+# apps/portals/nf/src/config/resources.ts:49 `toolsSearchQueryConfig` (wired at
+# synapseConfigs/tools.tsx:121), synapse-web-monorepo @ ec83a0164ae (2026-09-03).
+# run.py compiles this into the `production_current` strategy, including the
+# quoted-phrase / Synapse-id routing to simple_query_string that runs ahead of the
+# queryStrategy switch. Re-check against resources.ts whenever the portal is redeployed;
+# these boosts are deliberately NOT the same as `fields:` below — the delta between them
+# is the headroom the benchmark exists to measure.
+production:
+  query_strategy: MULTI_MATCH_BEST_FIELDS   # no fuzziness: the config sets none
+  fields:
+    - "resourceName^5"
+    - "synonyms^4"
+    - "rrid^4"
+    - "targetAntigen^2"
+    - "geneticDisorder"
+    - "description"
+
+# Fill of the columns this list already searches (non-null rows of 1218, 2026-09-09).
+# Read it as reach: `tumorType` is in the list but can only ever answer 2% of rows,
+# while `resourceName` is the only column present on every single one.
+#   resourceName            1218   100%
+#   resourceType            1216   100%
+#   geneticDisorder          802    66%
+#   species                  792    65%
+#   rrid                     733    60%
+#   cellLineCategory         664    55%
+#   sex                      664    55%
+#   manifestation            607    50%
+#   description              602    49%
+#   synonyms                 452    37%
+#   targetAntigen            262    22%
+#   investigatorName         199    16%
+#   race                     140    11%
+#   vectorType               122    10%
+#   tumorType                 28     2%
 fields:
   # identity / names — strongest signal
   - "resourceName^5"
@@ -29,42 +77,112 @@ fields:
   - "rrid^4"
   # antibody target
   - "targetAntigen^3"
-  # disease / phenotype / manifestation — discovery
-  - "cellLineManifestation^3"
-  - "animalModelOfManifestation^3"
-  - "diseaseType^2"
+  # disease / phenotype / manifestation — discovery.
+  # `manifestation` and `geneticDisorder` are the unified columns the source table moved to;
+  # they replace the per-resource-type names (cellLineManifestation, animalModelOfManifestation,
+  # diseaseType, cellLineGeneticDisorder, animalModelGeneticDisorder) this file used to list,
+  # none of which exist on syn51730943 any more.
+  - "manifestation^3"
+  - "geneticDisorder^2"
   - "tumorType^2"
-  - "cellLineGeneticDisorder^2"
-  - "animalModelGeneticDisorder^2"
   # organism / kind / modality — discovery
   - "species^2"
   - "cellLineCategory^2"
   - "resourceType^2"
   - "vectorType^2"
+  # TUNED to 5 on 2026-09-09 — Swept 1..5 on resourceName and 2/5/8 here against the
+  # full 66-case nf-tools golden: raising this field 2 -> 5 improves investigator-related queries
+  # that also include a resource type such as "mouse", with no downsite; ^8 overshoots (0.737 / 0.687), 
+  # so 5 is the measured optimum. Better than initial intuitive fix: lowering `resourceName`
+  # from ^5 is does not help until until ^2, and by then it costs the known-item and topical cases. 
+  # With competing signals, what decides the outcome is the ratio between the two fields, 
+  # not resourceName's absolute weight.
+  - "investigatorName^5"
+  # donor demographics — unboosted. Narrow, sparsely filled columns (race ~11%, sex on most
+  # cell lines) that only matter when the user names them, e.g. the nf1-cell-line-black case
+  # ('nf1 cell line black patient'). Left at weight 1 deliberately: boosting them would let a
+  # stray 'male'/'female' token outrank a name match on the ~200 rows carrying each value.
+  - "race"
+  - "sex"
   # free text — weight 1
   - "description"
 
 # Candidate fields NOT currently searched — uncomment (with a boost) to include.
-# Plausibly useful for discovery, left out of the default set pending SME review:
-#   - "specimenTissueType"          # tissue of origin
-#   - "specimenPreparationMethod"
-#   - "specimenType"
-#   - "specimenFormat"
-#   - "biobankName"
-#   - "insertName"                  # genetic-reagent insert
-#   - "insertSpecies"
-#   - "backgroundStrain"            # animal-model strain
-#   - "backgroundSubstrain"
-#   - "reactiveSpecies"             # antibody reactivity
-#   - "hostOrganism"                # antibody host
-#   - "investigatorName"            # people search (sparse: ~5% filled)
-#   - "institution"
-#   - "race"                        # demographic; relates to the nf1-cell-line-black gap
-#   - "sex"
+#
+# `fill` on each line = rows with a non-null value / 1218 rows total, counted from the
+# SOURCE table (syn51730943) on 2026-09-09. It is the ceiling on what adding that column
+# can do: a field filled on 0.2% of rows cannot answer more than 0.2% of the registry, no
+# matter how it is boosted. Fill is necessary but not sufficient — `modelType` is only 2%
+# filled and still made things worse (see the note on it below).
+# The source table gained ~24 columns in the 2026-08 revision (new resource types: PDX/PDM
+# models, organoids, computational tools/software, clinical assessments), so this list is
+# longer than it was. Left out of the default set pending SME
+# review, since adding a field changes every boosted/cross score.
+#
+# Free text:
+#   - "aiSummary"                   # DO NOT ADD — the column is EMPTY. Measured 2026-09-09:
+#                                   # 0 of 1218 rows carry a value, and the index itself
+#                                   # reports 0 docs where the field exists. 
+#                                   # Revisit only if the registry starts populating it.
+#
+# Anatomy / specimen:
+#   - "organ"                       # fill 135/1218 = 11% · NEW; enumeration.
+#                                   # STRONGEST REMAINING CANDIDATES — measured
+#                                   # 2026-09-09, 77% of organ values (104/135) and 93% of
+#                                   # tissue values (181/194) do NOT appear in any column this
+#                                   # list already searches.
+#                                   # BLOCKED ON THE GOLDEN, not on the weights: no case in
+#                                   # golden.yaml asks an anatomy question yet.
+#                                   # Known risks: "Primary tumor"
+#                                   # (62) and "Tumor" (4) put the generic token `tumor` in a
+#                                   # second field, and "Blood" (78) is an ordinary word — this
+#                                   # is the known dilution shape that already breaks the "<X> cell
+#                                   # line" queries.
+#   - "tissue"                      # fill 185/1218 = 15% · NEW; replaces the cell-line
+#                                   # tissue-of-origin role. See the organ note above — the two
+#                                   # should be evaluated together.
+#   - "specimenTissueType"          # fill 4/1218 = 0.3%
+#   - "specimenPreparationMethod"   # fill 3/1218 = 0.2%
+#   - "specimenType"                # fill 4/1218 = 0.3%
+#   - "specimenFormat"              # fill 4/1218 = 0.3%
+#   - "biobankName"                 # fill 4/1218 = 0.3%
+#
+# Resource-type descriptors (NEW — these are how the new types are discoverable at all):
+#   - "modelType"                   # fill 29/1218 = 2% · enumeration
+#   - "softwareType"                # fill 3/1218 = 0.2% · enumeration
+#   - "computationalToolType"       # fill 3/1218 = 0.2%
+#   - "computationalToolLanguage"   # fill 2/1218 = 0.2%
+#   - "computationalToolPlatformSupport" # fill 3/1218 = 0.2%
+#   - "organoidType" / "organoidModelType" / "organoidDerivationSource" / "organoidCellTypes" # fill 2/1218 = 0.2% / 5/1218 = 0.4% / 5/1218 = 0.4% / 5/1218 = 0.4%
+#   - "cultureSystem"               # fill 5/1218 = 0.4%
+#   - "pdmModelSystemType" / "pdmHostStrain" / "engraftmentSite" # fill 24/1218 = 2% / 11/1218 = 0.9% / 11/1218 = 0.9%
+#   - "clinicalAssessmentType" / "clinicalAssessmentTargetPopulation" # fill 4/1218 = 0.3% / 4/1218 = 0.3%
+#   - "clinicalAssessmentDiseaseSpecific" # fill 4/1218 = 0.3%
+#
+# Per-type detail (pre-existing):
+#   - "insertName"                  # fill 122/1218 = 10% · genetic-reagent insert
+#   - "insertSpecies"               # fill 122/1218 = 10%
+#   - "selectableMarker"            # fill 22/1218 = 2% · NEW; genetic reagent
+#   - "resistance"                  # DO NOT ADD — also empty, 0 of 1218 rows
+#                                   # (measured 2026-09-09).
+#   - "backgroundStrain"            # fill 80/1218 = 7% · animal-model strain
+#   - "backgroundSubstrain"         # fill 37/1218 = 3%
+#   - "animalState"                 # fill 126/1218 = 10% · NEW; enumeration
+#   - "reactiveSpecies"             # fill 262/1218 = 22% · antibody reactivity
+#   - "hostOrganism"                # fill 262/1218 = 22% · antibody host
+#   - "conjugate"                   # fill 261/1218 = 21% · NEW; antibody
+#
+# People:
+#   - "institution"                 # fill 194/1218 = 16% · companion to investigatorName; affiliation search
 #
 # Deliberately excluded (not useful as free-text match targets):
-#   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL
-#   boilerplate / contact .. howToAcquire, usageRequirements, contact
+#   identifiers ............ resourceId, investigatorSynapseId, orcid, biobankURL, downloadURL
+#   boilerplate / contact .. howToAcquire (fill 99%), usageRequirements (62%),
+#                            contact (0.1%), licenseType (0.2%). howToAcquire is the
+#                            most-filled text column in the table after resourceName,
+#                            and it is the ONLY place some tools name their originating
+#                            investigator — but see the note below before adding it.
 #   dates / age ............ dateAdded, dateModified, latestPublicationDate, age
-#   faceting-only flags .... completenessCategory, availabilityCategory,
-#                            criticalInfoCategory, otherInfoCategory, observationCategory
+#   faceting-only flags .... completenessCategory, availabilityCategory, criticalInfoCategory,
+#                            otherInfoCategory, observationCategory, availability,
+#                            availabilityStatus

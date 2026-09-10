@@ -55,10 +55,19 @@
 #                    is a deliberately strict bar: in prod the first results page shows
 #                    25 hits, so 20 is slightly stricter than "on page 1".) The `relevant`
 #                    order encodes the ideal ranking.
+#                    SCOPE: this flag exists to pair with `recall_gap_legacy_search` —
+#                    it is the "current" half of a legacy-MySQL-vs-today comparison, so
+#                    it belongs on cases carried over from that analysis. A case with no
+#                    legacy counterpart should leave BOTH off rather than set this one
+#                    alone: on its own it is just a live-search observation, it dates the
+#                    moment it was taken, and the per-case notes are the place for that.
 
 index: syn75081636
 index_name: nf-tools
-version: 2026.07.30
+# Bumped on every change to the cases below. Use `.N` suffix for same-day revision
+# ('2026.09.09' -> '2026.09.09.1'). This is the human-readable label only; 
+# run.py also records a content hash on every run for comparability, in case of a forgotten bump.
+version: '2026.09.09.1'
 k: 10
 # id_field: which column the `relevant` ids below come from, i.e. what the runner
 # matches hits on. resourceId is the nf-tools identifier; other portals/tables differ
@@ -780,7 +789,22 @@ cases:
     expected_pool: 5
     entity_types: [Cell Line]
     recall_gap_current: true   # verified live 2026-07-10: 0/5 in top 20 — race is a weak/low-signal field for free-text search
-    notes: "Eval CL-004. Ground truth = race='Black' AND cellLineGeneticDisorder HAS ('Neurofibromatosis type 1') (re-verified live 2026-07-10: 5 rows, not 6 — the 5 listed below are the complete pool, not just the head)."
+    notes: >-
+      Eval CL-004. Ground truth = race='Black' AND geneticDisorder HAS ('Neurofibromatosis
+      type 1') (re-verified live 2026-07-10: 5 rows, not 6 — the 5 listed below are the
+      complete pool, not just the head; the genetic-disorder column was renamed from
+      cellLineGeneticDisorder in the 2026-08 table revision, see #22).
+      Root cause re-diagnosed 2026-09-09 and it is NOT what it looked like. Two suspected
+      blockers were removed that day — `race` carried a KEYWORD analyzer so lowercase
+      'black' scored 0 (#23), and `race` was not in fields.yaml at all — and fixing both
+      changed this case's score by nothing. Measured after the fix: 'black' against `race`
+      alone returns all 5 at ranks 1,6,7,8,9, so the column is fully reachable now. The
+      real query still fails because 'nf1', 'cell', 'line' and 'patient' match ~1,134
+      resources between them and an unboosted `race` hit cannot outweigh boosted matches
+      elsewhere — the best relevant row lands at rank 14, outside k=10. Even 'nf1 black'
+      returns nothing relevant in the top 20. This is the same generic-token dilution as
+      melanoma-cell-line, not an analyzer or field-coverage gap, and it will not yield to
+      either lever.
     relevant:
       - 7ef2fd6f-9ba6-4e30-94fc-d4ffd61de6e6   # icNF00.10a (Cell Line)
       - ad2e271b-55ac-44ae-b39d-f1a6d76e1dc3   # cNF00.10a (Cell Line)
@@ -1049,3 +1073,357 @@ cases:
       human cell line, not a pig.
     relevant:
       - 209c16d7-c1fa-414f-8f08-458eaefc2259   # Nf1pArg1947mp1 (Animal Model), p.Arg1947*(R1947*) minipig
+
+  # ---------------------------------------------------------------------------
+  # Quoted-phrase cases (issue #18). The frontend routes any query containing a
+  # double-quoted phrase — and any query containing a Synapse id — to
+  # `simple_query_string` instead of the configured queryStrategy
+  # (buildQueryClause, SearchQueryUseQueryOptions.ts:146). Until these were added,
+  # 0 of 178 golden cases across all five tables contained a double quote, so that
+  # branch was never exercised and a regression in it could not be detected.
+  #   source: manual
+  # nf-tools has no Synapse-id case: its resourceIds are UUIDs, so there is nothing
+  # for a user to paste. The id path is covered on nf-studies (synid-exact-lookup).
+
+  - id: quoted-mpnst-model
+    query: '"malignant peripheral nerve sheath tumor model"'
+    type: known-item
+    source: manual
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 2
+    entity_types: [Animal Model]
+    recall_gap_current: false
+    notes: >-
+      Case to check that quoting works. The same words unquoted match 57 resources
+      (every model whose text carries 'tumor', 'nerve' or 'model' separately) and rank these
+      two first only on term overlap; quoted, the phrase clause returns exactly these two.
+      Probed live 2026-09-09 against prod with production_current's field list. The two rows
+      are genuine duplicates in the registry (same name, two resourceIds) — both are correct
+      answers, which is why expected_pool is 2 and not 1.
+    relevant:
+      - b566507a-ceaf-58a3-a953-3d94b55c1ac0   # C57BL/6 Neurofibromatosis Type 1 Malignant Peripheral Nerve Sheath Tumor Model
+      - 060e787d-8615-57ba-b7ba-609e997862e8   # C57BL/6 Neurofibromatosis Type 1 Malignant Peripheral Nerve Sheath Tumor Model
+
+  - id: quoted-pdx-phrase
+    query: '"patient-derived xenograft"'
+    type: topical
+    source: manual
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 12
+    entity_types: [Patient-Derived Model]
+    recall_gap_current: true
+    notes: >-
+      The counter-case to quoted-mpnst-model, and the cleanest field-list case in the set.
+      Ground truth = pdmModelSystemType = 'PDX (Patient-Derived Xenograft)' (12 rows, the
+      complete pool, not a head). The phrase IS in the data — it is the literal value of
+      `pdmModelSystemType`, a column added in the 2026-08 table revision — so the platform
+      default, which sends no field list and therefore searches everything, retrieves all
+      12 (ranks 3-14 of 14; Recall@10 = 0.67, held off rank 1 only by two red herrings whose
+      description uses the phrase: NCC-MPNST3-X2 c8a807e4 and UCD65 07d262bf). Every
+      strategy with an explicit field list, production_current included, scores ZERO here:
+      not because the data is missing but because fields.yaml does not list the column.
+      The exception is multi_match_cross, which ignores the quotes and matches the two rows
+      whose resourceName contains 'xenografts'. Probed live 2026-09-09.
+      Shares its pool with the `pdx` case above, which measures the SHORTHAND and does not
+      fail — the abbreviation is in the names, the expansion is only in the new column.
+      Read the two together; do not read their recall as independent evidence.
+    relevant:
+      - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX)
+      - 9a8e2ef3-2527-5ca5-8be3-be305783590a   # JH-2-009 (PDX)
+      - ed753700-b096-5b6f-878c-76b21cd0b2a6   # JH-2-013 (PDX)
+      - b0bf3254-ba2d-5ed0-9df1-b473f5237607   # JH-2-015 (PDX)
+      - 63e1afa6-0f36-5ad9-8659-9e3e4897e5bd   # JH-2-023 (PDX)
+      - 0a2a48e9-cfc3-5337-b5f6-e5aee18e7113   # JH-2-031 (PDX)
+      - 8e681594-c7c1-5809-86e2-0c16cd9a2493   # JH-2-055-b (PDX)
+      - 8133c2c7-7948-5c98-96d3-abc577e8bfad   # JH-2-079-c (PDX)
+      - 75944a7c-dca5-5796-913c-2585330ab1cc   # MN-2 (PDX)
+      - a4a33fb7-5dc0-5632-a437-c8fe1e38d4f7   # NF1 MPNST PDX4 (PDX)
+      - e080df79-e33c-56de-9299-07dd79ddee51   # human neurofibroma xenografts (PDX)
+      - 571cb9d8-dee4-506e-988c-3c45a80ab776   # vestibular schwannoma xenografts (PDX)
+
+  # ---------------------------------------------------------------------------
+  # INVESTIGATOR SEARCH — source: agent-generated, reviewed by avu 2026-09-09
+  # Raised by #19 (https://github.com/nf-osi/opensearch-ops/issues/19), from GFF
+  # conference feedback.
+  #
+  # Adds coverage for search by investigator name.
+  #
+  # Ground truth comes from the SOURCE table (syn51730943), not from search results: for
+  # each surname the pool is every row that credits that person, which means
+  # `investigatorName` PLUS the handful of rows where `howToAcquire` names the originating
+  # investigator (sometimes only as an email) while `investigatorName` is blank. Both are
+  # that person's tools, so both are relevant; every case whose two definitions differ says
+  # so in its notes, because that difference is a registry-completeness finding as much as
+  # a search one. Pools are COMPLETE — expected_pool == len(relevant), not an SME head
+  # estimate — so Recall@10 is capped at 10/pool for the prolific labs; read those cases on
+  # Hit@1 and MRR. `relevant` is in source-table order: there is no preferred ranking among
+  # one investigator's own tools.
+  # ---------------------------------------------------------------------------
+
+  - id: investigator-topilko-mouse
+    query: topilko mouse
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 2
+    entity_types: [Animal Model]
+    notes: >-
+      Investigator plus a type word that is NOT in the data — the mirror image of
+      investigator-pratilas-pdx, where the type word is. Piotr Topilko's two Prss56Cre mouse
+      models are the pool; his third tool drops out correctly, being `Nf1-/- skin-derived
+      precursor cells` with `species: ["Homo sapiens"]`. The irony is exactly backwards:
+      species is recorded on the row that is NOT a mouse and empty on the two that are, whose
+      `description` is empty too — so nothing on the target rows says mouse at all, and the
+      word the user typed can only dilute. It dilutes hard, because 'mouse' matches 215 rows
+      index-wide ('mice' matches 28, so the two are not stemmed to each other and the singular
+      is far the worse query). Live 2026-09-09: `multi_match_boosted`, `multi_match_cross`,
+      `boosted_fuzzy` and `simple_query_string_boosted` return NEITHER model in 25 hits, and
+      `phrase_prefix` returns nothing. What buries them is the name boost: the top slots go to
+      rows with 'Mouse' in `resourceName^5` — `Mouse Anti-Neurofibromin Antibody`, `Mouse
+      Anti-Human NF1`, the Hras and KRAS 'Mouse Untagged Clone' reagents — none of which is a
+      mouse model at all. The unboosted variants do BETTER than their boosted twins:
+      `multi_match_best` holds both models at ranks 4-5 and `simple_query_string` at 10-11,
+      against zero for the boosted pair. That is the case's argument for #20: `resourceName^5`
+      amplifies a generic type word sitting in product names until it outranks a rare surname
+      in `investigatorName^2`, so the boost that wins on known-item lookups is the boost that
+      loses here. frontend_default keeps both at ranks 5-6 by searching everything equally,
+      with his own human cell line at #1 — the row a 'mouse' query should not want.
+    relevant:
+      - c11416e9-1318-5ba4-b99b-9d615b4e2c00   # Prss56Cre/+; Rosa26tdTom/+; Nf1fl/fl (Animal Model)
+      - 1af77df9-a778-5c50-a54c-0bdb62389680   # Prss56Cre/+; Rosa26tdTom/+; Nf1flox/− (Animal Model)
+
+  - id: investigator-ratner
+    query: Ratner
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 4
+    entity_types: [Animal Model, Cell Line]
+    notes: >-
+      Four tools (3 Animal Model, 1 Cell Line), all credited in `investigatorName`, and no
+      other row in the source table mentions Ratner — the clean best case of the batch.
+    relevant:
+      - 0f404e70-2acf-4877-bcd5-6da81d9fa41e   # 90-8 (Cell Line)
+      - bfa7ccaa-fee4-42bd-bc74-afe859d56fb6   # NF1fl/fl;Dhh-Cre (Animal Model)
+      - c5359b57-3b0a-460d-900b-dbd7cc2af7d3   # PlpCre;Nf1flox/+ (Animal Model)
+      - 1b0b57e3-bc2d-4f0a-b42f-213be95ce457   # PlpCreERT; Nf1flox/flox; eGFP (Animal Model)
+
+  - id: investigator-verlinsky
+    query: Verlinsky
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 5
+    entity_types: [Cell Line]
+    notes: >-
+      Five RG-13x cell lines from the Reproductive Genetics Institute, all in
+      `investigatorName`, and the only five rows in the table that mention the name. 
+      An unambiguous surname with no near-miss in the registry, 
+      so this case isolates field COVERAGE from any ranking or fuzzy-matching effect.
+    relevant:
+      - 9b9d9f06-2918-490e-a783-1655c757d922   # RG-137 (Cell Line)
+      - e6e0a7ed-94f6-42e1-9700-6cafcb00f426   # RG-138 (Cell Line)
+      - f1dc0e42-68f8-4650-89ac-37a6acdeb10e   # RG-139 (Cell Line)
+      - 2fe9632c-b6db-443f-a512-4b2523a470e0   # RG-140 (Cell Line)
+      - aba67450-594d-422b-a7fe-6c69a882b859   # RG-141 (Cell Line)
+
+  - id: investigator-morrison
+    query: Morrison
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 7
+    entity_types: [Genetic Reagent]
+    notes: >-
+      Seven Genetic Reagents, the pAMP-CY1 / pLV NF1 plasmid series.
+    relevant:
+      - 4d2cd541-4baa-41dc-9f0d-7389dba8f8ec   # pAMP-CY1_NF1 T1 (+minintr) (Genetic Reagent)
+      - 83c6d427-6068-4779-9e96-a74b15991b1f   # pAMP-CY1_NF1 T1 (+minintr, KDR) (Genetic Reagent)
+      - d2f888b9-a59a-454f-b439-771eac3655bf   # pAMP-CY1_NF1 T1 R1276P (+minintr, KDR) (Genetic Reagent)
+      - 64aa76c1-0239-4a66-8666-c6d5e01a0700   # pAMP-CY1_NF1 T2 (+minintr) (Genetic Reagent)
+      - 33c4cd19-70b8-4e98-a9b9-ea7ffcde2d1f   # pAMP-CY1_NF1 T2 (+minintr, KDR) (Genetic Reagent)
+      - 920b513f-0ccd-4bc9-8a84-7638321fc07f   # pAMP-CY1_NF1 T2 R1276P (+minintr, KDR) (Genetic Reagent)
+      - 58a67e29-1551-4828-97da-85d37b88f4f1   # pLV-H1-SGIPZ_NF1 sh1miR (Genetic Reagent)
+
+  - id: investigator-hirbe-not-pratilas
+    query: Hirbe -Pratilas
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 7
+    entity_types: [Cell Line]
+    notes: >-
+      EXCLUSION — the hardest query in the batch. 
+      Angela C. Hirbe has seven WU-xxx cell lines of her own plus `JH-2-079-c
+      (PDX)`, which her `howToAcquire` shares with Christine A. Pratilas ("Contact developer:
+      Christine A. Pratilas; Angela C. Hirbe"). Asking for Hirbe but NOT Pratilas therefore
+      has a precise answer — the seven WU lines, with the co-developed tool deliberately out —
+      and the co-developed row is the test. Four distinct behaviours: 
+      (1) the two simple_query_string strategies HONOUR the `-` operator — 
+      Recall@10 1.00, a WU line at rank 1, zero Pratilas rows anywhere in the results, 
+      `JH-2-079-c` correctly absent — but their reported total
+      explodes to 1188, because a leading OR plus a negated term matches "has hirbe OR lacks
+      pratilas", i.e. most of the registry; the page is right and the result count is
+      nonsense. 
+      (2) The multi_match strategies (best, boosted, cross, fuzzy) also put a WU
+      line at rank 1 and score Recall@10 1.00, yet 18 of their first 25 hits are Pratilas
+      tools: `multi_match` ignores advanced query syntax, so `-Pratilas` is just another term and the
+      exclusion is silently dropped. 
+      (3) frontend_default is worst — it ignores the operator
+      AND lets the excluded name dominate ranking, pushing the first Hirbe tool to rank 13
+      (Recall@10 0.00) while returning 14 Pratilas rows including the co-developed one. The
+      user's exclusion term actively promotes what they asked to remove. Spelling it in
+      English ('Hirbe NOT Pratilas') is honoured by NOTHING, including simple_query_string,
+      which supports `-` but not the NOT keyword: measured the same day, it behaves exactly
+      like the multi_match rows, 18 leaked.
+    relevant:
+      - 14560250-869c-528c-89d6-68230d3d6552   # WU-225 (Cell Line)
+      - 1f6090a3-ace4-5421-8f58-2af411491fd9   # WU-356 (Cell Line)
+      - 19b617dd-9500-5e43-941f-6074d5ea5a40   # WU-368 (Cell Line)
+      - 73b03772-1439-5523-b3ee-a0a9287f0bb9   # WU-386 (Cell Line)
+      - 32f83bb5-753d-5bd9-94e6-9026669ef3ef   # WU-436 (Cell Line)
+      - bd0fedf7-254f-509e-b972-d54c8763e912   # WU-487 (Cell Line)
+      - 7668471d-2ec2-5005-a635-7ac7db2c29c3   # WU-561 (Cell Line)
+
+  - id: investigator-gutmann-typo
+    query: Gitmann
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 14
+    entity_types: [Animal Model, Cell Line]
+    notes: >-
+      A MISSPELLED surname — the query is 'Gitmann', one substitution away from David Gutmann,
+      whose 14 tools are the pool (13 credited in `investigatorName`, plus the Cell Line `iPSC
+      NF1 +/- BJFF.6 bkgd`, where he appears only as `gutmannd@wustl.edu` in `howToAcquire`).
+      Deliberately a typo because that is how a surname is usually mistyped, and because it
+      splits the batch's coverage finding from a ranking one. Live 2026-09-09: SIX of the
+      eight strategies return zero hits — every one without fuzziness. `boosted_fuzzy`
+      recovers the 13 investigatorName rows at ranks 1-13 (Recall@10 0.71, the
+      pool cap, Hit@1 1.00) and still misses the `howToAcquire` row. `frontend_default` finds
+      all 14 — the email-credited row FIRST, since `gutmannd` is one edit from the typo — but
+      seven Helen Morrison plasmids land at #3-9, ahead of 12 of the 14 true hits, collapsing
+      Recall@10 to 0.21: 'Gitmann' is within two edits of 'Lipmann', and her institution is
+      the Fritz Lipmann Institute (verified by querying `institution` alone: 7 hits fuzzy, 0
+      exact). So typo tolerance is simultaneously the only thing that answers this query and
+      the thing that buries the answer — read it against the exact-spelling cases in this
+      batch, and see the fuzziness note in RESULTS.md.
+    relevant:
+      - aaf6e2b6-2e88-4ed1-8bfc-9b803ba2d718   # Cx3cr1+/gfp (Animal Model)
+      - 9971e47e-976a-4631-8edd-5cae04304b01   # Nf1+/-GFAPCKO (Animal Model)
+      - fbeb0bb9-5341-496c-991a-de1e84af09b5   # Nf1flox/- (Animal Model)
+      - d1c0c790-acff-486a-b794-b0429b09eeec   # Nf1flox/-; GFAP-Cre; CD11b-TK (Animal Model)
+      - e487fd33-48d3-4a02-b2e0-4d0525ee8e20   # Nf1flox/-; GFAP-Cre; Cx3cr1+/gfp (Animal Model)
+      - 5a2a52f7-e0e2-4654-9157-07848c8b0bcc   # Nf1flox/-;Cx3cr1+/gfp (Animal Model)
+      - d2dec4d7-24be-4218-b7b5-63349158aa15   # Nf1flox/flox (Animal Model)
+      - ca2d103d-0d76-49aa-bf20-a17318184341   # Nf1flox/flox; NG2-Cre (Animal Model)
+      - e71b421a-5e1d-49d6-a045-aa03aff7e7fe   # Nf1flox/flox;Cx3cr1+/gfp (Animal Model)
+      - 0ff3a2b6-110b-4352-8abf-74b46c7e55ce   # Nf1flox/mut (Animal Model)
+      - 4e513b5b-dde9-424d-96ff-3dd7c90f429b   # Nf1flox/mut; GFAP-Cre (Animal Model)
+      - 669641d6-2e7c-4679-bfe8-0d31c53c2dfc   # Nf1flox/mut; NG2-Cre (Animal Model)
+      - 92a431bb-182a-4f6a-92a5-4509888e2102   # Nf1flox/mut; Ptenflox/wt; GFAP-Cre (FMPC) (Animal Model)
+      - a0c91627-fad6-4d60-bf74-67623374eff8   # iPSC NF1 +/- BJFF.6 bkgd (Cell Line)  [howToAcquire]
+
+  - id: investigator-wallace
+    query: Wallace
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 17
+    entity_types: [Cell Line]
+    notes: >-
+      Seventeen hTERT / sNF cell lines from the University of Florida, all credited in
+      `investigatorName`; complete pool, so Recall@10 caps at 0.59. Reads as a pair with
+      investigator-wallis: under `fuzziness: AUTO` a search for "Wallace" ALSO returns Deeann
+      Wallis's five HEK293 lines (frontend_default totals 22 against 17 exact matches, the
+      Wallis rows landing #18-20), so the two cases together measure the precision cost of
+      typo tolerance on surnames — a near-miss surname in this registry is a different real
+      person.
+    relevant:
+      - a8f48ce7-438c-4564-a70b-020abc96d5fe   # hTERT NF1 ipNF00.6 (Cell Line)
+      - f21cb7db-ee85-48a7-8f41-e4603238bede   # hTERT NF1 ipNF03.3 (Cell Line)
+      - 8fdc5f7a-ef8c-4193-a5c0-04577c3b134d   # hTERT NF1 ipNF04.4 (Cell Line)
+      - 5502caf5-4cf1-418f-bf50-164cfa316b0f   # hTERT NF1 ipNF05.5 (Cell Line)
+      - 844b598c-0171-4972-91c3-27aa21b45d52   # hTERT NF1 ipNF05.5 (Mixed clones) (Cell Line)
+      - be2333d6-6716-4d13-947d-41f4198497a4   # hTERT NF1 ipNF95.11b C (Cell Line)
+      - ab60aae5-7860-4d1d-bb02-208e6631c78b   # hTERT NF1 ipNF95.11b C/T (Cell Line)
+      - b44361f2-9021-4920-901a-b1a1f9143f97   # hTERT NF1 ipNF95.6 (Cell Line)
+      - 3dedf9d2-614c-4cf9-8d18-aff8aa2dc0eb   # hTERT NF1 ipn06.2 A (Cell Line)
+      - 8e0602ff-e3e6-438e-9fb7-c7abc1dd4304   # hTERT NF1 ipnNF09.4 (Cell Line)
+      - 2c4c8b02-f12e-4a17-a408-38ae88dd841d   # hTERT NF1 ipnNF95.11c (Cell Line)
+      - 98beda5b-9b28-4119-829a-2a0219d77af7   # hTERT NF1 sipnNF95.12B (Cell Line)
+      - 3a507bfd-7d2b-4238-b79a-83fe985c2cea   # hTERT ipn02.3 2λ (Cell Line)
+      - 3a8f5be4-aa22-48f2-9a76-9412010ecd45   # hTERT ipn02.8 (Cell Line)
+      - b72d99fd-ee1e-42ec-92b6-9f89e375cce1   # sNF02.2 (Cell Line)
+      - 504647eb-6b60-492a-bb51-3ab025830f51   # sNF94.3 (Cell Line)
+      - c9a87975-378b-4930-8fda-e5896c42c86c   # sNF96.2 (Cell Line)
+
+  - id: investigator-wallis
+    query: Wallis
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 20
+    entity_types: [Cell Line]
+    notes: >-
+      The registry-completeness case. Only 5 of Deeann Wallis's 20 tools carry
+      `investigatorName: Deeann Wallis`; the other 15 name her solely as `dwallis@uab.edu` in
+      `howToAcquire`. All 20 are hers, so all 20 are relevant, and the split is the
+      measurement: live 2026-09-09, frontend_default retrieves all 20. See also
+      investigator-wallace for the fuzzy Wallace/Wallis collision in the other direction.
+    relevant:
+      - 3239573e-4ae1-4e01-8098-00dce6ac0a84   # ELK-TAD Luciferase Reporter HEK293 Stable NF1 -/- (Cell Line)  [howToAcquire]
+      - ae765b00-9189-4a72-8ae7-cddc41e24055   # HEK293 NF1 -/- Exon 17 #A15 G629R cryptic splice (Cell Line)  [howToAcquire]
+      - 9b4b8eca-f981-440d-b478-0a5483353368   # HEK293 NF1 -/- Exon 17 #B48 G629R cryptic splice (Cell Line)  [howToAcquire]
+      - 130fd347-28e1-46c2-a72d-d243e99322b7   # HEK293 NF1 -/- Exon 47 insT #14 (Cell Line)  [howToAcquire]
+      - 7d565aea-0917-428b-9101-d2a19f3fbcf1   # HEK293 NF1 -/- Exon 52 R2550X #5 (Cell Line)  [howToAcquire]
+      - f59f3308-a440-497d-8eee-8d7756a9ae2b   # HEK293 NF1 -/- clone 2 (Cell Line)
+      - 02dacc42-ea46-48fb-a4df-7a875d801086   # HEK293 NF1 -/- with R1306X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - fb67363f-d309-4c7c-ba1e-f295ba411018   # HEK293 NF1 -/- with R192X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - 14353c91-2be9-4617-b337-c29080961826   # HEK293 NF1 -/- with R1947X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - aa32fc67-9cc3-4d31-bcbd-f7044f9fd484   # HEK293 NF1 -/- with R2550X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - 3f29aa26-1d05-453a-a6ac-d4e37d609dba   # HEK293 NF1 -/- with R461X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - 32f73d96-fd2a-4966-a150-ba5fa47d150c   # HEK293 NF1 -/- with R681X mNf1 cDNA (Cell Line)
+      - f047cff6-98c8-4562-b589-94b864ae35a1   # HEK293 NF1 -/- with R816X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - f2d00598-9db3-4549-a473-16b1db349614   # HEK293 NF1 -/- with WT mNf1 cDNA (Cell Line)
+      - 96d339f9-9d19-40c3-8f81-3590f7c00205   # HEK293 NF1 -/- with WT tagged mNf1 cDNA (Cell Line)
+      - 234515dd-7c28-4172-83c7-59dddfa22acb   # Schwann cell NF1 -/- (iPN97.4 #24) (Cell Line)  [howToAcquire]
+      - faf29a50-3168-4ccd-a484-f2a78a026af3   # Schwann cell NF1 -/- with R681X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - 3a3e5460-3d5b-45f9-995d-25bd49c06f34   # Schwann cell NF1 -/- with R816X mNf1 cDNA (Cell Line)  [howToAcquire]
+      - 3beebac1-95b0-4834-9008-19f7d268fc5b   # Schwann cell NF1 -/- with WT tagged mNf1 cDNA (Cell Line)  [howToAcquire]
+      - ad73cdb2-8add-48ff-b9f2-35a38132db84   # iPSC Y489C; Exon 13 cryptic splice (Cell Line)
+
+  - id: investigator-pratilas-pdx
+    query: Pratilas PDX
+    type: topical
+    source: agent-generated
+    last_reviewed: 2026-09-09
+    reviewer: avu
+    expected_pool: 8
+    entity_types: [Patient-Derived Model]
+    notes: >-
+      Investigator AND resource type — the realistic refinement of a surname search, and the
+      one case in this batch that production does not fail outright. The pool is Christine A.
+      Pratilas's eight PDX models (she also has 22 cell lines, which this excludes. 
+      'PDX' is in `resourceName` ('JH-2-002 (PDX)') while 'Pratilas' contributes nothing; 
+      when resourceName is "over-boosted" at ^5, two PDX models belonging 
+      to nobody in particular (`NF1 MPNST PDX4`, `MN-2`) is #1-2 ahead of hers.
+    relevant:
+      - c0fdf926-7ad8-50b5-9cbb-81a09e0b6f58   # JH-2-002 (PDX) (Patient-Derived Model)
+      - 9a8e2ef3-2527-5ca5-8be3-be305783590a   # JH-2-009 (PDX) (Patient-Derived Model)
+      - ed753700-b096-5b6f-878c-76b21cd0b2a6   # JH-2-013 (PDX) (Patient-Derived Model)
+      - b0bf3254-ba2d-5ed0-9df1-b473f5237607   # JH-2-015 (PDX) (Patient-Derived Model)
+      - 63e1afa6-0f36-5ad9-8659-9e3e4897e5bd   # JH-2-023 (PDX) (Patient-Derived Model)
+      - 0a2a48e9-cfc3-5337-b5f6-e5aee18e7113   # JH-2-031 (PDX) (Patient-Derived Model)
+      - 8e681594-c7c1-5809-86e2-0c16cd9a2493   # JH-2-055-b (PDX) (Patient-Derived Model)
+      - 8133c2c7-7948-5c98-96d3-abc577e8bfad   # JH-2-079-c (PDX) (Patient-Derived Model)
