@@ -203,18 +203,26 @@ particular [`multi_match` query types](https://docs.opensearch.org/latest/query-
 ### `nf-tools` index (syn75081636)
 
 - Source: `SELECT * FROM syn51730943` (NF Research Tools Central registry)
-- ~1,216 documents, 46 indexed columns:
+- ~1,218 documents, 70 indexed columns (source column model as of 2026-09-09; the
+  2026-08 table revision unified the per-resource-type disease/manifestation columns
+  into `geneticDisorder`/`manifestation` and added the PDX/PDM, organoid, computational
+  tool and clinical-assessment columns):
 
-  `resourceId, rrid, resourceName, synonyms, description, resourceType,
-  investigatorName, institution, investigatorSynapseId, orcid, usageRequirements,
-  howToAcquire, species, cellLineCategory, cellLineGeneticDisorder,
-  cellLineManifestation, backgroundStrain, backgroundSubstrain,
-  animalModelGeneticDisorder, animalModelOfManifestation, insertName, insertSpecies,
-  vectorType, targetAntigen, reactiveSpecies, hostOrganism, biobankName, biobankURL,
-  specimenTissueType, specimenPreparationMethod, diseaseType, tumorType,
-  specimenFormat, specimenType, contact, race, sex, age, dateAdded, dateModified,
-  latestPublicationDate, completenessCategory, availabilityCategory,
-  criticalInfoCategory, otherInfoCategory, observationCategory`
+  `resourceId, rrid, resourceName, synonyms, description, aiSummary, resourceType,
+  usageRequirements, howToAcquire, dateAdded, dateModified, geneticDisorder,
+  manifestation, tumorType, organ, tissue, cellLineCategory, backgroundStrain,
+  backgroundSubstrain, animalState, insertName, insertSpecies, vectorType,
+  targetAntigen, reactiveSpecies, hostOrganism, conjugate, biobankName, biobankURL,
+  specimenTissueType, specimenPreparationMethod, specimenFormat, specimenType, contact,
+  pdmModelSystemType, pdmHostStrain, engraftmentSite, organoidType, organoidModelType,
+  organoidDerivationSource, organoidCellTypes, cultureSystem, computationalToolType,
+  computationalToolLanguage, computationalToolPlatformSupport, downloadURL, licenseType,
+  clinicalAssessmentType, clinicalAssessmentTargetPopulation,
+  clinicalAssessmentDiseaseSpecific, availabilityStatus, resistance, selectableMarker,
+  softwareType, modelType, availability, investigatorName, institution,
+  investigatorSynapseId, orcid, species, race, sex, age, latestPublicationDate,
+  completenessCategory, availabilityCategory, criticalInfoCategory, otherInfoCategory,
+  observationCategory`
 
   Each hit returns `rowId`, `rowVersion`, `score`, and `fields` (column name/value
   pairs; multi-value columns are JSON-encoded strings).
@@ -231,12 +239,38 @@ shared harness scripts live at `benchmark/` root.
 
 Shared harness (`benchmark/` root):
 - [`benchmark/strategies.py`](benchmark/strategies.py) — query builders (`query_text → DSL`):
-  `frontend_default` (mirrors the live frontend exactly — bare `multi_match` + `fuzziness:
-  AUTO`, the production baseline), `simple_query_string`, `multi_match_best`,
-  `multi_match_boosted`, `multi_match_cross`, `boosted_fuzzy`, `phrase_prefix`. The functions
-  are table-agnostic; the field-boost lists
-  default to nf-tools. A table whose schema differs can override by adding its own
-  `benchmark/<table>/strategies.py` (run.py prefers it, else falls back here).
+  `frontend_default`, `simple_query_string`, `simple_query_string_boosted`,
+  `multi_match_best`, `multi_match_boosted`, `multi_match_cross`, `boosted_fuzzy`,
+  `phrase_prefix`, plus a per-table `production_current` compiled from the `production:`
+  block in the table's `fields.yaml`. All of them apply the front-end's routing rule, which
+  diverts any query containing a quoted phrase or a Synapse id to `simple_query_string`
+  ahead of everything else. The functions are table-agnostic; the field-boost lists come
+  from `benchmark/<table>/fields.yaml`. A table whose schema differs can override by adding
+  its own `benchmark/<table>/strategies.py` (run.py prefers it, else falls back here).
+
+  > [!IMPORTANT]
+  > `frontend_default` is only the *platform* default when the index is uncustomized too.
+  > A bound `SearchConfiguration` changes the analyzers for every strategy in the run, so
+  > scoring it against a bound index measures the default query on a customized index. One
+  > run cannot hold both states. To get a true platform-default number:
+  >
+  > ```bash
+  > python3 config/config.py unbind --index syn75081636   # wait for the rebuild
+  > python3 benchmark/run.py tools --label unbound
+  > python3 config/config.py apply 9 --index syn75081636  # put it back
+  > ```
+  >
+  > then point `constant:` in [`site.yaml`](site.yaml) at that run so the dashboard reads
+  > the honest number. `run.py` records the bound config id on every run and warns when this
+  > applies; `build_site.py` warns if a published run scored it against a bound index with
+  > no `constant:` entry covering it.
+
+  **The control is per-table.** `control:` in a table's `fields.yaml` names the strategy the
+  others are read against, and run.py records it on the run. nf-tools is the one NF index
+  whose portal page sets a `SearchQueryConfig`, so its control is `production_current` —
+  what that page really sends. The other 12 ship no config, so theirs is `frontend_default`,
+  the platform default. Comparing a candidate against the platform default on nf-tools would
+  claim credit for improvements production already shipped.
 - [`benchmark/run.py`](benchmark/run.py) — runs every (case × strategy) for a table, scores
   **MRR**, **Recall@k**, **Hit@1**, **Hit@k**; prints a table and writes
   `benchmark/<table>/results/<label>.json` (`--label` defaults to `latest`).
@@ -247,21 +281,28 @@ python3 benchmark/run.py tools                                                  
 python3 benchmark/run.py tools --label boost-v2 --strategy multi_match_boosted   # after editing benchmark/strategies.py
 ```
 
-**What the live frontend actually has** (a bare `multi_match` + `fuzziness: AUTO`, no
-field boosts) is documented with code line references in
-[docs/INTEGRATION.md](docs/INTEGRATION.md).
+**The platform default** (a bare `multi_match` + `fuzziness: AUTO`, no field boosts) is the
+query the Synapse front-end sends for a portal that has not customized its search — it is the
+control here, not what the NF portal ships, which uses its own recipe. Documented with code
+line references in [docs/INTEGRATION.md](docs/INTEGRATION.md).
 
-## Interactive app (Synapse Portal Search Lab)
+## Interactive site (benchmark results + search lab)
 
-[`web/`](web/) is a friendly **self-serve** version of the harness for business owners / SMEs that's a
-static, dependency-free browser app (no build tooling, no backend). It calls the public
-Synapse search API directly and has two modes:
+[`web/`](web/) is a static, dependency-free browser app (no build tooling, no backend) that
+publishes the benchmark to a general audience. Two tabs:
 
-- **Search playground** (entry-level) — type a query and compare two ranking *recipes* (strategies)
-  side by side, with per-field boost sliders. Intuitive way to show how a tuning change reorders real
-  results.
-- **Benchmark scoreboard** (advanced) — reference a golden set × selected recipes live in the browser, 
-  get same MRR / Recall / Hit table as `run.py`, with per-case drill-in.
+- **Benchmark results** (the landing tab) — the reporting face. Reads the runs **committed**
+  in `benchmark/<table>/results/`. Opens on a portfolio view of every
+  `nf-` SearchIndex (which have a golden set, which have a config, the platform default vs the
+  best recipe tested), then drills into one index: recipe leaderboard, where correct answers
+  land, quality against latency, lookup vs discovery split, a per-case rank heatmap with
+  filters, **the searches that fail today**, how the golden set was built, and the field
+  boosts in play. Charts are custom SVG in [`web/charts.js`](web/charts.js). 
+  Every figure carries a table view. 
+- **Search lab** — the hands-on face. Type a query and compare two ranking *recipes* side by
+  side with per-field boost editors, then score a recipe set against the golden set **live in
+  the browser**. Live scoring reports the same metrics as
+  `run.py`.
 
 **Works against any SearchIndex, any portal.** while nf-tools is the default, the index
 picker is **populated by listing every SearchIndex in the collection project**
@@ -269,20 +310,25 @@ picker is **populated by listing every SearchIndex in the collection project**
 non-curated index is chosen, the app discovers its columns live (`SELECT_COLUMNS`) and
 **auto-generates a field-boost config** from column type + name heuristics
 ([`web/boostgen.js`](web/boostgen.js)).
-Curated tables (those with a `golden.yaml`) ship hand-tuned boosts and enable the
-scoreboard; any other index runs in playground-only mode (no golden set → no benchmark).
+Curated tables (those with a `golden.yaml`) ship hand-tuned boosts and enable scoring; any
+other index runs in playground-only mode (no golden set → nothing to score against).
 The query recipes are identical for every index.
 
-This is a visual **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
-engineer/CI path, the site is the non-engineer path. The recipes and scoring are JS ports
+Search lab is a visual **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
+engineer/CI path, the site is for generally accessible investigation. The recipes and scoring are JS ports
 of [`strategies.py`](benchmark/strategies.py) and [`run.py`](benchmark/run.py); the golden
-cases and field boosts are **generated** from the same YAML at build time (so they never
-drift). The standing drift guard for the ported *logic* is a parity check: the live
-scoreboard's per-strategy MRR/Recall/Hit must match `python3 benchmark/run.py tools` within
-rounding.
+cases, field boosts and committed results are **generated** from the same YAML/JSON at build
+time to prevent drift. The standing drift guard for the ported *logic* is a parity
+check: live scoring's per-strategy MRR/Recall/Hit must match `python3 benchmark/run.py tools`
+within rounding.
+
+Every section is **linkable**: the URL carries `#/<tab>/<index>/<section>`, so
+`#/results/tools/failures` opens the results tab on nf-tools scrolled to the failing
+searches. Hovering a section heading reveals a control that copies that link
+([`web/route.js`](web/route.js)).
 
 > [!NOTE]
-> Workbench optimizes **query-time** levers only (recipe, field boosts, fuzziness) and
+> The site optimizes **query-time** levers only (recipe, field boosts, fuzziness) and
 > reflects the index's *current* production config. Index-time config (analyzers,
 > synonyms in [`config/`](config/)) needs a Sage-admin index rebuild and isn't adjustable
 > client-side.
@@ -290,15 +336,49 @@ rounding.
 ### Usage
 
 [`build_site.py`](build_site.py) assembles the site into `site/` (gitignored) — it copies
-`web/` and emits `site/data/<table>.json` (golden cases + boosts + an optional precomputed
-baseline scoreboard from `results/`). CI ([`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml))
-runs `run.py` then `build_site.py` and publishes `site/` to GitHub Pages.
+`web/` and emits:
+
+- `site/data/<table>.json` — the golden set with its per-case provenance, the field/boost
+  config, and **every** committed run in `results/` including per-case detail (what the rank
+  heatmap, rank bands and failure list are built from);
+- `site/data/manifest.json` — the portfolio: the `nf-` index inventory (parsed from the table
+  in this README), which indexes have a golden set or a committed config, and each table's
+  headline run metrics.
+
+### Publishing config — [`site.yaml`](site.yaml)
+
+Publishing is declared by `build_site.py` reading `site.yaml`.
+
+| Key | Meaning |
+| --- | --- |
+| `headline` | The run of record (`latest` — `run.py`'s default label). Published for every table that has it, and the run each index opens on, so an extra run with a newer timestamp can't headline an index with a partial strategy set. |
+| `extra_runs` | Additional labels per table, in run-switcher order. Currently `studies: [tuned]` — the tuning harness's promoted shape, scored against the platform default. |
+| `excluded` | Runs in `results/` deliberately not published, **with the reason**. Listing one turns a skipped file from an oversight into a decision. |
+| `constant` | Per table, `<strategy>: <label>` — pins that strategy's row to the index state of another run instead of the headline's. Currently `tools: {frontend_default: unbound}`, so the platform default reads off an index with no config bound. Not the same as `control:` in a table's `fields.yaml`, which names the strategy the rest of a run is *read against*. |
+
+A run reaches the published site only if `site.yaml` names it **and** it is committed.
+The build reports every case:
+
+```
+excluded by site.yaml: tools/bound-keyword, tools/pre-config-bind
+held constant: tools/latest: frontend_default taken from unbound
+note: selected run not on disk — benchmark/<table>/results/latest.json (no scored run yet …)
+WARNING: benchmark/<table>/results/<label>.json is not committed — the published site will not have it
+WARNING: unpublished run not accounted for: … — add it to extra_runs or excluded in site.yaml
+WARNING: tools/latest: frontend_default scored with config 9 bound — not a true platform
+         default. Score it unbound and add a `constant:` entry (see site.yaml).
+```
+
+The resolved selection is recorded in `site/data/manifest.json` (`runs_published`,
+`headline_label`), so a published payload states the policy it was built under. CI
+([`.github/workflows/benchmark.yml`](.github/workflows/benchmark.yml)) runs `run.py` then
+`build_site.py` and publishes `site/` to GitHub Pages.
 
 ```bash
 pip install pyyaml
-python3 benchmark/run.py tools --label baseline   # optional: precomputed fast-default scoreboard
-python3 build_site.py                              # -> site/
-python3 -m http.server -d site                     # open http://localhost:8000
+python3 benchmark/run.py tools --label latest   # refresh the run of record, then commit it
+python3 build_site.py                           # -> site/ (prints what it published & skipped)
+python3 -m http.server -d site                  # open http://localhost:8000
 ```
 
 ## Index health monitoring (fallback verification + repair)
