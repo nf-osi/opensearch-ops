@@ -152,11 +152,16 @@ const promoWord = (key, run) => (
   run.promo?.key === key ? "in production"
     : run.promo?.stale === key ? "before promotion"
     : null);
-/** `Name · in production`, for a chart whose row labels are the only place to say it. */
-const rowLabel = (key, run) => {
-  const word = promoWord(key, run);
-  return word ? `${strategyLabel(key).name} · ${word}` : strategyLabel(key).name;
-};
+/** The name a figure should label a row with. Once a promotion moves elsewhere, the
+ *  `production_current` row is no longer in production, and a chart calling it that is
+ *  simply wrong — a rotated heatmap header has no room to explain, so the row takes a
+ *  name that states what it now is. The glossary keeps the strategy's own name, being
+ *  shared by every index. */
+const figureName = (key, run) => (key === run.promo?.stale ? "Pre-promotion" : strategyLabel(key).name);
+/** …and `Name · in production` where there is room to mark the deployed row too. */
+const rowLabel = (key, run) => (key === run.promo?.key
+  ? `${figureName(key, run)} · in production`
+  : figureName(key, run));
 
 /** Normalise one committed run into the shape the views want, resolving which recipe is
  *  the control and which won on MRR.
@@ -824,7 +829,7 @@ function leaderboardSection(host, data, run) {
     ((run.strategies[a][state.rankBy] || 0) - (run.strategies[b][state.rankBy] || 0)) * dir);
   hbar(plot, {
     rows: ordered.map((key) => ({
-      label: strategyLabel(key).name,
+      label: figureName(key, run),
       value: run.strategies[key][state.rankBy] || 0,
       role: roleOf(key, run),
       labelRole: labelRoleOf(key, run),
@@ -850,7 +855,7 @@ function leaderboardSection(host, data, run) {
   }
   if (promo?.stale) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
-      `${strategyLabel(promo.stale).name} measures the configuration in place before ${promo.at || "the promotion"} — not what the portal sends now.`));
+      `${figureName(promo.stale, run)} is the configuration in place before ${promo.at || "the promotion"} — what the portal sent until then, not what it sends now.`));
   }
   // The row is labelled and coloured as the platform default, and on an index whose own
   // configuration is live it is not a platform-default measurement.
@@ -869,7 +874,7 @@ function leaderboardSection(host, data, run) {
     summary: "Table view — every metric, every recipe",
     head: ["Recipe", ...METRIC_KEYS.map((key) => metricName(key, run.k))],
     align: [null, ...METRIC_KEYS.map(() => "num")],
-    rows: ordered.map((key) => [strategyLabel(key).name,
+    rows: ordered.map((key) => [figureName(key, run),
       ...METRIC_KEYS.map((m) => fmtMetric(m, run.strategies[key][m]))]),
   }));
   // The bars are labelled with short names; the drawer defines them, in the same order
@@ -905,7 +910,7 @@ function landingSection(host, data, run) {
   const ordered = [...run.keys].sort((a, b) =>
     (bucketsFor(run, b, ids).top - bucketsFor(run, a, ids).top));
   const lg = rankstack(plot, {
-    rows: ordered.map((key) => ({ label: strategyLabel(key).name, role: roleOf(key, run),
+    rows: ordered.map((key) => ({ label: figureName(key, run), role: roleOf(key, run),
                                   labelRole: labelRoleOf(key, run), buckets: bucketsFor(run, key, ids) })),
     k: run.k,
   });
@@ -916,7 +921,7 @@ function landingSection(host, data, run) {
     align: [null, "num", "num", "num", "num"],
     rows: ordered.map((key) => {
       const b = bucketsFor(run, key, ids);
-      return [strategyLabel(key).name, b.top, b.near, b.deep, b.miss];
+      return [figureName(key, run), b.top, b.near, b.deep, b.miss];
     }),
   }));
   host.appendChild(sec);
@@ -990,14 +995,14 @@ function tradeoffSection(host, data, run) {
       `Median round-trip differs by ${Math.round(hi - lo)} ms across ${meds.length} recipes — ${share}% of ${fmtMs(mid)}. `
       + (share < 10
         ? "There is no speed cost to choosing on relevance here."
-        : `Slowest is ${strategyLabel(slowest).name} at ${fmtMs(hi)}, fastest ${strategyLabel(fastest).name} at ${fmtMs(lo)}.`)));
+        : `Slowest is ${figureName(slowest, run)} at ${fmtMs(hi)}, fastest ${figureName(fastest, run)} at ${fmtMs(lo)}.`)));
   }
 
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — quality and latency",
     head: ["Recipe", metricName("mrr", run.k), "Median", "p95"],
     align: [null, "num", "num", "num"],
-    rows: ordered.map((key) => [strategyLabel(key).name, fmtNum(run.strategies[key].mrr),
+    rows: ordered.map((key) => [figureName(key, run), fmtNum(run.strategies[key].mrr),
       fmtMs(run.strategies[key].rt_ms_median), fmtMs(run.strategies[key].rt_ms_p95)]),
   }));
   host.appendChild(sec);
@@ -1053,7 +1058,7 @@ function caseTypeSection(host, data, run) {
     head: ["Search type", "Recipe", "Cases", "MRR", `Recall@${run.k}`],
     align: [null, null, "num", "num", "num"],
     rows: rows.map((r) => [CASE_TYPE_LABELS[r.type]?.name || r.type,
-      `${strategyLabel(r.key).name} (${roleWord(r.key)})`, r.n, fmtNum(r.mrr), fmtNum(r.recall)]),
+      `${figureName(r.key, run)} (${roleWord(r.key)})`, r.n, fmtNum(r.mrr), fmtNum(r.recall)]),
   }));
   host.appendChild(sec);
 }
@@ -1096,7 +1101,7 @@ function caseSection(host, data, run) {
     rowKeys: ids,
     rowLabels: ids.map((id) => byId.get(id).query),
     colKeys: run.keys,
-    colLabels: run.keys.map((key) => strategyLabel(key).name),
+    colLabels: run.keys.map((key) => figureName(key, run)),
     colRoles: run.keys.map((key) => roleOf(key, run)),
     colLabelRoles: run.keys.map((key) => labelRoleOf(key, run)),
     cell: (id, key) => run.per_case[key]?.[id]?.first_rel_rank ?? null,
@@ -1105,7 +1110,7 @@ function caseSection(host, data, run) {
   plot.after(lg);
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — rank per search",
-    head: ["Search", "Type", ...run.keys.map((key) => strategyLabel(key).name)],
+    head: ["Search", "Type", ...run.keys.map((key) => figureName(key, run))],
     align: [null, null, ...run.keys.map(() => "num")],
     rows: ids.map((id) => [byId.get(id).query, byId.get(id).type,
       ...run.keys.map((key) => run.per_case[key]?.[id]?.first_rel_rank ?? "miss")]),
