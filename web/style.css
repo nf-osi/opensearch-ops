@@ -739,6 +739,9 @@ svg.viz { display: block; overflow: visible; }
 .viz-grid { stroke: var(--grid); stroke-width: 1; }
 .viz-axis { stroke: var(--axis); stroke-width: 1; }
 .viz-connect { stroke: var(--axis); stroke-width: 2; stroke-linecap: round; }
+/* the range plot's whisker: the row's own role colour (set inline), held back so the two
+   dots stay the marks the eye lands on */
+.viz-range { stroke-width: 3; stroke-linecap: round; opacity: .38; }
 .viz-dot { stroke: var(--card); stroke-width: 2; }
 .viz-cat { font: 500 12.5px "Public Sans", sans-serif; fill: var(--ink); }
 .viz-val { font: 600 12px "IBM Plex Mono", monospace; fill: var(--ink); font-variant-numeric: tabular-nums; }

@@ -9,7 +9,7 @@
 //                quality vs latency, case-type split, per-case ranks, the searches that
 //                fail, how the golden set was built, and the field boosts in play.
 
-import { hbar, dumbbell, scatter, rankstack, heatmap, legend, tableTwin, defsTwin, rankBucket,
+import { hbar, dumbbell, range, rankstack, heatmap, legend, tableTwin, defsTwin, rankBucket,
          ROLE, RANK_BANDS, fmtNum, fmtMs } from "./charts.js";
 import { strategyLabel, METRIC_LABELS, CASE_TYPE_LABELS, REFERENCE_POINTS } from "./labels.js";
 import { anchorLink, setRoute, scrollToSection } from "./route.js";
@@ -140,6 +140,18 @@ function promotionState(data, keys, bestKey) {
    bar takes the best fill — but the axis label still carries the deployed tint, so a
    reader scanning the categories can see which row is what production serves. */
 const labelRoleOf = (key, run) => (key === run.promo?.key ? ROLE.PRODUCTION : roleOf(key, run));
+
+/** The words for a row that is — or was — production. null when the recipe name says
+ *  everything, so only the rows a reader could get wrong are annotated. */
+const promoWord = (key, run) => (
+  run.promo?.key === key ? "in production"
+    : run.promo?.stale === key ? "before promotion"
+    : null);
+/** `Name · in production`, for a chart whose row labels are the only place to say it. */
+const rowLabel = (key, run) => {
+  const word = promoWord(key, run);
+  return word ? `${strategyLabel(key).name} · ${word}` : strategyLabel(key).name;
+};
 
 /** Normalise one committed run into the shape the views want, resolving which recipe is
  *  the control and which won on MRR.
@@ -823,42 +835,85 @@ function landingSection(host, data, run) {
 
 // -- quality vs latency -----------------------------------------------------
 function tradeoffSection(host, data, run) {
-  if (run.keys.length < 2) return;      // one point is not a trade-off
+  if (run.keys.length < 2) return;      // one row is not a comparison
   const sec = el("div", "sub");
-  sec.id = "speed";
-  sec.appendChild(subHead("Quality against speed", "speed"));
+  sec.id = "speed";                     // unchanged: #/results/<index>/speed still resolves
+  sec.appendChild(subHead("How long a search takes", "speed"));
+  sec.appendChild(el("p", "sub-lede",
+    "Round-trip is the client-observed wait from query to rendered results, including the async poll — so it is mostly a property of the index and the network rather than of the query shape. Two numbers per recipe: the median wait, and the 95th percentile, which is the slow tail a user actually notices."));
+
+  // Ordered by MRR, best at top, so "does the winning recipe cost anything?" is read off
+  // the row order. Quality is plotted in the leaderboard; repeating it on a second axis
+  // implied a frontier that the measurements do not support — the medians of every
+  // recipe on an index are typically within a few percent of each other.
+  const ordered = [...run.keys].sort((a, b) =>
+    (run.strategies[b].mrr || 0) - (run.strategies[a].mrr || 0));
+  /* Where the axis starts. Every recipe on an index waits on the same network and the
+     same async poll, so the interesting range is a band well above zero — anchoring at
+     zero spends half the plot on time nobody measured. Rounded down to a 250 ms step
+     below the fastest mark, with a margin so the leftmost dot never sits on the axis:
+     1000 ms on nf-tools, 500 ms on the sub-second indexes. */
+  const marks = ordered.flatMap((key) => [run.strategies[key].rt_ms_median, run.strategies[key].rt_ms_p95])
+    .filter((v) => typeof v === "number");
+  const lo = Math.min(...marks), hi = Math.max(...marks);
+  const axisFrom = Math.max(0, Math.floor((lo - (hi - lo) * 0.08) / 250) * 250);
   const { plot } = figure(sec, {
-    title: "MRR vs median round-trip",
-    note: "Round-trip is the client-observed wait from query to rendered results, including the async poll. Up and to the left is better.",
+    title: `Round-trip time, median to 95th percentile`,
+    note: `One row per recipe, ordered by MRR. The solid dot is the median wait, the hollow dot the 95th percentile; the bar between them is that recipe's spread. The axis starts at ${fmtMs(axisFrom)}, not zero.`,
   });
-  scatter(plot, {
-    points: run.keys.map((key) => ({
-      x: run.strategies[key].rt_ms_median || 0,
-      y: run.strategies[key].mrr || 0,
-      label: strategyLabel(key).name,
+  range(plot, {
+    min: axisFrom,
+    rows: ordered.map((key) => ({
+      label: rowLabel(key, run),
+      from: run.strategies[key].rt_ms_median || 0,
+      to: run.strategies[key].rt_ms_p95 || 0,
       role: roleOf(key, run),
+      labelRole: labelRoleOf(key, run),
     })),
-    xLabel: "median ms",
-    yLabel: "MRR",
+    fmt: fmtMs,
+    // the unit once per row, on the value the eye lands on
+    fmtShort: (v) => String(Math.round(v)),
+    fromLabel: "median",
+    toLabel: "95th percentile",
   });
   const rolesShown = new Set(run.keys.map((key) => roleOf(key, run)));
   plot.after(legend([
     ...(rolesShown.has(ROLE.BASELINE) ? [{ fill: "var(--series-2)", label: "Platform default" }] : []),
     ...(rolesShown.has(ROLE.PRODUCTION) ? [{ fill: "var(--series-3)", label: "In production" }] : []),
-    { fill: "var(--series-1)", label: "Best on MRR" },
+    { fill: "var(--series-1)", label: `Best on ${metricName("mrr", run.k)}` },
     ...(rolesShown.has(ROLE.OTHER) ? [{ fill: "var(--muted-mark)", label: "Other recipes tested" }] : []),
   ]));
+
+  /* State the spread as a number. On most indexes the medians sit within a few percent of
+     each other, and "there is nothing to choose here" is a finding a reader should not
+     have to infer from a plot that looks like a comparison. */
+  const meds = ordered.map((key) => run.strategies[key].rt_ms_median).filter((v) => typeof v === "number");
+  if (meds.length > 1) {
+    const lo = Math.min(...meds), hi = Math.max(...meds);
+    const sorted = [...meds].sort((a, b) => a - b);
+    const mid = sorted.length % 2
+      ? sorted[(sorted.length - 1) / 2]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    const share = Math.round(((hi - lo) / mid) * 100);
+    const slowest = ordered.find((key) => run.strategies[key].rt_ms_median === hi);
+    const fastest = ordered.find((key) => run.strategies[key].rt_ms_median === lo);
+    plot.parentElement.appendChild(el("p", "fig-note",
+      `Median round-trip differs by ${Math.round(hi - lo)} ms across ${meds.length} recipes — ${share}% of ${fmtMs(mid)}. `
+      + (share < 10
+        ? "There is no speed cost to choosing on relevance here."
+        : `Slowest is ${strategyLabel(slowest).name} at ${fmtMs(hi)}, fastest ${strategyLabel(fastest).name} at ${fmtMs(lo)}.`)));
+  }
+
   plot.parentElement.appendChild(tableTwin({
     summary: "Table view — quality and latency",
-    head: ["Recipe", "MRR", "Median", "p95"],
+    head: ["Recipe", metricName("mrr", run.k), "Median", "p95"],
     align: [null, "num", "num", "num"],
-    rows: run.keys.map((key) => [strategyLabel(key).name, fmtNum(run.strategies[key].mrr),
+    rows: ordered.map((key) => [strategyLabel(key).name, fmtNum(run.strategies[key].mrr),
       fmtMs(run.strategies[key].rt_ms_median), fmtMs(run.strategies[key].rt_ms_p95)]),
   }));
   host.appendChild(sec);
 }
 
-// -- known-item vs topical --------------------------------------------------
 function caseTypeSection(host, data, run) {
   const types = [...new Set(data.cases.map((c) => c.type).filter(Boolean))];
   if (types.length < 2) return;
@@ -874,11 +929,8 @@ function caseTypeSection(host, data, run) {
      so. A promoted arm that lost adds a third row, which is then the whole story. */
   const pairKeys = [run.promo?.stale || run.baseline_key, run.promo?.key, run.best_key]
     .filter((k, i, a) => k && a.indexOf(k) === i);
-  const roleWord = (key) => (
-    run.promo?.key === key ? "in production"
-      : run.promo?.stale === key ? "before promotion"
-      : key === run.baseline_key ? "today"
-      : "best tested");
+  const roleWord = (key) => promoWord(key, run)
+    || (key === run.baseline_key ? "today" : "best tested");
   const rows = [];
   for (const type of types) {
     const ids = data.cases.filter((c) => c.type === type).map((c) => c.id);

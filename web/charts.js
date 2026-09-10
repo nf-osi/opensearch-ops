@@ -3,8 +3,8 @@
 //
 // Five forms, each picked for the job its data does:
 //   hbar       magnitude across recipes (one measure, emphasis on the two roles)
-//   dumbbell   two-point comparison (platform default -> best recipe tested)
-//   scatter    two measures per recipe (quality vs latency) + the trade-off frontier
+//   dumbbell   two-point comparison, two series (platform default -> best recipe tested)
+//   range      one series' spread (median -> tail), zero-anchored
 //   rankstack  where the first correct result landed, as ordered rank bands
 //   heatmap    every case x every recipe, rank as magnitude
 //
@@ -122,6 +122,19 @@ function niceTicks(max, count = 4) {
   const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || mag * 10;
   const out = [];
   for (let t = 0; t <= max + step / 2; t += step) out.push(Number(t.toFixed(10)));
+  return out;
+}
+
+/** Clean ticks over an interval that does not start at zero — for marks that are
+ *  positions rather than magnitudes (a range plot), where anchoring at zero would spend
+ *  most of the plot on empty space. */
+function niceTicksIn(lo, hi, count = 4) {
+  if (!(hi > lo)) return [lo];
+  const raw = (hi - lo) / count;
+  const mag = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((v) => v >= raw) || mag * 10;
+  const out = [];
+  for (let t = Math.ceil(lo / step) * step; t <= hi + step / 2; t += step) out.push(Number(t.toFixed(10)));
   return out;
 }
 
@@ -391,44 +404,68 @@ export function dumbbell(host, { rows, fmt = (v) => fmtNum(v), fromLabel, toLabe
   }, { height });
 }
 
-// ------------------------------------------------------------------ scatter
-/** Quality vs latency. One point per recipe, coloured by role, every point directly
- *  labelled (the relief the contrast WARN on light hues requires). */
-export function scatter(host, { points, xLabel, yLabel, fmtX = fmtMs, fmtY = (v) => fmtNum(v) }) {
-  const height = 300, PAD = { t: 14, r: 18, b: 44, l: 52 };
+// ------------------------------------------------------------------ range
+/** One measure's spread per row: `from` (the typical value) to `to` (the tail).
+ *
+ *  Not a dumbbell. There the two dots are two different series, so each takes its own
+ *  role colour. Here they are two statistics of the SAME series, so hue stays the row's
+ *  role — a recipe's colour never changes — and which statistic is which is carried by
+ *  the dot instead: solid for the typical value, hollow for the tail.
+ *
+ *  `min` may start the axis above zero. That is fair here and not for a bar: these marks
+ *  are two positions on a clock, and their distance apart is the datum — no mark's length
+ *  encodes its value, so nothing is exaggerated by moving the origin. It does mean small
+ *  differences become legible, which is why the caller states the spread in words beside
+ *  the figure rather than leaving the plot to imply how big it is. */
+export function range(host, { rows, fmt = (v) => fmtNum(v), fmtShort = fmt,
+                              fromLabel = "median", toLabel = "tail", max, min = 0 }) {
+  const ROW = 30, PAD_T = 10, PAD_B = 24, R = 5;
+  const height = PAD_T + rows.length * ROW + PAD_B;
+  const top = Math.max(max ?? Math.max(...rows.flatMap((r) => [r.from || 0, r.to || 0])), 1e-9);
+  const floor = Math.min(min, top - 1e-9);
+  // Measure the value column rather than reserving a guess: these are tabular figures in
+  // a mono face, so the widest string is the column width, and a fixed gutter either
+  // clips the numbers or wastes plot width.
+  const VAL_FONT = "600 12px 'IBM Plex Mono', monospace";
+  const valText = (r) => `${fmtShort(r.from)} → ${fmt(r.to)}`;
+  const VALW = Math.ceil(Math.max(0, ...rows.map((r) => textWidth(valText(r), VAL_FONT)))) + 28;
+  const labelNeeds = Math.ceil(Math.max(0, ...rows.map((r) => textWidth(r.label, CAT_FONT)))) + 16;
   mount(host, (svg, w) => {
-    const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
-    const xMax = Math.max(...xs) * 1.12, xMin = Math.min(0, Math.min(...xs));
-    const yMin = Math.max(0, Math.min(...ys) - 0.06), yMax = Math.min(1, Math.max(...ys) + 0.06);
-    const px = (v) => PAD.l + ((v - xMin) / (xMax - xMin || 1)) * (w - PAD.l - PAD.r);
-    const py = (v) => height - PAD.b - ((v - yMin) / (yMax - yMin || 1)) * (height - PAD.t - PAD.b);
-    for (const t of niceTicks(yMax)) {
-      if (t < yMin) continue;
-      svg.appendChild(svgEl("line", { x1: PAD.l, y1: py(t), x2: w - PAD.r, y2: py(t), class: "viz-grid" }));
-      svg.appendChild(txt(PAD.l - 8, py(t) + 4, t.toFixed(2), "viz-tick", { "text-anchor": "end" }));
+    const labelW = Math.min(Math.max(120, labelNeeds), Math.max(160, w * 0.42));
+    const plotW = Math.max(40, w - labelW - VALW);
+    const at = (v) => labelW + (((v || 0) - floor) / (top - floor)) * plotW;
+    for (const t of niceTicksIn(floor, top)) {
+      const x = at(t);
+      svg.appendChild(svgEl("line", { x1: x, y1: PAD_T, x2: x, y2: PAD_T + rows.length * ROW, class: "viz-grid" }));
+      svg.appendChild(txt(x, height - 6, String(t), "viz-tick", { "text-anchor": "middle" }));
     }
-    for (const t of niceTicks(xMax)) {
-      if (t < xMin) continue;
-      svg.appendChild(txt(px(t), height - PAD.b + 16, String(Math.round(t)), "viz-tick", { "text-anchor": "middle" }));
-    }
-    svg.appendChild(svgEl("line", { x1: PAD.l, y1: height - PAD.b, x2: w - PAD.r, y2: height - PAD.b, class: "viz-axis" }));
-    svg.appendChild(txt(w - PAD.r, height - 8, xLabel, "viz-axis-label", { "text-anchor": "end" }));
-    svg.appendChild(txt(PAD.l - 8, PAD.t + 2, yLabel, "viz-axis-label"));
-    for (const p of points) {
-      const fill = ROLE_FILL[p.role] || ROLE_FILL.other;
-      svg.appendChild(svgEl("circle", { cx: px(p.x), cy: py(p.y), r: 6, fill, class: "viz-dot" }));
-      const hit = svgEl("circle", { cx: px(p.x), cy: py(p.y), r: 14, fill: "transparent" });
-      interactive(hit, p.label, [
-        { key: fill, value: fmtY(p.y), label: yLabel },
-        { key: null, value: fmtX(p.x), label: xLabel },
-      ]);
-      svg.appendChild(hit);
-      // keep labels inside the frame: flip past the right third, and trim to the room left
-      const flip = px(p.x) > w * 0.72;
-      const room = (flip ? px(p.x) - PAD.l : w - PAD.r - px(p.x)) - 14;
-      svg.appendChild(catLabel(px(p.x) + (flip ? -12 : 12), py(p.y) + 4, p.label, room,
-        "viz-point-label", "500 11.5px 'Public Sans', sans-serif", flip ? "end" : "start"));
-    }
+    rows.forEach((r, i) => {
+      const y = PAD_T + i * ROW + ROW / 2;
+      // a value at or below the floor still has to be visible: clamp to the axis start
+      const [x1, x2] = [at(Math.max(r.from || 0, floor)), at(Math.max(r.to || 0, floor))];
+      const fill = ROLE_FILL[r.role] || ROLE_FILL[ROLE.OTHER];
+      // the whisker takes the row's colour so the pair reads as one object, not two marks
+      const bar = svgEl("line", { x1, y1: y, x2, y2: y, class: "viz-range" });
+      bar.setAttribute("stroke", fill);
+      svg.appendChild(bar);
+      svg.appendChild(catLabel(labelW - 10, y + 4, r.label, labelW - 16, roleCls(r.labelRole ?? r.role)));
+      const rows2 = [{ key: fill, value: fmt(r.from), label: fromLabel },
+                     { key: fill, value: fmt(r.to), label: toLabel }];
+      const dot = (x, hollow, label, value) => {
+        const c = svgEl("circle", {
+          cx: x, cy: y, r: R, class: "viz-dot",
+          fill: hollow ? "var(--card)" : fill,
+          stroke: hollow ? fill : "var(--card)",
+        });
+        const hit = svgEl("circle", { cx: x, cy: y, r: 14, fill: "transparent" });  // >=24px target
+        interactive(hit, r.label, rows2);
+        hit.setAttribute("aria-label", `${r.label}, ${label}: ${value}`);
+        svg.append(c, hit);
+      };
+      dot(x1, false, fromLabel, fmt(r.from));
+      dot(x2, true, toLabel, fmt(r.to));
+      svg.appendChild(txt(w - 4, y + 4, valText(r), "viz-val", { "text-anchor": "end" }));
+    });
   }, { height });
 }
 
