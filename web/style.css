@@ -1,22 +1,28 @@
 /* Synapse Portal Search Lab — refined scientific-editorial.
-   Warm paper, deep ink, teal as the dominant accent, terracotta as the sharp accent.
+   Cool near-white surfaces, deep ink, teal as the dominant accent, terracotta as the
+   sharp accent. The surfaces are neutral on purpose: this is an instrument reporting
+   measurements, and a warm paper tint read as an archive of them.
    Display: Archivo (a grotesque — streamlined, impactful at heavy weights and tight
    tracking) · Body: Public Sans · Mono (scores/ids): IBM Plex Mono. */
 
 :root {
-  /* This design commits to one look: a single light, warm-paper palette. Declaring the
-     scheme keeps form controls, scrollbars and the canvas light under a dark OS setting
-     rather than half-flipping into a theme the marks were never validated against. */
+  /* This design commits to one look: a single light palette. Declaring the scheme keeps
+     form controls, scrollbars and the canvas light under a dark OS setting rather than
+     half-flipping into a theme the marks were never validated against. */
   color-scheme: light;
 
   --display:    "Archivo", "Public Sans", system-ui, sans-serif;
 
-  --paper:      #faf8f3;
-  --paper-2:    #f3efe6;
-  --card:       #fffdf8;
-  --ink:        #16201e;
-  --muted:      #5f6b67;
-  --faint:      #8a938f;
+  --paper:      #f7f9fa;
+  --paper-2:    #edf1f4;
+  --card:       #ffffff;
+  --wash-cool:  #e8eef2;   /* the second background bloom; was a terracotta tint */
+  --ink:        #151d21;
+  --muted:      #56626a;
+  /* AA (4.5:1) on every surface faint text actually sits on: card, paper, paper-2
+     (.delta.same), and --teal-wash — the selected index card's gradient and a hovered
+     scoreboard row both put .ic-id / .score on it. */
+  --faint:      #636c72;
   --teal:       #0e8c7f;
   --teal-deep:  #0a655b;
   --teal-wash:  #e4f0ee;
@@ -24,11 +30,11 @@
   --green:      #4c9a2a;   /* distinct from teal — upward delta only, so it doesn't blend in */
   --green-deep: #2e6b19;
   --green-wash: #e9f3e0;
-  --clay:       #c4622d;   /* sharp accent: highlights, "best", downward delta */
+  --clay:       #a55226;   /* sharp accent: downward delta, errors — AA on clay-wash too */
   --clay-wash:  #f7e7dc;
-  --rule:       #e2dccf;
-  --rule-soft:  #ece7db;
-  --shadow:     14px 18px 40px -28px rgba(16,32,30,.45);
+  --rule:       #e2e8ec;
+  --rule-soft:  #eef2f5;
+  --shadow:     14px 18px 40px -28px rgba(17,34,45,.38);
   --radius:     14px;
 
   /* ---- data-mark roles -------------------------------------------------
@@ -42,8 +48,8 @@
   --series-2:   #eb6834;   /* the platform default — the absolute control */
   --series-3:   #4a3aa7;   /* production_current — the contextual control */
   /* Text-safe steps of the same two hues, for axis labels that mirror a bar's role.
-     The fills themselves fail as text on --card: --series-2 is 3.15:1, under the 4.5:1
-     AA floor. These are the nearest darker steps that clear it (5.8:1 and 8.4:1) while
+     The fills themselves fail as text on --card: --series-2 is 3.2:1, under the 4.5:1
+     AA floor. These are the nearest darker steps that clear it (5.9:1 and 8.6:1) while
      staying recognisably the same hue as the mark they label. */
   --series-2-ink: #a8461d;
   --series-3-ink: #4a3aa7;
@@ -55,8 +61,8 @@
   --rank-deep:   #86b6ef;
   --rank-miss:   #c9c3b4;
   --rank-absent: #eae6da;
-  --grid:       #e6e1d4;
-  --axis:       #cfc9b9;
+  --grid:       #e7ecef;
+  --axis:       #ccd4d9;
 }
 
 * { box-sizing: border-box; }
@@ -74,7 +80,7 @@ body {
   margin: 0;
   background:
     radial-gradient(1200px 600px at 78% -8%, var(--teal-wash) 0%, transparent 55%),
-    radial-gradient(900px 500px at -5% 110%, var(--clay-wash) 0%, transparent 50%),
+    radial-gradient(900px 500px at -5% 110%, var(--wash-cool) 0%, transparent 50%),
     var(--paper);
   color: var(--ink);
   font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
@@ -84,9 +90,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* faint paper grain for atmosphere */
+/* A trace of grain, only enough to keep the large washes from banding — at .035 it read
+   as paper stock. Delete the element in index.html for a perfectly flat surface. */
 .grain {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .035;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .012;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
