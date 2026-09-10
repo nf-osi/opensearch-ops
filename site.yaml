@@ -1,0 +1,69 @@
+# What the published dashboard includes.
+#
+# build_site.py reads this file instead of globbing benchmark/<table>/results/*.json, so
+# dropping a scratch run into results/ can never quietly change the published site — a
+# run appears on the dashboard only if it is named here AND committed to git (CI builds
+# from a fresh checkout, so an untracked results file does not exist as far as the
+# published site is concerned; `python3 build_site.py` warns about both cases).
+
+# ---------------------------------------------------------------- the run of record
+# run.py's default label, and the run every index opens on. Published for every table
+# that has it; a table without it renders the "no scored run committed yet" state.
+#
+#   python3 benchmark/run.py <table>                 # writes results/latest.json
+#   python3 benchmark/run.py <table> --label latest  # the same thing, explicitly
+headline: latest
+
+# ---------------------------------------------------------------- extra runs
+# Additional labels to publish per table, in the order they should appear in the
+# dashboard's run switcher (after the headline). Use this for a run that earns a place
+# next to the run of record — a tuning winner, a before/after pair for a config change —
+# not for every experiment that happens to be on disk.
+#
+# None currently.
+extra_runs:
+
+# ---------------------------------------------------------------- held-constant rows
+# A run measures every strategy against ONE index state, because index configuration is a
+# property of the index, not of a query. That is usually what you want — but not for the
+# platform default, which is defined as "no customization at all". Measured on an index
+# that HAS a search config bound, `frontend_default` is the default query on a customized
+# index, which is a different thing and reads worse than the real default.
+#
+# `constant:` pins one strategy's row to a fixed index state by taking it from another run
+# of the same table, so re-scoring the headline against today's configuration cannot move
+# it. The runs in results/ stay untouched — the substitution happens at build time, so
+# re-running run.py cannot silently revert it — and the published payload records where the
+# row came from so the dashboard can mark it rather than passing it off as same-run.
+#
+#   <table>:
+#     <strategy>: <label to take that strategy's row from>
+#
+# (Not to be confused with `control:` in a table's fields.yaml, which names the strategy
+# the rest of a run is READ against. This one is about which run a row is measured in.)
+constant:
+  tools:
+    # nf-tools is bound to nf_tools_search_config, so `latest` measures the platform default
+    # against a configured index — which reads worse than the real default. The `unbound` run
+    # is the same golden and the same boosts scored with the config unbound (see its
+    # search_config_id: null), so take the row from there and the control means what it says.
+    # No numbers quoted here on purpose: both runs move whenever either is re-scored.
+    frontend_default: unbound
+
+# ---------------------------------------------------------------- deliberately excluded
+# Runs that exist in results/ and are NOT published, with the reason. Build
+# prints excluded runs as expected, and warns only about runs it finds in results/ that
+# appear in neither `extra_runs` nor here.
+excluded:
+  tools:
+    # Not a run of the portal's search: it measures nf-tools with its SearchConfiguration
+    # unbound, which is a state the portal is never in. It exists so `frontend_default` has an
+    # honest platform-default number, and it reaches the dashboard only through `constant:`
+    # above — as one row, marked, rather than as a run someone could mistake for production.
+    unbound: measures the index with its config unbound; spliced in via `constant:` instead
+  studies:
+    # Scored against the 31-case studies golden that predates the 37-case set now committed,
+    # and written before run.py recorded a dataset fingerprint, so there is nothing to check a
+    # comparison against. Publishing it beside `latest` would put two different datasets in one
+    # run switcher. Re-score it against the current golden to promote it to `extra_runs`.
+    tuned: scored against a superseded studies golden; re-score before publishing

@@ -6,10 +6,22 @@
 // `tag` is the short chip shown in compact UI.
 export const STRATEGY_LABELS = {
   frontend_default: {
-    name: "Default site search",
+    name: "Platform default",
+    tag: "default",
+    blurb: "The Synapse front-end's built-in query, applied to any portal that has not customized its search: every field, equal weight, typo tolerance, no boosts.",
+    bestFor: "The control every recipe here is measured against — a platform-wide fallback, not a choice NF made.",
+  },
+  production_current: {
+    name: "In production",
     tag: "live",
-    blurb: "The front-end's built-in default query: searches every field, equal weight, with typo tolerance. No boosts.",
-    bestFor: "The baseline — what users get right now.",
+    blurb: "The query this portal page actually issues right now, transcribed from its search config in synapse-web-monorepo — including the rule that sends quoted phrases and Synapse ids down a separate exact-match path.",
+    bestFor: "The control for an index whose portal has customized its search: any gain a recipe shows here is a gain over what users get today, not over a default nobody runs.",
+  },
+  simple_query_string_boosted: {
+    name: "Google-style (boosted)",
+    tag: "simple+",
+    blurb: "The forgiving operator-aware query, but with our field boosts applied. This is the exact shape production falls back to for a quoted phrase or a Synapse id.",
+    bestFor: "Exact-phrase and identifier lookups, where typo tolerance does more harm than good.",
   },
   simple_query_string: {
     name: "Google-style",

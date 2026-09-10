@@ -1,28 +1,30 @@
-# Stub: run the nf-tools search benchmark and publish results to GitHub Pages.
+# Run a benchmark for a table with a golden relevance set.
 #
 # Queries hit the public Synapse repo-prod API anonymously (no secrets needed).
-# To enable: repo Settings → Pages → Build and deployment → Source = "GitHub Actions".
 name: benchmark
 
 on:
-  workflow_dispatch: {}  # manual trigger only
+  workflow_dispatch:
+    inputs:
+      table:
+        description: Benchmark table
+        required: true
+        type: choice
+        default: tools
+        options:
+          - datasets
+          - publications
+          - studies
+          - tools
+          - usage-publications
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-# Allow one concurrent deployment; don't cancel an in-progress publish.
-concurrency:
-  group: pages
-  cancel-in-progress: false
+  contents: write
+  pull-requests: write
 
 jobs:
   benchmark:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -34,21 +36,21 @@ jobs:
         run: pip install pyyaml
 
       - name: Run benchmark
-        # Stub: single baseline run. Add more strategies/labels as needed.
-        # Non-fatal: if the run fails (or no benchmark exists yet), the build
-        # step below still publishes an "under construction" page.
-        continue-on-error: true
-        run: python3 benchmark/run.py tools --label baseline
+        run: python3 benchmark/run.py "${{ inputs.table }}" --label latest
 
-      - name: Build site
-        # Always runs, even if the benchmark step failed. Copies the web/ app and
-        # generates site/data/<table>.json (golden cases + boosts + any precomputed
-        # baseline from results/) for the interactive Synapse Portal Search Lab.
-        run: python3 build_site.py --out site
-
-      - uses: actions/upload-pages-artifact@v3
+      - name: Create results review pull request
+        # The action creates or updates one PR and stages only the generated result file.
+        # Publishing remains separate: publish.yml deploys results after review and merge.
+        uses: peter-evans/create-pull-request@v7
         with:
-          path: site
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/benchmark-results-${{ inputs.table }}
+          delete-branch: true
+          commit-message: Update ${{ inputs.table }} benchmark results
+          title: Update ${{ inputs.table }} benchmark results
+          body: |
+            Automated `${{ inputs.table }}` benchmark run for review.
 
-      - id: deploy
-        uses: actions/deploy-pages@v4
+            Review the metric and per-case changes before merging. The publishing workflow
+            deploys the committed result after merge.
+          add-paths: benchmark/${{ inputs.table }}/results/latest.json

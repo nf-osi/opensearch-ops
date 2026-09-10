@@ -50,8 +50,8 @@ The dashboard is the authoritative source for scores, ranks, latency, and failur
 **<https://nf-osi.github.io/opensearch-ops/>**
 
 Build it locally with `python3 build_site.py && python3 -m http.server -d site`. Runs are JSON
-files in [results/](results/); the dashboard embeds `latest.json`, and the other runs there are
-kept for comparison. Each file records the golden set and index state it measured, so check those
+files in [results/](results/), and [site.yaml](../../site.yaml) decides which of them the
+dashboard publishes. Each file records the golden set and index state it measured, so check those
 before reading two of them side by side.
 
 ### Findings

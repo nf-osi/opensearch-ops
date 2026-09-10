@@ -124,7 +124,8 @@ def warn_if_bound(index_id, strategies, config_id):
           f"  the default QUERY on a CUSTOMIZED index — not the platform default. For a true\n"
           f"  platform-default number, unbind first (config.py unbind), score it under its own\n"
           f"  label, then re-bind — and keep that run as its own results file, since it measured\n"
-          f"  a different index state (see search_config_id in each result).\n")
+          f"  a different index state (see search_config_id in each result). To publish that\n"
+          f"  row without publishing the run, pin it with `constant:` in site.yaml.\n")
 
 
 def warn_if_golden_drift(resdir, label, fp):
