@@ -96,7 +96,7 @@ def warn_if_bound(index_id, strategies, config_id):
         python3 benchmark/run.py <table> --label unbound
         python3 config/config.py apply <config-id> --index <id>
 
-    and point site.yaml's `graft:` at that run so the dashboard reads the honest number.
+    and point site.yaml's `constant:` at that run so the dashboard reads the honest number.
     """
     if not config_id or "frontend_default" not in strategies:
         return
@@ -104,7 +104,7 @@ def warn_if_bound(index_id, strategies, config_id):
           f"`frontend_default` here is\n"
           f"  the default QUERY on a CUSTOMIZED index — not the platform default. For a true\n"
           f"  platform-default number, unbind first (config.py unbind), score it, then re-bind:\n"
-          f"  see warn_if_bound() in this file and `graft:` in site.yaml.\n")
+          f"  see warn_if_bound() in this file and `constant:` in site.yaml.\n")
 
 
 def reciprocal_rank(ranked_ids, relevant):

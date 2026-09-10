@@ -60,9 +60,9 @@ def frontend_default(q, size, fields):
     against a SearchIndex with a SearchConfiguration bound measures the default query on a
     CUSTOMIZED index, which is a different and usually worse number. Index state is shared
     by every strategy in a run, so this cannot be corrected within one run. To get a true
-    platform default, unbind first (`config.py unbind`), score, then re-bind, and graft
-    that row into the published run via site.yaml. run.py records the bound config id on
-    every run and warns when this strategy is scored against a bound index.
+    platform default, unbind first (`config.py unbind`), score, then re-bind, and pin that
+    row into the published run via site.yaml's `constant:`. run.py records the bound config
+    id on every run and warns when this strategy is scored against a bound index.
     """
     if routes_to_simple_query_string(q):
         return {"query": {"simple_query_string": {"query": q}}, "size": size}
