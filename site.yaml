@@ -61,9 +61,4 @@ excluded:
     # honest platform-default number, and it reaches the dashboard only through `constant:`
     # above — as one row, marked, rather than as a run someone could mistake for production.
     unbound: measures the index with its config unbound; spliced in via `constant:` instead
-  studies:
-    # Scored against the 31-case studies golden that predates the 37-case set now committed,
-    # and written before run.py recorded a dataset fingerprint, so there is nothing to check a
-    # comparison against. Publishing it beside `latest` would put two different datasets in one
-    # run switcher. Re-score it against the current golden to promote it to `extra_runs`.
-    tuned: scored against a superseded studies golden; re-score before publishing
+
