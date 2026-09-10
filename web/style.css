@@ -451,6 +451,16 @@ main { padding: 16px 0 48px; }
   color: var(--teal-deep); display: inline-block; padding: 0 2px;
 }
 .hero-sub { margin: 14px 0 0; max-width: 72ch; font-size: 14.5px; color: var(--muted); }
+/* freshness, stated where the reader starts rather than only in the footer */
+.hero-stamp {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 14px;
+  font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.hero-stamp-key {
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  font-size: 10px;
+}
+.hero-stamp-key:not(:first-child) { margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--rule); }
 
 /* The hero rail: the three pooled facts as one strip with hairline dividers, not three
    bordered tiles. Context for the headline, so it carries no card fill and no shadow —

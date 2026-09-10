@@ -301,7 +301,7 @@ export async function initResults(route = {}) {
   renderReferencePoints();
   renderPortfolio();
   await showRoute(route, { scroll: true });
-  $("#builtStamp").textContent = MANIFEST.generated_at ? `Built ${MANIFEST.generated_at}` : "";
+  $("#builtStamp").textContent = MANIFEST.generated_at ? `Site built ${MANIFEST.generated_at}.` : "";
   return MANIFEST;
 }
 
@@ -322,6 +322,29 @@ function defaultTable() {
   return [...MANIFEST.tables].sort((a, b) => depth(b) - depth(a))[0]?.table;
 }
 
+// ---------------------------------------------------------------- freshness
+/* "When was this last updated?" has two answers and they are not the same: when the runs
+   were scored (what the numbers describe) and when the site was generated from them (a
+   rebuild moves this without any new measurement). The scoring date is the one a reader
+   means, so it leads; the build date follows it, and the footer keeps the full timestamp.
+   Runs are scored per index; this is the newest, and each index states its own date on its
+   card and in its identity row. */
+function freshnessStamp() {
+  const days = MANIFEST.tables.map((t) => day(t.latest?.run_at)).filter((d) => d && d !== "—").sort();
+  const p = el("p", "hero-stamp");
+  if (!days.length) {
+    p.append(document.createTextNode("No runs published yet"));
+    return p;
+  }
+  p.appendChild(el("span", "hero-stamp-key", "Most recent run"));
+  p.append(document.createTextNode(days[days.length - 1]));
+  if (MANIFEST.generated_at) {
+    p.appendChild(el("span", "hero-stamp-key", "Site built"));
+    p.append(document.createTextNode(MANIFEST.generated_at));
+  }
+  return p;
+}
+
 // ---------------------------------------------------------------- hero
 // The finding, stated as a sentence with the number set large inside it — one hero figure
 // per view. Pools every scored case in every index that has a committed run.
@@ -338,6 +361,7 @@ function renderHero() {
   const host = $("#hero");
   host.replaceChildren();
   host.appendChild(el("p", "hero-eyebrow", "Experimental gains"));
+  host.appendChild(freshnessStamp());
 
   // Relative lift, not the control's own score — the finding is what tuning buys, and a
   // control result read as a headline invites "58% is bad" rather than "+17% is available".
