@@ -1,10 +1,35 @@
 # Build and publish the dashboard from committed benchmark results.
 #
 # Enable GitHub Pages with Settings → Pages → Build and deployment → GitHub Actions.
+#
+# Two triggers, because they are available at different times. `workflow_dispatch` only
+# appears once this file is on the default branch, so it cannot be used to preview a
+# dashboard branch before merge. `push` reads the workflow from the ref that triggered it,
+# so it works from a branch — scoped to `*-dashboard`, which is what the `github-pages`
+# environment's deployment-branch policy already allows. A branch push publishes to the
+# live URL; the next push to main replaces it.
 name: pages
 
 on:
   workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - '*-dashboard'
+    # Only the site's actual inputs, so an unrelated commit does not redeploy. README is
+    # one of them: load_index_registry() parses the nf- index table out of it. Results are
+    # matched as `results/*.json` rather than `latest.json` alone, because site.yaml can
+    # publish another label — tools/unbound reaches the dashboard through `constant:`, and
+    # editing it changes published numbers.
+    paths:
+      - 'web/**'
+      - 'benchmark/*/golden.yaml'
+      - 'benchmark/*/fields.yaml'
+      - 'benchmark/*/results/*.json'
+      - 'site.yaml'
+      - 'build_site.py'
+      - 'README.md'
+      - '.github/workflows/publish.yml'
 
 permissions:
   contents: read
