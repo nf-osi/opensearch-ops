@@ -11,11 +11,12 @@
 # derived automatically by stripping the boosts — no need to list the fields twice.
 # Tune these weights and re-run; this is one of the main levers the harness exists to test.
 #
-# This file may also carry an optional `query:` block describing a full tuned query shape
-# (query type, tie_breaker, minimum_should_match, phrase_boost), which run.py compiles into
-# a `tuned` strategy — see benchmark/studies/fields.yaml for a worked example and the tuner
-# README's "Applying a winner". nf-tools has no block yet: its boosts below are hand-curated
-# and every strategy here is one of the fixed shapes.
+# This file sets WHICH fields are matched and how much each is worth. It does NOT set the
+# query shape: that comes from the strategy name (benchmark/strategies.py), and run.py hands
+# these fields to whichever strategy it is scoring. `production:` below is the one exception
+# — it carries a query_strategy because the control has to mirror the deployed portal query
+# rather than one of the fixed shapes. run.py reads only `fields:`, `production:`, and
+# `control:` from this file; any other top-level key is ignored.
 #
 # NOTE: a multi_match/simple_query_string with an explicit `fields` list searches ONLY
 # these columns — the other 58 columns are invisible to every strategy except
@@ -26,6 +27,16 @@
 # (`/entity/syn51730943/column`, 70 columns), which is authoritative: the index is
 # `SELECT * FROM syn51730943`, so a name absent there is a silent no-op in every query.
 
+# WINNING SHAPE: `multi_match_cross` — cross_fields over the list below, no fuzziness.
+# Measured 2026-09-10 on the 66-case golden with search config 9 bound: with these same
+# boosts, cross_fields beats best_fields on every metric (MRR 0.744 vs 0.694, Recall@10
+# 0.705 vs 0.662, Hit@1 0.682 vs 0.636, Hit@10 0.848 vs 0.803), and both beat the 0.586 of
+# the six-field config still deployed. Portal equivalent is queryStrategy
+# MULTI_MATCH_CROSS_FIELDS, promoted to resources.ts on 2026-09-10 and awaiting deploy.
+# CAVEAT: the boosts below were swept under best_fields (see the investigatorName note), so
+# they are a measured-good point under cross_fields rather than an optimum tuned for it.
+# Re-sweeping the weights under cross_fields is the obvious next step.
+#
 # ---------------------------------------------------------------- the control
 # Which strategy this table is measured against. nf-tools is the one NF index whose portal
 # page sets a SearchQueryConfig, so its control is what that config sends (below), NOT the

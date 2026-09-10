@@ -1,0 +1,77 @@
+# Per-table field config for the nf-publications benchmark (syn75081631, source syn16857542).
+#
+# This file sets WHICH fields are matched and how much each is worth. It does NOT set the
+# query shape: that comes from the strategy name (benchmark/strategies.py), and run.py hands
+# these fields to whichever strategy it is scoring. run.py reads only `fields:`,
+# `production:`, and `control:`; any other top-level key is ignored.
+#
+# WINNING SHAPE: `boosted_fuzzy` — best_fields over the list below WITH fuzziness AUTO.
+# Fuzziness is not optional here: the same boosts without it score MRR 0.716 / Recall@10
+# 0.664, against 0.754 / 0.708 with it. Portal equivalent is queryStrategy BOOSTED_FUZZY.
+# Score this table with `--strategy boosted_fuzzy`; the unfuzzied boosted strategies
+# understate it.
+#
+# No `production:` block: the nf-publications portal page sets no SearchQueryConfig, so what
+# it sends today IS the platform default and `frontend_default` (the implicit control) already
+# represents it. Add a `production:` block only once a config ships for this table.
+#
+# Column names audited 2026-09-10 against the source table's column model
+# (`/entity/syn16857542/column`, 12 columns), which is authoritative: the index is
+# `SELECT * FROM syn16857542` and carries all 260 rows, so a name absent there is a silent
+# no-op in every query.
+#
+# Every text-mappable column is named, so there is nothing left for a `*` entry to add
+# beyond `year`, which is unusable: appending `*` scores MRR 0.754 / Recall@10 0.708 /
+# Hit@1 0.700, identical to the list below (measured 2026-09-10). This table is therefore
+# indifferent to the portal's `includeUnlistedFields` setting — unlike nf-datasets, where
+# `*` erases the gain, and nf-studies, where it is load-bearing.
+
+# EVERY text-mappable column is listed. Unlike nf-tools (70 columns, curated subset), this
+# table is small and every column is a plausible match target, and a field absent from the
+# list is invisible to the query however it is weighted. The one exclusion is structural:
+# `year` (INTEGER) is omitted because naming a numeric or date column in a `fields` list makes
+# the whole query fail with a 500, not just that field — measured 2026-09-10 against this index.
+
+# Fill of each column (non-null rows of 260, source table, 2026-09-10):
+#   title            260  100%
+#   pmid             260  100%
+#   author           260  100%
+#   fundingAgency    260  100%
+#   doi              259  100%
+#   journal          258   99%
+#   manifestation    240   92%
+#   diseaseFocus     239   92%
+#   studyId          235   90%
+#   studyName        231   89%
+#   publicationType    0    0%
+fields:
+  # the paper itself — the strongest and only free-text signal on this table
+  - "title^5"
+  # people. STRING_LIST of every author; supports author and consortium lookups
+  - "author^3"
+  # disease / phenotype — the topical axis of this registry
+  - "manifestation^3"
+  - "diseaseFocus^2"
+  # provenance: which NF study and where it appeared
+  - "studyName^2"
+  - "journal^2"
+  # identifiers and remaining categoricals — unboosted. They answer known-item lookups when
+  # the user pastes an id, and should not outrank a title match when they merely co-occur.
+  - "studyId"
+  - "doi"
+  - "pmid"
+  - "fundingAgency"
+  # Listed for completeness and currently inert: 0 of 260 rows carry a value. Costs nothing
+  # at weight 1 and starts working if the registry populates it.
+  - "publicationType"
+
+# TUNED 2026-09-10 over the 30-case golden, all measured with fuzziness AUTO:
+#   title^5 (this)  MRR 0.754  R@10 0.708  Hit@1 0.700
+#   title^8         MRR 0.756  R@10 0.717  Hit@1 0.700   — inside the noise floor of 30 cases
+#   title^5, everything else flat
+#                   MRR 0.755  R@10 0.697  Hit@1 0.700   — the category boosts buy recall only
+#   all fields flat MRR 0.655  R@10 0.664  Hit@1 0.567   — flat but still fuzzy; lands
+#                   exactly on the platform default, i.e. the boosts are the entire gain
+#                   (flat AND unfuzzied is lower still: 0.630 / 0.647 / 0.533)
+# ^5 and ^8 are indistinguishable on this golden; ^5 is kept as the more conservative ratio.
+# Widen the golden before treating any of these weights as settled.

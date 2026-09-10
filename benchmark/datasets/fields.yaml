@@ -1,0 +1,135 @@
+# Per-table field config for the nf-datasets benchmark (syn75081630, source syn50913342).
+#
+# This file sets WHICH fields are matched and how much each is worth. It does NOT set the
+# query shape: that comes from the strategy name (benchmark/strategies.py), and run.py hands
+# these fields to whichever strategy it is scoring. run.py reads only `fields:`,
+# `production:`, and `control:`; any other top-level key is ignored.
+#
+# WINNING SHAPE: `boosted_fuzzy` — best_fields over the list below WITH fuzziness AUTO, and
+# with NO boosts (see below). Fuzziness is what this table lives on: the same flat list
+# without it scores MRR 0.749 / Recall@10 0.793, against 0.836 / 0.855 with it. The golden
+# deliberately carries misspellings ("schwnomatosis", "vestibulr schwannoma nf2", "chp-seq",
+# "corielle") because that is what users type. Portal equivalent is queryStrategy
+# BOOSTED_FUZZY. Score this table with `--strategy boosted_fuzzy`.
+#
+# No `production:` block: the nf-datasets portal page sets no SearchQueryConfig, so what it
+# sends today IS the platform default and `frontend_default` (the implicit control) already
+# represents it. Add a `production:` block only once a config ships for this table.
+#
+# Column names audited 2026-09-10 against the source table's column model
+# (`/entity/syn50913342/column`, 53 columns), which is authoritative: the index is
+# `SELECT * FROM syn50913342` and carries all 189 rows, so a name absent there is a silent
+# no-op in every query.
+
+# ------------------------------------------------------------------ NO BOOSTS, DELIBERATELY
+# Every field is at weight 1, and that is a measured result rather than a starting point.
+# Boosting the title-ish fields reliably COSTS recall on this table, because relevance here
+# lives in the category columns, not the title. Measured 2026-09-10, all with fuzziness AUTO,
+# recall@10 per case:
+#
+#   case                    query                       flat   title^5/name^5 + 16 more boosts
+#   scrna-seq               "single cell rna-seq"       1.00   0.40
+#   drug-screen             "drug screen"               1.00   0.80
+#   elisa-antibody          "elisa antibody assay"      1.00   0.75
+#   vestibular-schwannoma   "vestibulr schwannoma nf2"  1.00   0.80
+#   mouse-model             "nf1 mouse model seq"       0.25   0.50
+#
+# Four topical cases lose, one gains. A dataset whose TITLE happens to say "drug screen"
+# outranks the datasets whose `measurementTechnique` actually is one, which is the whole
+# failure mode. Aggregate: flat MRR 0.836 / R@10 0.855 / Hit@1 0.750, boosted 0.849 / 0.820 /
+# 0.786 — boosting buys 0.013 MRR for 0.035 recall, a bad trade on a discovery-weighted
+# golden. Lighter boost sets were tried (title^3+name^3 alone; six category fields at ^2) and
+# both land at R@10 0.796-0.820: it is boosting AT ALL that costs recall here, not the size
+# of the boost. Re-test if the golden ever tilts toward known-item title lookups.
+#
+# Those boosted comparisons were measured on the 42-field list, before the four keyword
+# columns below were dropped. Dropping them was neutral for the flat config (identical on
+# every metric), so the flat-vs-boosted conclusion carries over, but the boosted numbers
+# themselves have not been re-scored against the 38-field list.
+
+# EVERY text-mappable column is listed, including the technical ones. Unlike nf-tools (70
+# columns, curated subset), a field absent from the list is invisible to the query however it
+# is weighted, and pruning was measured to hurt: dropping the 13 obvious non-content columns
+# (etag, path, datasetMD5Hex, croissant_file_s3_object, createdBy, modifiedBy, id, studyId,
+# versionLabel, versionComment, externalRepositoryUri, externalUrl, doi) costs R@10
+# 0.855 -> 0.839 and gains nothing. The only exclusions are structural: yearProcessed,
+# yearPublished, datePublished, datasetSizeInBytes, datasetItemCount, individualCount,
+# specimenCount, currentVersion (INTEGER), confidenceScore (DOUBLE), createdOn, modifiedOn
+# (DATE) are omitted because naming a numeric or date column in a `fields` list makes the
+# whole query fail with a 500, not just that field — measured 2026-09-10 against this index.
+#
+# A SECOND, STRATEGY-SPECIFIC exclusion: id, studyId (ENTITYID) and createdBy, modifiedBy
+# (USERID) are mapped as `keyword`, and naming a keyword field explicitly makes
+# `phrase_prefix` fail with "Can only use phrase prefix queries on text fields" — again
+# failing the whole query, so `run.py datasets` could not complete at all while they were
+# listed. Dropping them is free here: the winning config scores identically with and without
+# them (MRR 0.836 / R@10 0.855 / Hit@1 0.750 either way), so they are simply gone. This is
+# NOT true of nf-studies, where the equivalent columns are worth 0.027 MRR and are kept
+# reachable through `*` instead — see benchmark/studies/fields.yaml.
+#
+# DO NOT add `*` to this list. It is what the portal's `includeUnlistedFields: true` (the
+# default) would append, and it erases the entire gain: with `*` the flat list scores MRR
+# 0.812 / R@10 0.855 / Hit@1 0.714, exactly the platform default, because the numeric and
+# date columns come back in and dilute. A shipped config for this table MUST set
+# `includeUnlistedFields: false`.
+
+# Fill of each column (non-null rows of 189, source table, 2026-09-10). Read it as reach:
+# `description` is the richest free text on the table but can only ever answer 47% of rows,
+# while `title` is present on all but five.
+#   name/id/studyId/etag/path 189 100% · title 184 97% · creator 183 97% · license 166 88%
+#   diseaseFocus 165 87% · accessType 165 87% · dataType 164 87% · funder 164 87%
+#   species 162 86% · datasetMD5Hex 160 85% · measurementTechnique 159 84% · keywords 153 81%
+#   contributor 138 73% · manifestation 136 72% · dataUseModifiers 125 66%
+#   includedInDataCatalog 111 59% · description 89 47% · series 85 45%
+#   croissant_file_s3_object 69 37% · subject 51 27% · fundingAgency 48 25%
+#   countryOfOrigin 40 21% · hosting/repository/externalUrl 36 19% · versionComment 28 15%
+#   versionLabel 28 15% · ageGroup 21 11% · doi 18 10% · alternateName 18 10%
+#   externalRepositoryUri 13 7% · conditionsOfAccess 9 5% · assay 9 5% · visualizeDataOn 7 4%
+#   citation 5 3% · modelSystemName 3 2%
+fields:
+  # identity / naming
+  - "title"
+  - "name"
+  - "alternateName"
+  - "series"
+  # what the data IS — the topical axis these queries actually target
+  - "keywords"
+  - "measurementTechnique"
+  - "assay"
+  - "dataType"
+  - "subject"
+  - "description"
+  # biology
+  - "manifestation"
+  - "diseaseFocus"
+  - "species"
+  - "modelSystemName"
+  - "ageGroup"
+  # people, funders, provenance
+  - "creator"
+  - "contributor"
+  - "funder"
+  - "fundingAgency"
+  - "citation"
+  - "countryOfOrigin"
+  # access and licensing
+  - "accessType"
+  - "license"
+  - "conditionsOfAccess"
+  - "dataUseModifiers"
+  # where it lives
+  - "includedInDataCatalog"
+  - "hosting"
+  - "repository"
+  - "externalUrl"
+  - "externalRepositoryUri"
+  - "visualizeDataOn"
+  - "path"
+  # identifiers and record-keeping. Kept because pruning them measured worse (see above),
+  # not because they are expected to match natural language.
+  - "doi"
+  - "etag"
+  - "datasetMD5Hex"
+  - "croissant_file_s3_object"
+  - "versionLabel"
+  - "versionComment"
