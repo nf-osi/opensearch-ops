@@ -44,7 +44,15 @@ control: production_current
 # is the headroom the benchmark exists to measure.
 production:
   query_strategy: MULTI_MATCH_BEST_FIELDS   # no fuzziness: the config sets none
-  # Fill of the columns this list already searches (non-null rows of 1218, 2026-09-09).
+  fields:
+    - "resourceName^5"
+    - "synonyms^4"
+    - "rrid^4"
+    - "targetAntigen^2"
+    - "geneticDisorder"
+    - "description"
+
+# Fill of the columns this list already searches (non-null rows of 1218, 2026-09-09).
 # Read it as reach: `tumorType` is in the list but can only ever answer 2% of rows,
 # while `resourceName` is the only column present on every single one.
 #   resourceName            1218   100%
@@ -62,14 +70,6 @@ production:
 #   race                     140    11%
 #   vectorType               122    10%
 #   tumorType                 28     2%
-fields:
-    - "resourceName^5"
-    - "synonyms^4"
-    - "rrid^4"
-    - "targetAntigen^2"
-    - "geneticDisorder"
-    - "description"
-
 fields:
   # identity / names — strongest signal
   - "resourceName^5"
