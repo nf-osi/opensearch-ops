@@ -11,11 +11,11 @@
       "hit_at_1": 0.5757575757575758,
       "hit_at_k": 0.8181818181818182,
       "n_cases": 66,
-      "rt_ms_mean": 1296.7383717045639,
-      "rt_ms_median": 1134.1605186462402,
-      "rt_ms_min": 659.0621471405029,
-      "rt_ms_max": 2091.10951423645,
-      "rt_ms_p95": 1830.4235935211182
+      "rt_ms_mean": 1241.178718480197,
+      "rt_ms_median": 1146.766185760498,
+      "rt_ms_min": 646.381139755249,
+      "rt_ms_max": 2029.9148559570312,
+      "rt_ms_p95": 1657.6824188232422
     },
     "simple_query_string": {
       "mrr": 0.657972582972583,
@@ -23,23 +23,23 @@
       "hit_at_1": 0.5909090909090909,
       "hit_at_k": 0.8181818181818182,
       "n_cases": 66,
-      "rt_ms_mean": 969.6731856375029,
-      "rt_ms_median": 1109.4794273376465,
-      "rt_ms_min": 624.2275238037109,
-      "rt_ms_max": 1567.2378540039062,
-      "rt_ms_p95": 1227.2741794586182
+      "rt_ms_mean": 933.4840413295861,
+      "rt_ms_median": 1086.580753326416,
+      "rt_ms_min": 619.6999549865723,
+      "rt_ms_max": 1582.158088684082,
+      "rt_ms_p95": 1194.8246955871582
     },
     "simple_query_string_boosted": {
-      "mrr": 0.6780483405483405,
-      "recall_at_k": 0.663458110516934,
+      "mrr": 0.6690656565656565,
+      "recall_at_k": 0.6392156862745098,
       "hit_at_1": 0.6060606060606061,
-      "hit_at_k": 0.803030303030303,
+      "hit_at_k": 0.7727272727272727,
       "n_cases": 66,
-      "rt_ms_mean": 1021.3353308764371,
-      "rt_ms_median": 1114.1424179077148,
-      "rt_ms_min": 632.7826976776123,
-      "rt_ms_max": 2021.695613861084,
-      "rt_ms_p95": 1208.6222171783447
+      "rt_ms_mean": 928.7843668099606,
+      "rt_ms_median": 1101.3567447662354,
+      "rt_ms_min": 627.2079944610596,
+      "rt_ms_max": 1612.401008605957,
+      "rt_ms_p95": 1165.5638217926025
     },
     "multi_match_best": {
       "mrr": 0.6202380952380953,
@@ -47,59 +47,59 @@
       "hit_at_1": 0.5606060606060606,
       "hit_at_k": 0.7878787878787878,
       "n_cases": 66,
-      "rt_ms_mean": 1021.943388563214,
-      "rt_ms_median": 1110.1744174957275,
-      "rt_ms_min": 628.5786628723145,
-      "rt_ms_max": 1904.0477275848389,
-      "rt_ms_p95": 1580.5604457855225
+      "rt_ms_mean": 894.1585728616426,
+      "rt_ms_median": 712.60666847229,
+      "rt_ms_min": 619.4279193878174,
+      "rt_ms_max": 1199.3296146392822,
+      "rt_ms_p95": 1177.2799491882324
     },
     "multi_match_boosted": {
-      "mrr": 0.6943181818181818,
-      "recall_at_k": 0.6616904337492573,
+      "mrr": 0.7044191919191919,
+      "recall_at_k": 0.6778520499108734,
       "hit_at_1": 0.6363636363636364,
       "hit_at_k": 0.803030303030303,
       "n_cases": 66,
-      "rt_ms_mean": 1041.1200126012166,
-      "rt_ms_median": 1117.0380115509033,
-      "rt_ms_min": 626.56569480896,
-      "rt_ms_max": 1596.2870121002197,
-      "rt_ms_p95": 1175.3654479980469
+      "rt_ms_mean": 864.97527180296,
+      "rt_ms_median": 688.8315677642822,
+      "rt_ms_min": 628.9246082305908,
+      "rt_ms_max": 1168.7252521514893,
+      "rt_ms_p95": 1153.1693935394287
     },
     "multi_match_cross": {
-      "mrr": 0.7443181818181818,
-      "recall_at_k": 0.705377302436126,
+      "mrr": 0.7548340548340547,
+      "recall_at_k": 0.7316399286987523,
       "hit_at_1": 0.6818181818181818,
-      "hit_at_k": 0.8484848484848485,
+      "hit_at_k": 0.8939393939393939,
       "n_cases": 66,
-      "rt_ms_mean": 1046.0578564441566,
-      "rt_ms_median": 1115.9658432006836,
-      "rt_ms_min": 638.6513710021973,
-      "rt_ms_max": 1619.7962760925293,
-      "rt_ms_p95": 1585.2622985839844
+      "rt_ms_mean": 1029.5753984740286,
+      "rt_ms_median": 1114.9170398712158,
+      "rt_ms_min": 641.9761180877686,
+      "rt_ms_max": 2084.355592727661,
+      "rt_ms_p95": 1631.4008235931396
     },
     "boosted_fuzzy": {
-      "mrr": 0.6916426166426166,
-      "recall_at_k": 0.6831190051778286,
+      "mrr": 0.6948833573833574,
+      "recall_at_k": 0.6919573890162125,
       "hit_at_1": 0.6363636363636364,
       "hit_at_k": 0.8333333333333334,
       "n_cases": 66,
-      "rt_ms_mean": 1068.685885631677,
-      "rt_ms_median": 1118.6814308166504,
-      "rt_ms_min": 625.6299018859863,
-      "rt_ms_max": 1587.9268646240234,
-      "rt_ms_p95": 1204.6892642974854
+      "rt_ms_mean": 974.5975913423481,
+      "rt_ms_median": 1106.6570281982422,
+      "rt_ms_min": 633.540153503418,
+      "rt_ms_max": 1729.4304370880127,
+      "rt_ms_p95": 1172.5437641143799
     },
     "phrase_prefix": {
-      "mrr": 0.582449494949495,
-      "recall_at_k": 0.5195187165775401,
-      "hit_at_1": 0.5303030303030303,
+      "mrr": 0.5938131313131314,
+      "recall_at_k": 0.5164884135472371,
+      "hit_at_1": 0.5454545454545454,
       "hit_at_k": 0.6818181818181818,
       "n_cases": 66,
-      "rt_ms_mean": 1046.9643238819008,
-      "rt_ms_median": 1115.8294677734375,
-      "rt_ms_min": 630.0795078277588,
-      "rt_ms_max": 1600.4443168640137,
-      "rt_ms_p95": 1570.807933807373
+      "rt_ms_mean": 898.117928793936,
+      "rt_ms_median": 772.7627754211426,
+      "rt_ms_min": 630.7461261749268,
+      "rt_ms_max": 1571.638822555542,
+      "rt_ms_p95": 1192.8839683532715
     },
     "production_current": {
       "mrr": 0.5857323232323232,
@@ -107,11 +107,11 @@
       "hit_at_1": 0.5303030303030303,
       "hit_at_k": 0.6818181818181818,
       "n_cases": 66,
-      "rt_ms_mean": 1005.3795792839744,
-      "rt_ms_median": 1110.419750213623,
-      "rt_ms_min": 624.6039867401123,
-      "rt_ms_max": 1610.9890937805176,
-      "rt_ms_p95": 1262.6466751098633
+      "rt_ms_mean": 879.7081419915864,
+      "rt_ms_median": 674.9274730682373,
+      "rt_ms_min": 629.4887065887451,
+      "rt_ms_max": 1767.918586730957,
+      "rt_ms_p95": 1153.8612842559814
     }
   },
   "per_case": {
@@ -124,7 +124,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1587.5029563903809,
+        "rt_ms": 1624.995231628418,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -136,7 +136,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1136.4920139312744,
+        "rt_ms": 1160.4371070861816,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -148,7 +148,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1125.2965927124023,
+        "rt_ms": 1123.0361461639404,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -160,7 +160,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1126.4469623565674,
+        "rt_ms": 1147.505521774292,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -172,7 +172,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 2091.10951423645,
+        "rt_ms": 1599.4534492492676,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -184,7 +184,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1700.3700733184814,
+        "rt_ms": 1657.6824188232422,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -196,7 +196,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1127.9675960540771,
+        "rt_ms": 1129.2667388916016,
         "query": "cnf",
         "type": "topical"
       },
@@ -208,7 +208,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1375.6537437438965,
+        "rt_ms": 1183.0055713653564,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -220,7 +220,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1115.9672737121582,
+        "rt_ms": 1117.762804031372,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -232,7 +232,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1117.9170608520508,
+        "rt_ms": 1149.3446826934814,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -244,7 +244,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1110.9821796417236,
+        "rt_ms": 1114.7353649139404,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -256,7 +256,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1092.2207832336426,
+        "rt_ms": 1137.5539302825928,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -268,7 +268,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1121.4771270751953,
+        "rt_ms": 1128.2927989959717,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -280,7 +280,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1196.0294246673584,
+        "rt_ms": 1192.0313835144043,
         "query": "mpnst",
         "type": "topical"
       },
@@ -292,7 +292,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1110.24808883667,
+        "rt_ms": 1157.8564643859863,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -304,7 +304,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1114.1488552093506,
+        "rt_ms": 1090.5992984771729,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -316,7 +316,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1124.560832977295,
+        "rt_ms": 1105.2916049957275,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -328,7 +328,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1099.0509986877441,
+        "rt_ms": 678.7621974945068,
         "query": "nf2",
         "type": "topical"
       },
@@ -340,7 +340,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1101.6442775726318,
+        "rt_ms": 1144.0315246582031,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -352,7 +352,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1003.0338764190674,
+        "rt_ms": 1142.6446437835693,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -364,7 +364,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 710.7143402099609,
+        "rt_ms": 1216.9480323791504,
         "query": "pnf",
         "type": "topical"
       },
@@ -376,7 +376,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1131.042242050171,
+        "rt_ms": 1107.5503826141357,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -388,7 +388,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1135.8635425567627,
+        "rt_ms": 1111.9060516357422,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -400,7 +400,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1150.418758392334,
+        "rt_ms": 1118.8619136810303,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -412,7 +412,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1111.8626594543457,
+        "rt_ms": 801.0506629943848,
         "query": "t265",
         "type": "known-item"
       },
@@ -424,7 +424,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1107.8369617462158,
+        "rt_ms": 1920.2561378479004,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -436,7 +436,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1088.6189937591553,
+        "rt_ms": 1255.5060386657715,
         "query": "pdx",
         "type": "topical"
       },
@@ -448,7 +448,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1103.4605503082275,
+        "rt_ms": 1002.3601055145264,
         "query": "ipsc",
         "type": "topical"
       },
@@ -460,7 +460,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1129.126787185669,
+        "rt_ms": 1286.1008644104004,
         "query": "minipig model",
         "type": "topical"
       },
@@ -472,7 +472,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1658.8144302368164,
+        "rt_ms": 1099.6077060699463,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -484,7 +484,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1618.3016300201416,
+        "rt_ms": 1158.9741706848145,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -496,7 +496,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1155.5945873260498,
+        "rt_ms": 1124.999761581421,
         "query": "organoid",
         "type": "topical"
       },
@@ -508,7 +508,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1135.1275444030762,
+        "rt_ms": 1130.6712627410889,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -520,7 +520,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1564.6328926086426,
+        "rt_ms": 1113.250970840454,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -532,7 +532,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1125.389814376831,
+        "rt_ms": 1125.6511211395264,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -544,7 +544,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1588.0703926086426,
+        "rt_ms": 1284.848690032959,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -556,7 +556,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1134.1605186462402,
+        "rt_ms": 1114.2356395721436,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -568,7 +568,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1562.2663497924805,
+        "rt_ms": 1598.5476970672607,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -580,7 +580,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1578.4480571746826,
+        "rt_ms": 1608.3648204803467,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -592,7 +592,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 2070.219039916992,
+        "rt_ms": 2029.9148559570312,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -604,7 +604,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1586.442470550537,
+        "rt_ms": 1619.1253662109375,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -616,7 +616,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1561.8512630462646,
+        "rt_ms": 1775.5496501922607,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -628,7 +628,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1547.6245880126953,
+        "rt_ms": 1543.766975402832,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -640,7 +640,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1586.2767696380615,
+        "rt_ms": 1582.5157165527344,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -652,7 +652,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1830.4235935211182,
+        "rt_ms": 1578.6418914794922,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -664,7 +664,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1597.991704940796,
+        "rt_ms": 1613.743543624878,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -676,7 +676,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1594.8379039764404,
+        "rt_ms": 1594.1030979156494,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -688,7 +688,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 2060.3857040405273,
+        "rt_ms": 1629.7764778137207,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -700,7 +700,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1189.4760131835938,
+        "rt_ms": 735.9418869018555,
         "query": "ipNF",
         "type": "topical"
       },
@@ -712,7 +712,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1129.2645931243896,
+        "rt_ms": 1139.0862464904785,
         "query": "cagg",
         "type": "topical"
       },
@@ -724,7 +724,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1121.6108798980713,
+        "rt_ms": 1123.7361431121826,
         "query": "corielle",
         "type": "known-item"
       },
@@ -736,7 +736,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1115.2265071868896,
+        "rt_ms": 1142.3454284667969,
         "query": "lambda",
         "type": "known-item"
       },
@@ -748,7 +748,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 659.0621471405029,
+        "rt_ms": 1147.6459503173828,
         "query": "90-8",
         "type": "known-item"
       },
@@ -760,7 +760,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1123.1458187103271,
+        "rt_ms": 1146.766185760498,
         "query": "minipigs",
         "type": "topical"
       },
@@ -772,7 +772,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1578.7386894226074,
+        "rt_ms": 1420.8991527557373,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -784,7 +784,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1124.5031356811523,
+        "rt_ms": 646.381139755249,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -796,7 +796,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 12,
         "n_found_in_k": 8,
-        "rt_ms": 1111.5293502807617,
+        "rt_ms": 1152.566909790039,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -808,7 +808,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1610.626220703125,
+        "rt_ms": 1147.3348140716553,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -820,7 +820,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1587.8915786743164,
+        "rt_ms": 1154.3996334075928,
         "query": "Ratner",
         "type": "topical"
       },
@@ -832,7 +832,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1115.3359413146973,
+        "rt_ms": 1143.3134078979492,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -844,7 +844,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1587.282657623291,
+        "rt_ms": 1125.000238418579,
         "query": "Morrison",
         "type": "topical"
       },
@@ -856,7 +856,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 7,
         "n_found_in_k": 0,
-        "rt_ms": 1137.1684074401855,
+        "rt_ms": 1116.4567470550537,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -868,7 +868,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 14,
         "n_found_in_k": 3,
-        "rt_ms": 1112.6017570495605,
+        "rt_ms": 1143.4638500213623,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -880,7 +880,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1222.35107421875,
+        "rt_ms": 1210.8473777770996,
         "query": "Wallace",
         "type": "topical"
       },
@@ -892,7 +892,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 10,
-        "rt_ms": 1134.5913410186768,
+        "rt_ms": 1131.3369274139404,
         "query": "Wallis",
         "type": "topical"
       },
@@ -904,7 +904,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 6,
-        "rt_ms": 1120.4020977020264,
+        "rt_ms": 1159.1548919677734,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -918,7 +918,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 676.2619018554688,
+        "rt_ms": 652.8947353363037,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -930,7 +930,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1093.2567119598389,
+        "rt_ms": 1144.331455230713,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -942,7 +942,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 680.0305843353271,
+        "rt_ms": 1114.0618324279785,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -954,7 +954,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 732.7084541320801,
+        "rt_ms": 1132.289171218872,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -966,7 +966,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1121.0553646087646,
+        "rt_ms": 624.9377727508545,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -978,7 +978,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1203.6783695220947,
+        "rt_ms": 739.699125289917,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -990,7 +990,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1567.2378540039062,
+        "rt_ms": 1136.7957592010498,
         "query": "cnf",
         "type": "topical"
       },
@@ -1002,7 +1002,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 645.4691886901855,
+        "rt_ms": 1194.8246955871582,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -1014,7 +1014,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1084.4085216522217,
+        "rt_ms": 657.4249267578125,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -1026,7 +1026,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1101.4747619628906,
+        "rt_ms": 1116.5745258331299,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -1038,7 +1038,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 652.4772644042969,
+        "rt_ms": 1098.6199378967285,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -1050,7 +1050,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 720.6447124481201,
+        "rt_ms": 643.4023380279541,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -1062,7 +1062,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1160.6855392456055,
+        "rt_ms": 629.4348239898682,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -1074,7 +1074,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1112.342357635498,
+        "rt_ms": 1107.0003509521484,
         "query": "mpnst",
         "type": "topical"
       },
@@ -1086,7 +1086,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 670.0263023376465,
+        "rt_ms": 642.3494815826416,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -1098,7 +1098,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1115.7233715057373,
+        "rt_ms": 646.885871887207,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -1110,7 +1110,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1148.5438346862793,
+        "rt_ms": 1131.3984394073486,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -1122,7 +1122,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1109.68017578125,
+        "rt_ms": 1136.1868381500244,
         "query": "nf2",
         "type": "topical"
       },
@@ -1134,7 +1134,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1122.6954460144043,
+        "rt_ms": 1114.5892143249512,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -1146,7 +1146,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1128.7009716033936,
+        "rt_ms": 1086.580753326416,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -1158,7 +1158,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1227.2741794586182,
+        "rt_ms": 711.9293212890625,
         "query": "pnf",
         "type": "topical"
       },
@@ -1170,7 +1170,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 927.4880886077881,
+        "rt_ms": 619.6999549865723,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -1182,7 +1182,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1223.895788192749,
+        "rt_ms": 644.2744731903076,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -1194,7 +1194,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 651.0155200958252,
+        "rt_ms": 650.425910949707,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -1206,7 +1206,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 624.2275238037109,
+        "rt_ms": 631.7582130432129,
         "query": "t265",
         "type": "known-item"
       },
@@ -1218,7 +1218,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 633.1150531768799,
+        "rt_ms": 1211.0965251922607,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -1230,7 +1230,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1120.4726696014404,
+        "rt_ms": 650.1426696777344,
         "query": "pdx",
         "type": "topical"
       },
@@ -1242,7 +1242,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 665.8828258514404,
+        "rt_ms": 1224.806785583496,
         "query": "ipsc",
         "type": "topical"
       },
@@ -1254,7 +1254,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 709.6672058105469,
+        "rt_ms": 634.9689960479736,
         "query": "minipig model",
         "type": "topical"
       },
@@ -1266,7 +1266,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1102.13303565979,
+        "rt_ms": 646.0607051849365,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -1278,7 +1278,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1131.307601928711,
+        "rt_ms": 1115.4570579528809,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -1290,7 +1290,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 718.529462814331,
+        "rt_ms": 642.61794090271,
         "query": "organoid",
         "type": "topical"
       },
@@ -1302,7 +1302,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1108.0174446105957,
+        "rt_ms": 773.6735343933105,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -1314,7 +1314,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1156.080961227417,
+        "rt_ms": 1582.158088684082,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -1326,7 +1326,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 643.0351734161377,
+        "rt_ms": 646.7249393463135,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -1338,7 +1338,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 1123.0614185333252,
+        "rt_ms": 1084.857702255249,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -1350,7 +1350,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1113.1329536437988,
+        "rt_ms": 1085.932970046997,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -1362,7 +1362,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 645.0710296630859,
+        "rt_ms": 1128.2501220703125,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -1374,7 +1374,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1125.1733303070068,
+        "rt_ms": 1125.3013610839844,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -1386,7 +1386,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 665.2801036834717,
+        "rt_ms": 1076.6546726226807,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -1398,7 +1398,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 672.1179485321045,
+        "rt_ms": 648.4992504119873,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -1410,7 +1410,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1113.1036281585693,
+        "rt_ms": 678.2805919647217,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -1422,7 +1422,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1125.48828125,
+        "rt_ms": 1125.9689331054688,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -1434,7 +1434,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1114.1860485076904,
+        "rt_ms": 648.2791900634766,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -1446,7 +1446,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 654.6154022216797,
+        "rt_ms": 660.9423160552979,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -1458,7 +1458,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 666.8622493743896,
+        "rt_ms": 1163.9702320098877,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -1470,7 +1470,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 1,
-        "rt_ms": 1125.584602355957,
+        "rt_ms": 1101.1900901794434,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -1482,7 +1482,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 651.1430740356445,
+        "rt_ms": 1124.6812343597412,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -1494,7 +1494,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1159.5523357391357,
+        "rt_ms": 1145.7476615905762,
         "query": "ipNF",
         "type": "topical"
       },
@@ -1506,7 +1506,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1110.8741760253906,
+        "rt_ms": 1119.7714805603027,
         "query": "cagg",
         "type": "topical"
       },
@@ -1518,7 +1518,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 662.665605545044,
+        "rt_ms": 640.4492855072021,
         "query": "corielle",
         "type": "known-item"
       },
@@ -1530,7 +1530,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1135.3199481964111,
+        "rt_ms": 1131.432294845581,
         "query": "lambda",
         "type": "known-item"
       },
@@ -1542,7 +1542,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1103.1765937805176,
+        "rt_ms": 1130.737543106079,
         "query": "90-8",
         "type": "known-item"
       },
@@ -1554,7 +1554,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1109.4794273376465,
+        "rt_ms": 1105.4656505584717,
         "query": "minipigs",
         "type": "topical"
       },
@@ -1566,7 +1566,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 689.8529529571533,
+        "rt_ms": 669.0731048583984,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -1578,7 +1578,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1091.0108089447021,
+        "rt_ms": 1119.863748550415,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -1590,7 +1590,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1134.9565982818604,
+        "rt_ms": 1170.339822769165,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -1602,7 +1602,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1118.1812286376953,
+        "rt_ms": 647.8002071380615,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -1614,7 +1614,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 642.4651145935059,
+        "rt_ms": 1111.3598346710205,
         "query": "Ratner",
         "type": "topical"
       },
@@ -1626,7 +1626,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1270.0037956237793,
+        "rt_ms": 654.4716358184814,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -1638,7 +1638,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1156.674861907959,
+        "rt_ms": 1097.217321395874,
         "query": "Morrison",
         "type": "topical"
       },
@@ -1650,7 +1650,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1136.683464050293,
+        "rt_ms": 653.2719135284424,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -1662,7 +1662,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 648.411750793457,
+        "rt_ms": 938.8923645019531,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -1674,7 +1674,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1183.687448501587,
+        "rt_ms": 1188.0903244018555,
         "query": "Wallace",
         "type": "topical"
       },
@@ -1686,7 +1686,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 1133.357048034668,
+        "rt_ms": 1180.1023483276367,
         "query": "Wallis",
         "type": "topical"
       },
@@ -1698,7 +1698,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 8,
-        "rt_ms": 1228.0128002166748,
+        "rt_ms": 1116.9743537902832,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -1712,7 +1712,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1125.6122589111328,
+        "rt_ms": 1612.401008605957,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -1724,7 +1724,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 645.3864574432373,
+        "rt_ms": 665.0745868682861,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -1736,7 +1736,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1208.6222171783447,
+        "rt_ms": 1114.0408515930176,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -1748,7 +1748,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1114.1424179077148,
+        "rt_ms": 1121.9813823699951,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -1760,7 +1760,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1095.5538749694824,
+        "rt_ms": 1216.4008617401123,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -1772,19 +1772,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1230.9391498565674,
+        "rt_ms": 749.1366863250732,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
       "cnf": {
-        "rr": 0.5,
-        "first_rel_rank": 2,
+        "rr": 1.0,
+        "first_rel_rank": 1,
         "recall_at_k": 0.4,
-        "hit_at_1": 0.0,
+        "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 670.9883213043213,
+        "rt_ms": 1122.9360103607178,
         "query": "cnf",
         "type": "topical"
       },
@@ -1796,7 +1796,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 705.6074142456055,
+        "rt_ms": 1115.1721477508545,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -1808,7 +1808,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1135.2016925811768,
+        "rt_ms": 630.9587955474854,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -1820,7 +1820,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 662.308931350708,
+        "rt_ms": 1138.6783123016357,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -1832,7 +1832,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 647.4912166595459,
+        "rt_ms": 1161.3163948059082,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -1844,7 +1844,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1146.7361450195312,
+        "rt_ms": 1109.6808910369873,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -1856,7 +1856,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1139.2855644226074,
+        "rt_ms": 1140.9006118774414,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -1868,31 +1868,31 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1115.1604652404785,
+        "rt_ms": 1093.766212463379,
         "query": "mpnst",
         "type": "topical"
       },
       "neurofibromin": {
-        "rr": 0.14285714285714285,
-        "first_rel_rank": 7,
-        "recall_at_k": 0.2,
+        "rr": 0.0,
+        "first_rel_rank": null,
+        "recall_at_k": 0.0,
         "hit_at_1": 0.0,
-        "hit_at_k": 1.0,
+        "hit_at_k": 0.0,
         "n_relevant": 5,
-        "n_found_in_k": 1,
-        "rt_ms": 1100.1160144805908,
+        "n_found_in_k": 0,
+        "rt_ms": 1115.1165962219238,
         "query": "neurofibromin",
         "type": "topical"
       },
       "nf1-flox": {
         "rr": 1.0,
         "first_rel_rank": 1,
-        "recall_at_k": 0.4,
+        "recall_at_k": 0.2,
         "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 2,
-        "rt_ms": 645.2536582946777,
+        "n_found_in_k": 1,
+        "rt_ms": 638.0095481872559,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -1904,7 +1904,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1115.2362823486328,
+        "rt_ms": 633.5594654083252,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -1916,7 +1916,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1087.6367092132568,
+        "rt_ms": 1099.0779399871826,
         "query": "nf2",
         "type": "topical"
       },
@@ -1928,7 +1928,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1113.1949424743652,
+        "rt_ms": 639.8839950561523,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -1940,19 +1940,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1132.2026252746582,
+        "rt_ms": 1118.3137893676758,
         "query": "optic glioma",
         "type": "topical"
       },
       "pnf": {
-        "rr": 0.2,
-        "first_rel_rank": 5,
-        "recall_at_k": 1.0,
+        "rr": 0.0,
+        "first_rel_rank": null,
+        "recall_at_k": 0.0,
         "hit_at_1": 0.0,
-        "hit_at_k": 1.0,
+        "hit_at_k": 0.0,
         "n_relevant": 2,
-        "n_found_in_k": 2,
-        "rt_ms": 1126.4853477478027,
+        "n_found_in_k": 0,
+        "rt_ms": 1101.3567447662354,
         "query": "pnf",
         "type": "topical"
       },
@@ -1964,7 +1964,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 647.5744247436523,
+        "rt_ms": 1111.2141609191895,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -1976,7 +1976,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 633.8248252868652,
+        "rt_ms": 1112.3309135437012,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -1988,7 +1988,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1119.222640991211,
+        "rt_ms": 662.5626087188721,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -2000,7 +2000,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1121.7761039733887,
+        "rt_ms": 1101.644515991211,
         "query": "t265",
         "type": "known-item"
       },
@@ -2012,7 +2012,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1083.2157135009766,
+        "rt_ms": 1129.9042701721191,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -2024,7 +2024,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1126.0735988616943,
+        "rt_ms": 727.5609970092773,
         "query": "pdx",
         "type": "topical"
       },
@@ -2036,7 +2036,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 2021.695613861084,
+        "rt_ms": 1124.9184608459473,
         "query": "ipsc",
         "type": "topical"
       },
@@ -2048,7 +2048,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 632.7826976776123,
+        "rt_ms": 1105.12375831604,
         "query": "minipig model",
         "type": "topical"
       },
@@ -2060,7 +2060,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 653.6543369293213,
+        "rt_ms": 1126.4185905456543,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -2072,7 +2072,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 646.418571472168,
+        "rt_ms": 627.2079944610596,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -2084,7 +2084,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1110.318899154663,
+        "rt_ms": 1106.736183166504,
         "query": "organoid",
         "type": "topical"
       },
@@ -2096,7 +2096,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1168.8106060028076,
+        "rt_ms": 1102.3666858673096,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -2108,7 +2108,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1111.3522052764893,
+        "rt_ms": 666.1927700042725,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -2120,7 +2120,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1148.817539215088,
+        "rt_ms": 659.233808517456,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -2132,7 +2132,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 1130.0241947174072,
+        "rt_ms": 652.7080535888672,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -2144,7 +2144,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1145.1618671417236,
+        "rt_ms": 1118.823528289795,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -2156,7 +2156,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1120.513916015625,
+        "rt_ms": 1129.9803256988525,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -2168,31 +2168,31 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1123.520851135254,
+        "rt_ms": 653.1322002410889,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
       "nf1-antibody-cterm": {
-        "rr": 0.25,
-        "first_rel_rank": 4,
+        "rr": 0.3333333333333333,
+        "first_rel_rank": 3,
         "recall_at_k": 0.4,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1113.7511730194092,
+        "rt_ms": 642.507791519165,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
       "nf1-antibody-phospho": {
         "rr": 1.0,
         "first_rel_rank": 1,
-        "recall_at_k": 1.0,
+        "recall_at_k": 0.8,
         "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 5,
-        "rt_ms": 1129.6546459197998,
+        "n_found_in_k": 4,
+        "rt_ms": 1101.0589599609375,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -2204,7 +2204,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1131.1125755310059,
+        "rt_ms": 654.0274620056152,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -2216,7 +2216,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1152.0178318023682,
+        "rt_ms": 649.0077972412109,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -2228,7 +2228,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1128.6029815673828,
+        "rt_ms": 1136.080026626587,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -2240,7 +2240,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1124.5977878570557,
+        "rt_ms": 678.5218715667725,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -2252,7 +2252,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1128.9892196655273,
+        "rt_ms": 1128.2696723937988,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -2264,7 +2264,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1102.5700569152832,
+        "rt_ms": 648.3151912689209,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -2276,7 +2276,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1108.9019775390625,
+        "rt_ms": 649.1248607635498,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -2288,7 +2288,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 641.5376663208008,
+        "rt_ms": 1139.0175819396973,
         "query": "ipNF",
         "type": "topical"
       },
@@ -2300,7 +2300,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1115.2052879333496,
+        "rt_ms": 666.8009757995605,
         "query": "cagg",
         "type": "topical"
       },
@@ -2312,7 +2312,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1247.5128173828125,
+        "rt_ms": 1139.3177509307861,
         "query": "corielle",
         "type": "known-item"
       },
@@ -2324,7 +2324,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1096.2672233581543,
+        "rt_ms": 1106.9581508636475,
         "query": "lambda",
         "type": "known-item"
       },
@@ -2336,7 +2336,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 660.3410243988037,
+        "rt_ms": 667.9773330688477,
         "query": "90-8",
         "type": "known-item"
       },
@@ -2348,7 +2348,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 633.5361003875732,
+        "rt_ms": 689.9778842926025,
         "query": "minipigs",
         "type": "topical"
       },
@@ -2360,7 +2360,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1201.3258934020996,
+        "rt_ms": 657.198429107666,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -2372,7 +2372,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1125.760793685913,
+        "rt_ms": 641.4239406585693,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -2384,19 +2384,19 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1121.131181716919,
+        "rt_ms": 675.539493560791,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
       "investigator-topilko-mouse": {
-        "rr": 1.0,
-        "first_rel_rank": 1,
+        "rr": 0.16666666666666666,
+        "first_rel_rank": 6,
         "recall_at_k": 1.0,
-        "hit_at_1": 1.0,
+        "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1111.259937286377,
+        "rt_ms": 1119.5735931396484,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -2408,7 +2408,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1111.2806797027588,
+        "rt_ms": 657.6359272003174,
         "query": "Ratner",
         "type": "topical"
       },
@@ -2420,7 +2420,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 647.8993892669678,
+        "rt_ms": 666.7394638061523,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -2432,7 +2432,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1105.6385040283203,
+        "rt_ms": 656.2206745147705,
         "query": "Morrison",
         "type": "topical"
       },
@@ -2444,7 +2444,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1120.7396984100342,
+        "rt_ms": 1140.385627746582,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -2456,7 +2456,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 1105.0231456756592,
+        "rt_ms": 650.0082015991211,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -2468,7 +2468,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 746.9916343688965,
+        "rt_ms": 1213.6287689208984,
         "query": "Wallace",
         "type": "topical"
       },
@@ -2480,7 +2480,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 640.5727863311768,
+        "rt_ms": 1103.0642986297607,
         "query": "Wallis",
         "type": "topical"
       },
@@ -2492,7 +2492,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 8,
-        "rt_ms": 1147.9895114898682,
+        "rt_ms": 1165.5638217926025,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -2506,7 +2506,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1138.1886005401611,
+        "rt_ms": 1143.017053604126,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -2518,7 +2518,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1158.7190628051758,
+        "rt_ms": 657.393217086792,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -2530,7 +2530,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 647.6199626922607,
+        "rt_ms": 1169.1040992736816,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -2542,7 +2542,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1107.09547996521,
+        "rt_ms": 660.0823402404785,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -2554,7 +2554,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1125.57053565979,
+        "rt_ms": 712.60666847229,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -2566,7 +2566,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1204.4143676757812,
+        "rt_ms": 1199.3296146392822,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -2578,7 +2578,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 647.6364135742188,
+        "rt_ms": 672.4214553833008,
         "query": "cnf",
         "type": "topical"
       },
@@ -2590,7 +2590,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1115.030288696289,
+        "rt_ms": 1139.8906707763672,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -2602,7 +2602,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 648.8184928894043,
+        "rt_ms": 666.370153427124,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -2614,7 +2614,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1124.1099834442139,
+        "rt_ms": 1131.3624382019043,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -2626,7 +2626,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1144.7031497955322,
+        "rt_ms": 1160.5937480926514,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -2638,7 +2638,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1169.3508625030518,
+        "rt_ms": 1136.8141174316406,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -2650,7 +2650,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1111.1705303192139,
+        "rt_ms": 654.8051834106445,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -2662,7 +2662,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1174.574613571167,
+        "rt_ms": 1177.2799491882324,
         "query": "mpnst",
         "type": "topical"
       },
@@ -2674,7 +2674,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1124.098539352417,
+        "rt_ms": 1135.025978088379,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -2686,7 +2686,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 705.768346786499,
+        "rt_ms": 648.7648487091064,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -2698,7 +2698,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1111.3765239715576,
+        "rt_ms": 657.2582721710205,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -2710,7 +2710,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 701.9219398498535,
+        "rt_ms": 1104.0775775909424,
         "query": "nf2",
         "type": "topical"
       },
@@ -2722,7 +2722,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1125.3855228424072,
+        "rt_ms": 642.2131061553955,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -2734,7 +2734,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1111.5124225616455,
+        "rt_ms": 1117.7270412445068,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -2746,7 +2746,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1200.0844478607178,
+        "rt_ms": 1181.3788414001465,
         "query": "pnf",
         "type": "topical"
       },
@@ -2758,7 +2758,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 651.0086059570312,
+        "rt_ms": 1101.9952297210693,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -2770,7 +2770,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1136.2583637237549,
+        "rt_ms": 1150.7558822631836,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -2782,7 +2782,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 647.6945877075195,
+        "rt_ms": 619.4279193878174,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -2794,7 +2794,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1104.344367980957,
+        "rt_ms": 672.4376678466797,
         "query": "t265",
         "type": "known-item"
       },
@@ -2806,7 +2806,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1097.6765155792236,
+        "rt_ms": 638.530969619751,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -2818,7 +2818,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 660.2928638458252,
+        "rt_ms": 1133.7294578552246,
         "query": "pdx",
         "type": "topical"
       },
@@ -2830,7 +2830,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 653.7554264068604,
+        "rt_ms": 653.0513763427734,
         "query": "ipsc",
         "type": "topical"
       },
@@ -2842,7 +2842,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1113.6059761047363,
+        "rt_ms": 1139.6572589874268,
         "query": "minipig model",
         "type": "topical"
       },
@@ -2854,7 +2854,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 653.8901329040527,
+        "rt_ms": 1105.7803630828857,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -2866,7 +2866,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1115.4224872589111,
+        "rt_ms": 672.7297306060791,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -2878,7 +2878,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 664.5667552947998,
+        "rt_ms": 629.2896270751953,
         "query": "organoid",
         "type": "topical"
       },
@@ -2890,7 +2890,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1132.4121952056885,
+        "rt_ms": 1112.9629611968994,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -2902,7 +2902,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1119.776725769043,
+        "rt_ms": 1111.7863655090332,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -2914,7 +2914,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1137.739896774292,
+        "rt_ms": 639.9743556976318,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -2926,7 +2926,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 1580.5604457855225,
+        "rt_ms": 1122.6797103881836,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -2938,7 +2938,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1081.1996459960938,
+        "rt_ms": 657.006025314331,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -2950,7 +2950,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1110.1744174957275,
+        "rt_ms": 658.1103801727295,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -2962,7 +2962,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 635.7021331787109,
+        "rt_ms": 657.6652526855469,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -2974,7 +2974,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1108.4368228912354,
+        "rt_ms": 654.1228294372559,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -2986,7 +2986,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 657.6123237609863,
+        "rt_ms": 1139.6825313568115,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -2998,7 +2998,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1179.09574508667,
+        "rt_ms": 673.6156940460205,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -3010,7 +3010,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 641.5507793426514,
+        "rt_ms": 651.0720252990723,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -3022,7 +3022,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1599.8601913452148,
+        "rt_ms": 668.8928604125977,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -3034,7 +3034,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1096.343994140625,
+        "rt_ms": 1143.5303688049316,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -3046,7 +3046,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1119.2526817321777,
+        "rt_ms": 653.2266139984131,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -3058,7 +3058,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 641.7403221130371,
+        "rt_ms": 1137.695074081421,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -3070,7 +3070,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 658.2322120666504,
+        "rt_ms": 1104.5646667480469,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -3082,7 +3082,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 640.2888298034668,
+        "rt_ms": 644.4582939147949,
         "query": "ipNF",
         "type": "topical"
       },
@@ -3094,7 +3094,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 628.5786628723145,
+        "rt_ms": 1132.6000690460205,
         "query": "cagg",
         "type": "topical"
       },
@@ -3106,7 +3106,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 655.585527420044,
+        "rt_ms": 1102.522611618042,
         "query": "corielle",
         "type": "known-item"
       },
@@ -3118,7 +3118,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1108.339548110962,
+        "rt_ms": 642.702579498291,
         "query": "lambda",
         "type": "known-item"
       },
@@ -3130,7 +3130,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1107.4020862579346,
+        "rt_ms": 651.496410369873,
         "query": "90-8",
         "type": "known-item"
       },
@@ -3142,7 +3142,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1603.193759918213,
+        "rt_ms": 646.6009616851807,
         "query": "minipigs",
         "type": "topical"
       },
@@ -3154,7 +3154,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1114.8674488067627,
+        "rt_ms": 1114.8898601531982,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -3166,7 +3166,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1107.4142456054688,
+        "rt_ms": 1118.7431812286377,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -3178,7 +3178,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1106.8363189697266,
+        "rt_ms": 650.3880023956299,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -3190,7 +3190,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1105.1998138427734,
+        "rt_ms": 1094.6502685546875,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -3202,7 +3202,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1262.0718479156494,
+        "rt_ms": 652.8317928314209,
         "query": "Ratner",
         "type": "topical"
       },
@@ -3214,7 +3214,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1904.0477275848389,
+        "rt_ms": 661.5626811981201,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -3226,7 +3226,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1007.6782703399658,
+        "rt_ms": 1100.9650230407715,
         "query": "Morrison",
         "type": "topical"
       },
@@ -3238,7 +3238,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1246.2031841278076,
+        "rt_ms": 1127.3787021636963,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -3250,7 +3250,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 1275.3024101257324,
+        "rt_ms": 650.2981185913086,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -3262,7 +3262,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 728.2538414001465,
+        "rt_ms": 1186.0735416412354,
         "query": "Wallace",
         "type": "topical"
       },
@@ -3274,7 +3274,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 1128.2188892364502,
+        "rt_ms": 640.8431529998779,
         "query": "Wallis",
         "type": "topical"
       },
@@ -3286,7 +3286,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 6,
-        "rt_ms": 1123.4245300292969,
+        "rt_ms": 1123.9709854125977,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -3300,7 +3300,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1168.5636043548584,
+        "rt_ms": 1152.5249481201172,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -3312,7 +3312,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1132.6873302459717,
+        "rt_ms": 649.1942405700684,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -3324,7 +3324,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1137.6640796661377,
+        "rt_ms": 1134.998083114624,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -3336,7 +3336,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1140.6798362731934,
+        "rt_ms": 656.7528247833252,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -3348,19 +3348,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 639.7876739501953,
+        "rt_ms": 663.8150215148926,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
       "plexiform-neurofibroma": {
-        "rr": 0.16666666666666666,
-        "first_rel_rank": 6,
+        "rr": 0.5,
+        "first_rel_rank": 2,
         "recall_at_k": 1.0,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 655.4775238037109,
+        "rt_ms": 673.4559535980225,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -3372,7 +3372,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1104.4962406158447,
+        "rt_ms": 777.1856784820557,
         "query": "cnf",
         "type": "topical"
       },
@@ -3384,7 +3384,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1103.095531463623,
+        "rt_ms": 647.1929550170898,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -3396,7 +3396,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1593.5332775115967,
+        "rt_ms": 1100.818395614624,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -3408,7 +3408,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1171.0114479064941,
+        "rt_ms": 1144.7875499725342,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -3420,7 +3420,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1111.1938953399658,
+        "rt_ms": 1095.4301357269287,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -3432,7 +3432,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1138.0298137664795,
+        "rt_ms": 1131.14333152771,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -3444,19 +3444,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1127.2454261779785,
+        "rt_ms": 1129.6846866607666,
         "query": "krox20-cre",
         "type": "topical"
       },
       "mpnst": {
-        "rr": 0.16666666666666666,
-        "first_rel_rank": 6,
-        "recall_at_k": 0.4,
+        "rr": 0.5,
+        "first_rel_rank": 2,
+        "recall_at_k": 0.8,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 2,
-        "rt_ms": 1148.4105587005615,
+        "n_found_in_k": 4,
+        "rt_ms": 1102.6911735534668,
         "query": "mpnst",
         "type": "topical"
       },
@@ -3468,7 +3468,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1104.9089431762695,
+        "rt_ms": 646.5249061584473,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -3480,7 +3480,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1108.917236328125,
+        "rt_ms": 688.8315677642822,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -3492,7 +3492,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 672.2490787506104,
+        "rt_ms": 1100.1439094543457,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -3504,7 +3504,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1104.6221256256104,
+        "rt_ms": 639.967679977417,
         "query": "nf2",
         "type": "topical"
       },
@@ -3516,7 +3516,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1110.708236694336,
+        "rt_ms": 1109.4727516174316,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -3528,7 +3528,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1096.1720943450928,
+        "rt_ms": 1168.7252521514893,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -3540,7 +3540,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 695.0132846832275,
+        "rt_ms": 1112.3738288879395,
         "query": "pnf",
         "type": "topical"
       },
@@ -3552,7 +3552,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 652.0895957946777,
+        "rt_ms": 1153.1693935394287,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -3564,7 +3564,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1140.0117874145508,
+        "rt_ms": 1110.0053787231445,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -3576,7 +3576,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1131.6938400268555,
+        "rt_ms": 665.1256084442139,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -3588,7 +3588,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1133.6798667907715,
+        "rt_ms": 656.9535732269287,
         "query": "t265",
         "type": "known-item"
       },
@@ -3600,7 +3600,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1128.927230834961,
+        "rt_ms": 1088.1001949310303,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -3612,7 +3612,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 644.1893577575684,
+        "rt_ms": 1101.7439365386963,
         "query": "pdx",
         "type": "topical"
       },
@@ -3624,7 +3624,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1120.2383041381836,
+        "rt_ms": 1127.2106170654297,
         "query": "ipsc",
         "type": "topical"
       },
@@ -3636,7 +3636,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1110.2063655853271,
+        "rt_ms": 646.9366550445557,
         "query": "minipig model",
         "type": "topical"
       },
@@ -3648,7 +3648,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1112.2174263000488,
+        "rt_ms": 683.4120750427246,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -3660,7 +3660,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1131.9773197174072,
+        "rt_ms": 647.1085548400879,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -3672,7 +3672,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1117.0380115509033,
+        "rt_ms": 668.562650680542,
         "query": "organoid",
         "type": "topical"
       },
@@ -3684,7 +3684,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1596.2870121002197,
+        "rt_ms": 1109.2493534088135,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -3696,7 +3696,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1160.5522632598877,
+        "rt_ms": 638.2169723510742,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -3708,7 +3708,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 641.4346694946289,
+        "rt_ms": 638.3452415466309,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -3720,7 +3720,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 1133.87131690979,
+        "rt_ms": 1109.715223312378,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -3732,7 +3732,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1128.9169788360596,
+        "rt_ms": 643.5244083404541,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -3744,7 +3744,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1111.6905212402344,
+        "rt_ms": 636.3644599914551,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -3756,7 +3756,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1106.8425178527832,
+        "rt_ms": 628.9246082305908,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -3768,7 +3768,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1092.5323963165283,
+        "rt_ms": 653.6781787872314,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -3780,7 +3780,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1122.633934020996,
+        "rt_ms": 632.6553821563721,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -3792,7 +3792,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 644.5128917694092,
+        "rt_ms": 657.7942371368408,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -3804,7 +3804,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1100.9602546691895,
+        "rt_ms": 1096.8170166015625,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -3816,7 +3816,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1111.7949485778809,
+        "rt_ms": 633.575439453125,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -3828,7 +3828,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1132.8978538513184,
+        "rt_ms": 671.4081764221191,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -3840,19 +3840,19 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 654.7825336456299,
+        "rt_ms": 650.3593921661377,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
       "lentiviral-rnai-vector": {
         "rr": 0.5,
         "first_rel_rank": 2,
-        "recall_at_k": 0.3333333333333333,
+        "recall_at_k": 1.0,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 3,
-        "n_found_in_k": 1,
-        "rt_ms": 1124.742031097412,
+        "n_found_in_k": 3,
+        "rt_ms": 1114.7058010101318,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -3864,7 +3864,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1173.7139225006104,
+        "rt_ms": 1134.8814964294434,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -3876,7 +3876,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1158.7798595428467,
+        "rt_ms": 643.8987255096436,
         "query": "ipNF",
         "type": "topical"
       },
@@ -3888,7 +3888,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1123.769998550415,
+        "rt_ms": 797.6603507995605,
         "query": "cagg",
         "type": "topical"
       },
@@ -3900,7 +3900,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1132.812738418579,
+        "rt_ms": 649.6438980102539,
         "query": "corielle",
         "type": "known-item"
       },
@@ -3912,7 +3912,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1152.5681018829346,
+        "rt_ms": 1130.5263042449951,
         "query": "lambda",
         "type": "known-item"
       },
@@ -3924,7 +3924,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1128.3411979675293,
+        "rt_ms": 1125.497817993164,
         "query": "90-8",
         "type": "known-item"
       },
@@ -3936,7 +3936,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1124.3903636932373,
+        "rt_ms": 644.8616981506348,
         "query": "minipigs",
         "type": "topical"
       },
@@ -3948,7 +3948,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1095.3795909881592,
+        "rt_ms": 648.0374336242676,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -3960,7 +3960,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 646.3325023651123,
+        "rt_ms": 653.8028717041016,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -3972,7 +3972,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1113.2924556732178,
+        "rt_ms": 630.2478313446045,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -3984,7 +3984,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1201.1592388153076,
+        "rt_ms": 646.5208530426025,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -3996,7 +3996,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1112.2944355010986,
+        "rt_ms": 729.7763824462891,
         "query": "Ratner",
         "type": "topical"
       },
@@ -4008,7 +4008,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 626.56569480896,
+        "rt_ms": 640.2878761291504,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -4020,7 +4020,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1146.7835903167725,
+        "rt_ms": 1166.1036014556885,
         "query": "Morrison",
         "type": "topical"
       },
@@ -4032,7 +4032,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1135.0879669189453,
+        "rt_ms": 1125.1626014709473,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -4044,7 +4044,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 636.5659236907959,
+        "rt_ms": 1158.0727100372314,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -4056,7 +4056,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1175.3654479980469,
+        "rt_ms": 721.890926361084,
         "query": "Wallace",
         "type": "topical"
       },
@@ -4068,7 +4068,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 647.728443145752,
+        "rt_ms": 1127.046823501587,
         "query": "Wallis",
         "type": "topical"
       },
@@ -4080,7 +4080,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 6,
-        "rt_ms": 631.8008899688721,
+        "rt_ms": 1125.070333480835,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -4094,7 +4094,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1094.1135883331299,
+        "rt_ms": 1100.9070873260498,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -4106,7 +4106,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 649.2297649383545,
+        "rt_ms": 1123.952865600586,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -4118,7 +4118,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1106.8198680877686,
+        "rt_ms": 1597.0797538757324,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -4130,7 +4130,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1101.6106605529785,
+        "rt_ms": 1111.8009090423584,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -4142,7 +4142,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1128.039836883545,
+        "rt_ms": 657.5427055358887,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -4154,7 +4154,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1140.9435272216797,
+        "rt_ms": 1631.4008235931396,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -4166,7 +4166,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1110.011339187622,
+        "rt_ms": 2084.355592727661,
         "query": "cnf",
         "type": "topical"
       },
@@ -4178,7 +4178,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1125.8814334869385,
+        "rt_ms": 1120.0149059295654,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -4190,7 +4190,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1137.0906829833984,
+        "rt_ms": 1607.5317859649658,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -4202,7 +4202,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1123.2094764709473,
+        "rt_ms": 1890.2029991149902,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -4214,7 +4214,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1110.8627319335938,
+        "rt_ms": 1010.0147724151611,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -4226,7 +4226,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 646.3720798492432,
+        "rt_ms": 1759.9682807922363,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -4238,7 +4238,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1129.1589736938477,
+        "rt_ms": 1079.1091918945312,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -4250,7 +4250,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1185.0025653839111,
+        "rt_ms": 1191.3964748382568,
         "query": "mpnst",
         "type": "topical"
       },
@@ -4262,19 +4262,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1106.452465057373,
+        "rt_ms": 1148.3933925628662,
         "query": "neurofibromin",
         "type": "topical"
       },
       "nf1-flox": {
         "rr": 1.0,
         "first_rel_rank": 1,
-        "recall_at_k": 0.2,
+        "recall_at_k": 0.4,
         "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 1,
-        "rt_ms": 657.9277515411377,
+        "n_found_in_k": 2,
+        "rt_ms": 1120.0964450836182,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -4286,7 +4286,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1111.187219619751,
+        "rt_ms": 652.64892578125,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -4298,7 +4298,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 638.6513710021973,
+        "rt_ms": 726.8750667572021,
         "query": "nf2",
         "type": "topical"
       },
@@ -4310,7 +4310,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 675.6391525268555,
+        "rt_ms": 642.5695419311523,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -4322,7 +4322,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1126.7032623291016,
+        "rt_ms": 1097.1052646636963,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -4334,7 +4334,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1102.2276878356934,
+        "rt_ms": 651.5326499938965,
         "query": "pnf",
         "type": "topical"
       },
@@ -4346,7 +4346,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 651.1721611022949,
+        "rt_ms": 641.9761180877686,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -4358,7 +4358,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1106.2910556793213,
+        "rt_ms": 1134.4046592712402,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -4370,7 +4370,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1114.8052215576172,
+        "rt_ms": 1141.1128044128418,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -4382,7 +4382,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1122.1809387207031,
+        "rt_ms": 645.122766494751,
         "query": "t265",
         "type": "known-item"
       },
@@ -4394,7 +4394,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1146.7552185058594,
+        "rt_ms": 1135.697603225708,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -4406,19 +4406,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1146.7654705047607,
+        "rt_ms": 649.8939990997314,
         "query": "pdx",
         "type": "topical"
       },
       "ipsc": {
-        "rr": 0.125,
-        "first_rel_rank": 8,
+        "rr": 0.14285714285714285,
+        "first_rel_rank": 7,
         "recall_at_k": 0.4,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1445.7848072052002,
+        "rt_ms": 1119.5294857025146,
         "query": "ipsc",
         "type": "topical"
       },
@@ -4430,7 +4430,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1594.6321487426758,
+        "rt_ms": 648.5540866851807,
         "query": "minipig model",
         "type": "topical"
       },
@@ -4442,7 +4442,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 640.9177780151367,
+        "rt_ms": 1114.9170398712158,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -4454,7 +4454,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1099.0920066833496,
+        "rt_ms": 685.7950687408447,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -4466,7 +4466,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1592.944860458374,
+        "rt_ms": 1131.422996520996,
         "query": "organoid",
         "type": "topical"
       },
@@ -4478,7 +4478,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1131.126880645752,
+        "rt_ms": 1105.4821014404297,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -4490,7 +4490,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1619.7962760925293,
+        "rt_ms": 1115.7703399658203,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -4502,7 +4502,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1121.523380279541,
+        "rt_ms": 1112.8969192504883,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -4514,7 +4514,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 1131.34765625,
+        "rt_ms": 1154.5803546905518,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -4526,7 +4526,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1126.1732578277588,
+        "rt_ms": 1143.93949508667,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -4538,7 +4538,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1107.2208881378174,
+        "rt_ms": 1097.928762435913,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -4550,7 +4550,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1149.2674350738525,
+        "rt_ms": 683.680534362793,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -4562,7 +4562,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 641.8395042419434,
+        "rt_ms": 662.0993614196777,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -4574,19 +4574,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1196.4657306671143,
+        "rt_ms": 1126.8014907836914,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
       "metabolic-mouse-model": {
-        "rr": 0.0,
-        "first_rel_rank": null,
-        "recall_at_k": 0.0,
+        "rr": 0.2,
+        "first_rel_rank": 5,
+        "recall_at_k": 1.0,
         "hit_at_1": 0.0,
-        "hit_at_k": 0.0,
+        "hit_at_k": 1.0,
         "n_relevant": 2,
-        "n_found_in_k": 0,
-        "rt_ms": 1127.5889873504639,
+        "n_found_in_k": 2,
+        "rt_ms": 1222.8333950042725,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -4598,7 +4598,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1107.5515747070312,
+        "rt_ms": 1157.1097373962402,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -4610,19 +4610,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1135.3812217712402,
+        "rt_ms": 655.7447910308838,
         "query": "hybridoma cell line",
         "type": "topical"
       },
       "nf1-cell-line-black": {
-        "rr": 0.0,
-        "first_rel_rank": null,
-        "recall_at_k": 0.0,
+        "rr": 0.14285714285714285,
+        "first_rel_rank": 7,
+        "recall_at_k": 0.2,
         "hit_at_1": 0.0,
-        "hit_at_k": 0.0,
+        "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 0,
-        "rt_ms": 1106.0900688171387,
+        "n_found_in_k": 1,
+        "rt_ms": 651.8406867980957,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -4634,7 +4634,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1136.4960670471191,
+        "rt_ms": 654.2325019836426,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -4646,19 +4646,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1124.0828037261963,
+        "rt_ms": 668.2076454162598,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
       "nf1-bacterial-vector": {
-        "rr": 0.0,
-        "first_rel_rank": null,
-        "recall_at_k": 0.0,
+        "rr": 0.3333333333333333,
+        "first_rel_rank": 3,
+        "recall_at_k": 0.3333333333333333,
         "hit_at_1": 0.0,
-        "hit_at_k": 0.0,
+        "hit_at_k": 1.0,
         "n_relevant": 3,
-        "n_found_in_k": 0,
-        "rt_ms": 648.0398178100586,
+        "n_found_in_k": 1,
+        "rt_ms": 1596.5144634246826,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -4670,7 +4670,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 656.4667224884033,
+        "rt_ms": 1145.4250812530518,
         "query": "ipNF",
         "type": "topical"
       },
@@ -4682,7 +4682,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1120.9523677825928,
+        "rt_ms": 1166.501522064209,
         "query": "cagg",
         "type": "topical"
       },
@@ -4694,7 +4694,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1585.2622985839844,
+        "rt_ms": 658.5640907287598,
         "query": "corielle",
         "type": "known-item"
       },
@@ -4706,7 +4706,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1152.5688171386719,
+        "rt_ms": 654.9222469329834,
         "query": "lambda",
         "type": "known-item"
       },
@@ -4718,7 +4718,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1111.614465713501,
+        "rt_ms": 656.1872959136963,
         "query": "90-8",
         "type": "known-item"
       },
@@ -4730,7 +4730,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1128.3104419708252,
+        "rt_ms": 882.9905986785889,
         "query": "minipigs",
         "type": "topical"
       },
@@ -4742,7 +4742,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 649.5120525360107,
+        "rt_ms": 1121.4733123779297,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -4754,7 +4754,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 654.5472145080566,
+        "rt_ms": 1116.3220405578613,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -4766,7 +4766,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 12,
         "n_found_in_k": 2,
-        "rt_ms": 1125.0293254852295,
+        "rt_ms": 661.1831188201904,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -4778,7 +4778,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1115.9658432006836,
+        "rt_ms": 658.9038372039795,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -4790,7 +4790,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 702.5961875915527,
+        "rt_ms": 1123.291254043579,
         "query": "Ratner",
         "type": "topical"
       },
@@ -4802,7 +4802,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1128.6218166351318,
+        "rt_ms": 1158.6875915527344,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -4814,7 +4814,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1127.3369789123535,
+        "rt_ms": 1193.7730312347412,
         "query": "Morrison",
         "type": "topical"
       },
@@ -4826,7 +4826,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 649.8439311981201,
+        "rt_ms": 654.3123722076416,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -4838,7 +4838,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 651.3140201568604,
+        "rt_ms": 675.0423908233643,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -4850,7 +4850,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1189.5403861999512,
+        "rt_ms": 1232.2015762329102,
         "query": "Wallace",
         "type": "topical"
       },
@@ -4862,7 +4862,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 1104.9022674560547,
+        "rt_ms": 1167.3011779785156,
         "query": "Wallis",
         "type": "topical"
       },
@@ -4874,7 +4874,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 8,
-        "rt_ms": 706.9647312164307,
+        "rt_ms": 1162.3051166534424,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -4888,7 +4888,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1101.9585132598877,
+        "rt_ms": 1108.8054180145264,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -4900,7 +4900,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1115.649700164795,
+        "rt_ms": 1118.4709072113037,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -4912,7 +4912,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1106.372356414795,
+        "rt_ms": 1129.1766166687012,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -4924,7 +4924,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 712.031364440918,
+        "rt_ms": 1133.0955028533936,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -4936,43 +4936,43 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1134.282112121582,
+        "rt_ms": 1105.980634689331,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
       "plexiform-neurofibroma": {
-        "rr": 0.1111111111111111,
-        "first_rel_rank": 9,
+        "rr": 0.25,
+        "first_rel_rank": 4,
         "recall_at_k": 0.6666666666666666,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1121.394157409668,
+        "rt_ms": 1112.0567321777344,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
       "cnf": {
-        "rr": 0.125,
-        "first_rel_rank": 8,
+        "rr": 0.2,
+        "first_rel_rank": 5,
         "recall_at_k": 0.4,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1204.6892642974854,
+        "rt_ms": 647.608757019043,
         "query": "cnf",
         "type": "topical"
       },
       "ctf-biobank": {
         "rr": 1.0,
         "first_rel_rank": 1,
-        "recall_at_k": 0.75,
+        "recall_at_k": 1.0,
         "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 4,
-        "n_found_in_k": 3,
-        "rt_ms": 743.4966564178467,
+        "n_found_in_k": 4,
+        "rt_ms": 816.7355060577393,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -4984,7 +4984,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1113.4424209594727,
+        "rt_ms": 1108.8354587554932,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -4996,7 +4996,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1128.7407875061035,
+        "rt_ms": 662.7814769744873,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -5008,7 +5008,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1117.2451972961426,
+        "rt_ms": 1114.5210266113281,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -5020,7 +5020,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1110.1624965667725,
+        "rt_ms": 644.8609828948975,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -5032,7 +5032,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1101.7942428588867,
+        "rt_ms": 1106.6570281982422,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -5044,7 +5044,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 661.3645553588867,
+        "rt_ms": 1109.7490787506104,
         "query": "mpnst",
         "type": "topical"
       },
@@ -5056,7 +5056,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1133.1946849822998,
+        "rt_ms": 1110.6674671173096,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -5068,7 +5068,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1119.0664768218994,
+        "rt_ms": 658.172607421875,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -5080,7 +5080,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1587.9268646240234,
+        "rt_ms": 639.5654678344727,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -5092,7 +5092,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1102.1826267242432,
+        "rt_ms": 644.9830532073975,
         "query": "nf2",
         "type": "topical"
       },
@@ -5104,7 +5104,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1138.0975246429443,
+        "rt_ms": 674.3645668029785,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -5116,7 +5116,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 639.0838623046875,
+        "rt_ms": 1125.000238418579,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -5128,7 +5128,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 653.1403064727783,
+        "rt_ms": 1115.3910160064697,
         "query": "pnf",
         "type": "topical"
       },
@@ -5140,7 +5140,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1118.6814308166504,
+        "rt_ms": 709.0601921081543,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -5152,7 +5152,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 625.6299018859863,
+        "rt_ms": 639.8186683654785,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -5164,7 +5164,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1119.9023723602295,
+        "rt_ms": 1105.8928966522217,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -5176,7 +5176,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1179.4207096099854,
+        "rt_ms": 1119.8415756225586,
         "query": "t265",
         "type": "known-item"
       },
@@ -5188,7 +5188,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1122.7262020111084,
+        "rt_ms": 642.758846282959,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -5200,7 +5200,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1132.3800086975098,
+        "rt_ms": 1133.4166526794434,
         "query": "pdx",
         "type": "topical"
       },
@@ -5212,7 +5212,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1126.2555122375488,
+        "rt_ms": 1104.4707298278809,
         "query": "ipsc",
         "type": "topical"
       },
@@ -5224,7 +5224,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 650.1131057739258,
+        "rt_ms": 1088.8655185699463,
         "query": "minipig model",
         "type": "topical"
       },
@@ -5236,7 +5236,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1119.6670532226562,
+        "rt_ms": 1113.5287284851074,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -5248,7 +5248,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1124.1698265075684,
+        "rt_ms": 633.540153503418,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -5260,7 +5260,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1115.5500411987305,
+        "rt_ms": 1103.5797595977783,
         "query": "organoid",
         "type": "topical"
       },
@@ -5272,7 +5272,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 652.2586345672607,
+        "rt_ms": 692.962646484375,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -5284,7 +5284,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1138.2431983947754,
+        "rt_ms": 1133.608341217041,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -5296,7 +5296,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1145.0726985931396,
+        "rt_ms": 640.6481266021729,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -5308,7 +5308,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1117.3961162567139,
+        "rt_ms": 1091.834306716919,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -5320,7 +5320,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1172.814130783081,
+        "rt_ms": 1099.532127380371,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -5332,7 +5332,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1158.4603786468506,
+        "rt_ms": 1106.8475246429443,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -5344,7 +5344,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1104.6092510223389,
+        "rt_ms": 1098.0494022369385,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -5356,7 +5356,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1149.8146057128906,
+        "rt_ms": 1113.9273643493652,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -5368,7 +5368,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1137.8846168518066,
+        "rt_ms": 655.2941799163818,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -5380,7 +5380,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1110.9015941619873,
+        "rt_ms": 669.3434715270996,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -5392,7 +5392,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 661.2708568572998,
+        "rt_ms": 1147.7937698364258,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -5404,7 +5404,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1129.981279373169,
+        "rt_ms": 1172.5437641143799,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -5416,7 +5416,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1140.4480934143066,
+        "rt_ms": 1208.7862491607666,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -5428,19 +5428,19 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 661.8857383728027,
+        "rt_ms": 1131.7720413208008,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
       "lentiviral-rnai-vector": {
         "rr": 0.3333333333333333,
         "first_rel_rank": 3,
-        "recall_at_k": 0.6666666666666666,
+        "recall_at_k": 1.0,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 3,
-        "n_found_in_k": 2,
-        "rt_ms": 1126.7733573913574,
+        "n_found_in_k": 3,
+        "rt_ms": 1164.8313999176025,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -5452,7 +5452,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1105.6227684020996,
+        "rt_ms": 1118.6866760253906,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -5464,7 +5464,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1183.0086708068848,
+        "rt_ms": 733.0584526062012,
         "query": "ipNF",
         "type": "topical"
       },
@@ -5476,7 +5476,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 659.1565608978271,
+        "rt_ms": 1143.0909633636475,
         "query": "cagg",
         "type": "topical"
       },
@@ -5488,7 +5488,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1114.3412590026855,
+        "rt_ms": 1116.8112754821777,
         "query": "corielle",
         "type": "known-item"
       },
@@ -5500,7 +5500,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1115.9672737121582,
+        "rt_ms": 1118.9749240875244,
         "query": "lambda",
         "type": "known-item"
       },
@@ -5512,7 +5512,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1400.6016254425049,
+        "rt_ms": 661.984920501709,
         "query": "90-8",
         "type": "known-item"
       },
@@ -5524,7 +5524,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1112.0717525482178,
+        "rt_ms": 650.0520706176758,
         "query": "minipigs",
         "type": "topical"
       },
@@ -5536,7 +5536,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1132.8530311584473,
+        "rt_ms": 1105.9741973876953,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -5548,7 +5548,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1088.3867740631104,
+        "rt_ms": 656.2385559082031,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -5560,7 +5560,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1095.1566696166992,
+        "rt_ms": 1126.420021057129,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -5572,7 +5572,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1578.9685249328613,
+        "rt_ms": 666.4061546325684,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -5584,7 +5584,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1117.044448852539,
+        "rt_ms": 1142.7226066589355,
         "query": "Ratner",
         "type": "topical"
       },
@@ -5596,7 +5596,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1123.863935470581,
+        "rt_ms": 1140.1658058166504,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -5608,7 +5608,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1139.8646831512451,
+        "rt_ms": 1729.4304370880127,
         "query": "Morrison",
         "type": "topical"
       },
@@ -5620,7 +5620,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1133.493185043335,
+        "rt_ms": 1197.7832317352295,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -5632,7 +5632,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 14,
         "n_found_in_k": 10,
-        "rt_ms": 1121.3631629943848,
+        "rt_ms": 656.0919284820557,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -5644,7 +5644,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1195.9474086761475,
+        "rt_ms": 710.702657699585,
         "query": "Wallace",
         "type": "topical"
       },
@@ -5656,7 +5656,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 1118.004560470581,
+        "rt_ms": 1120.0194358825684,
         "query": "Wallis",
         "type": "topical"
       },
@@ -5668,7 +5668,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 6,
-        "rt_ms": 1109.9252700805664,
+        "rt_ms": 1118.7987327575684,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -5682,7 +5682,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1307.3856830596924,
+        "rt_ms": 1126.3415813446045,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -5694,7 +5694,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1122.9450702667236,
+        "rt_ms": 638.2851600646973,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -5706,7 +5706,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 650.357723236084,
+        "rt_ms": 646.1498737335205,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -5718,7 +5718,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 653.0718803405762,
+        "rt_ms": 658.9090824127197,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -5730,7 +5730,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 1,
-        "rt_ms": 637.3021602630615,
+        "rt_ms": 649.1467952728271,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -5742,19 +5742,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1187.2994899749756,
+        "rt_ms": 1199.7568607330322,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
       "cnf": {
-        "rr": 0.25,
-        "first_rel_rank": 4,
-        "recall_at_k": 0.8,
-        "hit_at_1": 0.0,
+        "rr": 1.0,
+        "first_rel_rank": 1,
+        "recall_at_k": 1.0,
+        "hit_at_1": 1.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 4,
-        "rt_ms": 1119.8441982269287,
+        "n_found_in_k": 5,
+        "rt_ms": 654.9925804138184,
         "query": "cnf",
         "type": "topical"
       },
@@ -5766,7 +5766,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 1,
-        "rt_ms": 1102.2744178771973,
+        "rt_ms": 630.7461261749268,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -5778,7 +5778,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1101.8402576446533,
+        "rt_ms": 1127.4993419647217,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -5790,7 +5790,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1570.807933807373,
+        "rt_ms": 1105.6249141693115,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -5802,7 +5802,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 652.935266494751,
+        "rt_ms": 1123.8353252410889,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -5814,7 +5814,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1600.4443168640137,
+        "rt_ms": 1112.1406555175781,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -5826,19 +5826,19 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 640.3484344482422,
+        "rt_ms": 1117.5758838653564,
         "query": "krox20-cre",
         "type": "topical"
       },
       "mpnst": {
         "rr": 0.3333333333333333,
         "first_rel_rank": 3,
-        "recall_at_k": 0.8,
+        "recall_at_k": 0.4,
         "hit_at_1": 0.0,
         "hit_at_k": 1.0,
         "n_relevant": 5,
-        "n_found_in_k": 4,
-        "rt_ms": 664.1361713409424,
+        "n_found_in_k": 2,
+        "rt_ms": 650.8934497833252,
         "query": "mpnst",
         "type": "topical"
       },
@@ -5850,7 +5850,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 798.6798286437988,
+        "rt_ms": 631.5631866455078,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -5862,7 +5862,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1103.4173965454102,
+        "rt_ms": 645.8187103271484,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -5874,7 +5874,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1593.5945510864258,
+        "rt_ms": 1091.2275314331055,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -5886,7 +5886,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1114.3310070037842,
+        "rt_ms": 656.5358638763428,
         "query": "nf2",
         "type": "topical"
       },
@@ -5898,7 +5898,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1100.6989479064941,
+        "rt_ms": 1571.638822555542,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -5910,7 +5910,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1094.712257385254,
+        "rt_ms": 1097.9232788085938,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -5922,7 +5922,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 651.0298252105713,
+        "rt_ms": 1142.3618793487549,
         "query": "pnf",
         "type": "topical"
       },
@@ -5934,7 +5934,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1130.0246715545654,
+        "rt_ms": 1116.5196895599365,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -5946,7 +5946,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1157.7458381652832,
+        "rt_ms": 1150.6683826446533,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -5958,7 +5958,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 1,
-        "rt_ms": 1169.7914600372314,
+        "rt_ms": 1122.4987506866455,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -5970,7 +5970,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1119.805097579956,
+        "rt_ms": 1126.1208057403564,
         "query": "t265",
         "type": "known-item"
       },
@@ -5982,7 +5982,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1233.0236434936523,
+        "rt_ms": 1125.2026557922363,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -5994,7 +5994,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1135.2827548980713,
+        "rt_ms": 1098.684549331665,
         "query": "pdx",
         "type": "topical"
       },
@@ -6006,7 +6006,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1109.2758178710938,
+        "rt_ms": 917.8597927093506,
         "query": "ipsc",
         "type": "topical"
       },
@@ -6018,7 +6018,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 1,
-        "rt_ms": 1141.8395042419434,
+        "rt_ms": 644.0966129302979,
         "query": "minipig model",
         "type": "topical"
       },
@@ -6030,7 +6030,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 676.4748096466064,
+        "rt_ms": 643.4776782989502,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -6042,7 +6042,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1127.0580291748047,
+        "rt_ms": 1144.6633338928223,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -6054,7 +6054,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 630.0795078277588,
+        "rt_ms": 664.0288829803467,
         "query": "organoid",
         "type": "topical"
       },
@@ -6066,7 +6066,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1106.3835620880127,
+        "rt_ms": 1109.7080707550049,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -6078,7 +6078,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1138.7131214141846,
+        "rt_ms": 1108.7708473205566,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -6090,7 +6090,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 646.0928916931152,
+        "rt_ms": 642.967700958252,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -6102,7 +6102,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 2,
-        "rt_ms": 1120.0001239776611,
+        "rt_ms": 634.5672607421875,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -6114,7 +6114,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1141.787052154541,
+        "rt_ms": 661.266565322876,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -6126,7 +6126,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1092.7023887634277,
+        "rt_ms": 1105.381727218628,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -6138,7 +6138,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1570.8298683166504,
+        "rt_ms": 1126.466989517212,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -6150,7 +6150,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1109.7548007965088,
+        "rt_ms": 1099.4846820831299,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -6162,7 +6162,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 649.1975784301758,
+        "rt_ms": 650.5491733551025,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -6174,7 +6174,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1127.2718906402588,
+        "rt_ms": 641.9172286987305,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -6186,7 +6186,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1112.846851348877,
+        "rt_ms": 642.6229476928711,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -6198,7 +6198,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 636.6064548492432,
+        "rt_ms": 660.0980758666992,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -6210,7 +6210,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1099.5376110076904,
+        "rt_ms": 670.0518131256104,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -6222,7 +6222,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 655.6055545806885,
+        "rt_ms": 667.572021484375,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -6234,7 +6234,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1180.4542541503906,
+        "rt_ms": 771.5260982513428,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -6246,7 +6246,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1130.768060684204,
+        "rt_ms": 772.7627754211426,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -6258,7 +6258,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1165.4276847839355,
+        "rt_ms": 1192.8839683532715,
         "query": "ipNF",
         "type": "topical"
       },
@@ -6270,7 +6270,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1137.7978324890137,
+        "rt_ms": 1102.086067199707,
         "query": "cagg",
         "type": "topical"
       },
@@ -6282,7 +6282,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1103.2702922821045,
+        "rt_ms": 1125.0340938568115,
         "query": "corielle",
         "type": "known-item"
       },
@@ -6294,7 +6294,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1102.1928787231445,
+        "rt_ms": 1175.5216121673584,
         "query": "lambda",
         "type": "known-item"
       },
@@ -6306,7 +6306,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1128.1020641326904,
+        "rt_ms": 1121.7076778411865,
         "query": "90-8",
         "type": "known-item"
       },
@@ -6318,7 +6318,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1185.6746673583984,
+        "rt_ms": 1165.2464866638184,
         "query": "minipigs",
         "type": "topical"
       },
@@ -6330,7 +6330,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 650.0494480133057,
+        "rt_ms": 652.0791053771973,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -6342,7 +6342,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1120.9485530853271,
+        "rt_ms": 1108.792781829834,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -6354,7 +6354,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1109.4729900360107,
+        "rt_ms": 672.4555492401123,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -6366,7 +6366,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1122.3986148834229,
+        "rt_ms": 651.2370109558105,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -6378,7 +6378,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 4,
-        "rt_ms": 1115.8320903778076,
+        "rt_ms": 649.0304470062256,
         "query": "Ratner",
         "type": "topical"
       },
@@ -6390,7 +6390,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1107.2280406951904,
+        "rt_ms": 666.0289764404297,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -6402,7 +6402,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 7,
         "n_found_in_k": 7,
-        "rt_ms": 1125.471830368042,
+        "rt_ms": 671.8575954437256,
         "query": "Morrison",
         "type": "topical"
       },
@@ -6414,7 +6414,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 7,
         "n_found_in_k": 0,
-        "rt_ms": 1186.2406730651855,
+        "rt_ms": 685.0149631500244,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -6426,7 +6426,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 651.4732837677002,
+        "rt_ms": 665.8945083618164,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -6438,7 +6438,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 17,
         "n_found_in_k": 10,
-        "rt_ms": 1220.515251159668,
+        "rt_ms": 1193.7530040740967,
         "query": "Wallace",
         "type": "topical"
       },
@@ -6450,7 +6450,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 20,
         "n_found_in_k": 5,
-        "rt_ms": 1115.8294677734375,
+        "rt_ms": 1123.0309009552002,
         "query": "Wallis",
         "type": "topical"
       },
@@ -6462,7 +6462,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 8,
         "n_found_in_k": 0,
-        "rt_ms": 1135.3096961975098,
+        "rt_ms": 655.6265354156494,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -6476,7 +6476,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1120.2373504638672,
+        "rt_ms": 1123.6045360565186,
         "query": "ScienCell Schwann cells",
         "type": "known-item"
       },
@@ -6488,7 +6488,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1116.5251731872559,
+        "rt_ms": 652.2493362426758,
         "query": "CVCL_8478",
         "type": "known-item"
       },
@@ -6500,7 +6500,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1115.185260772705,
+        "rt_ms": 1146.8827724456787,
         "query": "MPC 10/9CRC1",
         "type": "known-item"
       },
@@ -6512,7 +6512,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 651.0887145996094,
+        "rt_ms": 1127.488374710083,
         "query": "ipNF95.11b",
         "type": "known-item"
       },
@@ -6524,7 +6524,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1105.8218479156494,
+        "rt_ms": 1121.5217113494873,
         "query": "neurofibromin antibody",
         "type": "topical"
       },
@@ -6536,7 +6536,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1111.433744430542,
+        "rt_ms": 674.9274730682373,
         "query": "plexiform neurofibroma",
         "type": "topical"
       },
@@ -6548,7 +6548,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1105.468511581421,
+        "rt_ms": 1131.7989826202393,
         "query": "cnf",
         "type": "topical"
       },
@@ -6560,7 +6560,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 3,
-        "rt_ms": 635.338544845581,
+        "rt_ms": 655.0230979919434,
         "query": "ctf biobank",
         "type": "topical"
       },
@@ -6572,7 +6572,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 651.8027782440186,
+        "rt_ms": 651.7236232757568,
         "query": "dhh-cre",
         "type": "topical"
       },
@@ -6584,7 +6584,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1109.9720001220703,
+        "rt_ms": 684.6694946289062,
         "query": "ipnf05.5",
         "type": "known-item"
       },
@@ -6596,7 +6596,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1120.1510429382324,
+        "rt_ms": 1058.8772296905518,
         "query": "jh-2-002",
         "type": "known-item"
       },
@@ -6608,7 +6608,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1135.1137161254883,
+        "rt_ms": 1767.918586730957,
         "query": "johns hopkins",
         "type": "known-item"
       },
@@ -6620,7 +6620,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 3,
-        "rt_ms": 1114.6180629730225,
+        "rt_ms": 654.353141784668,
         "query": "krox20-cre",
         "type": "topical"
       },
@@ -6632,7 +6632,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1284.1339111328125,
+        "rt_ms": 1119.981050491333,
         "query": "mpnst",
         "type": "topical"
       },
@@ -6644,7 +6644,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1164.7841930389404,
+        "rt_ms": 644.0515518188477,
         "query": "neurofibromin",
         "type": "topical"
       },
@@ -6656,7 +6656,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 1144.7434425354004,
+        "rt_ms": 649.7225761413574,
         "query": "nf1-flox",
         "type": "topical"
       },
@@ -6668,7 +6668,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 654.0849208831787,
+        "rt_ms": 1127.7573108673096,
         "query": "nf1-grd",
         "type": "topical"
       },
@@ -6680,7 +6680,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1221.8201160430908,
+        "rt_ms": 640.5444145202637,
         "query": "nf2",
         "type": "topical"
       },
@@ -6692,7 +6692,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 831.8135738372803,
+        "rt_ms": 652.4531841278076,
         "query": "nonsense mutation",
         "type": "topical"
       },
@@ -6704,7 +6704,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1009.6805095672607,
+        "rt_ms": 652.592658996582,
         "query": "optic glioma",
         "type": "topical"
       },
@@ -6716,7 +6716,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1004.4238567352295,
+        "rt_ms": 661.4804267883301,
         "query": "pnf",
         "type": "topical"
       },
@@ -6728,7 +6728,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1003.868579864502,
+        "rt_ms": 639.3373012542725,
         "query": "schwann cell",
         "type": "topical"
       },
@@ -6740,7 +6740,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 982.3060035705566,
+        "rt_ms": 633.1582069396973,
         "query": "snf96.2",
         "type": "known-item"
       },
@@ -6752,7 +6752,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 814.2373561859131,
+        "rt_ms": 1603.1074523925781,
         "query": "st88-14",
         "type": "known-item"
       },
@@ -6764,7 +6764,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 668.17307472229,
+        "rt_ms": 659.076452255249,
         "query": "t265",
         "type": "known-item"
       },
@@ -6776,7 +6776,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 664.5605564117432,
+        "rt_ms": 651.3710021972656,
         "query": "zebrafish",
         "type": "topical"
       },
@@ -6788,7 +6788,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 1159.1360569000244,
+        "rt_ms": 1148.1473445892334,
         "query": "pdx",
         "type": "topical"
       },
@@ -6800,7 +6800,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 660.6631278991699,
+        "rt_ms": 647.5353240966797,
         "query": "ipsc",
         "type": "topical"
       },
@@ -6812,7 +6812,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1135.5421543121338,
+        "rt_ms": 1104.8345565795898,
         "query": "minipig model",
         "type": "topical"
       },
@@ -6824,7 +6824,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 5,
-        "rt_ms": 667.504072189331,
+        "rt_ms": 1136.1756324768066,
         "query": "drosophila model",
         "type": "topical"
       },
@@ -6836,7 +6836,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1124.9659061431885,
+        "rt_ms": 1103.5873889923096,
         "query": "melanoma cell line",
         "type": "topical"
       },
@@ -6848,7 +6848,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 1,
-        "rt_ms": 1117.2802448272705,
+        "rt_ms": 638.049840927124,
         "query": "organoid",
         "type": "topical"
       },
@@ -6860,7 +6860,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 2,
-        "rt_ms": 624.6039867401123,
+        "rt_ms": 1105.7841777801514,
         "query": "pten mouse model",
         "type": "topical"
       },
@@ -6872,7 +6872,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 3,
-        "rt_ms": 1109.6038818359375,
+        "rt_ms": 671.2114810943604,
         "query": "nf1 p53 mouse",
         "type": "topical"
       },
@@ -6884,7 +6884,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1091.0382270812988,
+        "rt_ms": 1096.4241027832031,
         "query": "gfap-cre",
         "type": "topical"
       },
@@ -6896,7 +6896,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 4,
         "n_found_in_k": 2,
-        "rt_ms": 1112.4460697174072,
+        "rt_ms": 1082.294225692749,
         "query": "crispr plasmid",
         "type": "topical"
       },
@@ -6908,7 +6908,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1279.4573307037354,
+        "rt_ms": 665.3709411621094,
         "query": "nf1 shrna",
         "type": "topical"
       },
@@ -6920,7 +6920,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 657.4769020080566,
+        "rt_ms": 653.8145542144775,
         "query": "vestibular schwannoma",
         "type": "known-item"
       },
@@ -6932,7 +6932,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1112.5543117523193,
+        "rt_ms": 662.9807949066162,
         "query": "drosophila nf1 antibody",
         "type": "known-item"
       },
@@ -6944,7 +6944,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 635.1382732391357,
+        "rt_ms": 1116.6954040527344,
         "query": "c-terminal neurofibromin antibody",
         "type": "topical"
       },
@@ -6956,7 +6956,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 5,
         "n_found_in_k": 4,
-        "rt_ms": 1149.4760513305664,
+        "rt_ms": 1104.0046215057373,
         "query": "phospho nf1 antibody",
         "type": "topical"
       },
@@ -6968,7 +6968,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1075.3583908081055,
+        "rt_ms": 1127.5405883789062,
         "query": "nf1 metabolic model",
         "type": "topical"
       },
@@ -6980,7 +6980,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1111.3479137420654,
+        "rt_ms": 645.3266143798828,
         "query": "caf\u00e9-au-lait spots",
         "type": "topical"
       },
@@ -6992,7 +6992,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1110.4979515075684,
+        "rt_ms": 657.4299335479736,
         "query": "hybridoma cell line",
         "type": "topical"
       },
@@ -7004,7 +7004,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1610.9890937805176,
+        "rt_ms": 629.4887065887451,
         "query": "nf1 cell line black patient",
         "type": "topical"
       },
@@ -7016,7 +7016,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1125.9465217590332,
+        "rt_ms": 694.9691772460938,
         "query": "lung adenocarcinoma cell line",
         "type": "topical"
       },
@@ -7028,7 +7028,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 1126.047134399414,
+        "rt_ms": 653.583288192749,
         "query": "lentiviral rnai vector",
         "type": "topical"
       },
@@ -7040,7 +7040,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 3,
         "n_found_in_k": 0,
-        "rt_ms": 657.2625637054443,
+        "rt_ms": 1153.8612842559814,
         "query": "nf1 bacterial expression vector",
         "type": "topical"
       },
@@ -7052,7 +7052,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 9,
         "n_found_in_k": 9,
-        "rt_ms": 1110.419750213623,
+        "rt_ms": 1121.408224105835,
         "query": "ipNF",
         "type": "topical"
       },
@@ -7064,7 +7064,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1129.080057144165,
+        "rt_ms": 649.3043899536133,
         "query": "cagg",
         "type": "topical"
       },
@@ -7076,7 +7076,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1091.1188125610352,
+        "rt_ms": 667.7141189575195,
         "query": "corielle",
         "type": "known-item"
       },
@@ -7088,7 +7088,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1111.7498874664307,
+        "rt_ms": 644.1805362701416,
         "query": "lambda",
         "type": "known-item"
       },
@@ -7100,7 +7100,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 1,
         "n_found_in_k": 1,
-        "rt_ms": 1262.6466751098633,
+        "rt_ms": 665.597677230835,
         "query": "90-8",
         "type": "known-item"
       },
@@ -7112,7 +7112,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 3,
         "n_found_in_k": 2,
-        "rt_ms": 1111.1574172973633,
+        "rt_ms": 663.2943153381348,
         "query": "minipigs",
         "type": "topical"
       },
@@ -7124,7 +7124,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 1,
         "n_found_in_k": 0,
-        "rt_ms": 1135.3342533111572,
+        "rt_ms": 842.9775238037109,
         "query": "NF1+/R1947X pigs",
         "type": "known-item"
       },
@@ -7136,7 +7136,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 2,
         "n_found_in_k": 2,
-        "rt_ms": 1119.0123558044434,
+        "rt_ms": 647.9372978210449,
         "query": "\"malignant peripheral nerve sheath tumor model\"",
         "type": "known-item"
       },
@@ -7148,7 +7148,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 12,
         "n_found_in_k": 0,
-        "rt_ms": 1150.1779556274414,
+        "rt_ms": 682.5268268585205,
         "query": "\"patient-derived xenograft\"",
         "type": "topical"
       },
@@ -7160,7 +7160,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 2,
         "n_found_in_k": 0,
-        "rt_ms": 1097.7106094360352,
+        "rt_ms": 650.7396697998047,
         "query": "topilko mouse",
         "type": "topical"
       },
@@ -7172,7 +7172,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 4,
         "n_found_in_k": 0,
-        "rt_ms": 654.4673442840576,
+        "rt_ms": 669.1508293151855,
         "query": "Ratner",
         "type": "topical"
       },
@@ -7184,7 +7184,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 5,
         "n_found_in_k": 0,
-        "rt_ms": 1090.1298522949219,
+        "rt_ms": 1103.6033630371094,
         "query": "Verlinsky",
         "type": "topical"
       },
@@ -7196,7 +7196,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 7,
         "n_found_in_k": 0,
-        "rt_ms": 650.4940986633301,
+        "rt_ms": 1111.9332313537598,
         "query": "Morrison",
         "type": "topical"
       },
@@ -7208,7 +7208,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 7,
         "n_found_in_k": 0,
-        "rt_ms": 1104.6206951141357,
+        "rt_ms": 1133.8346004486084,
         "query": "Hirbe -Pratilas",
         "type": "topical"
       },
@@ -7220,7 +7220,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 14,
         "n_found_in_k": 0,
-        "rt_ms": 649.5754718780518,
+        "rt_ms": 1156.3608646392822,
         "query": "Gitmann",
         "type": "topical"
       },
@@ -7232,7 +7232,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 17,
         "n_found_in_k": 0,
-        "rt_ms": 645.7228660583496,
+        "rt_ms": 1102.9913425445557,
         "query": "Wallace",
         "type": "topical"
       },
@@ -7244,7 +7244,7 @@
         "hit_at_k": 0.0,
         "n_relevant": 20,
         "n_found_in_k": 0,
-        "rt_ms": 1110.7869148254395,
+        "rt_ms": 1122.154712677002,
         "query": "Wallis",
         "type": "topical"
       },
@@ -7256,7 +7256,7 @@
         "hit_at_k": 1.0,
         "n_relevant": 8,
         "n_found_in_k": 6,
-        "rt_ms": 1135.1242065429688,
+        "rt_ms": 1140.2459144592285,
         "query": "Pratilas PDX",
         "type": "topical"
       }
@@ -7264,7 +7264,7 @@
   },
   "control": "production_current",
   "label": "latest",
-  "run_at": "2026-09-10T15:45:09Z",
+  "run_at": "2026-09-10T23:51:20Z",
   "golden": {
     "version": "2026.09.09.1",
     "hash": "890cb2799874",
@@ -7272,18 +7272,18 @@
   },
   "field_config": {
     "fields": [
-      "resourceName^5",
-      "synonyms^4",
-      "rrid^4",
-      "targetAntigen^3",
-      "manifestation^3",
-      "geneticDisorder^2",
-      "tumorType^2",
-      "species^2",
-      "cellLineCategory^2",
-      "resourceType^2",
-      "vectorType^2",
-      "investigatorName^5",
+      "resourceName^2.5",
+      "synonyms^2",
+      "rrid^2",
+      "targetAntigen^1.75",
+      "manifestation^1.75",
+      "geneticDisorder^1.5",
+      "tumorType^1.5",
+      "species^1.5",
+      "cellLineCategory^1.5",
+      "resourceType^1.5",
+      "vectorType^1.5",
+      "investigatorName^2.25",
       "race",
       "sex",
       "description"
@@ -7299,7 +7299,7 @@
         "description"
       ]
     },
-    "hash": "c097a433930e",
+    "hash": "b350295cd270",
     "from_fields_yaml": true
   }
 }

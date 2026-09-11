@@ -107,6 +107,14 @@ fields:
 #                          MRR 0.659  R@10 0.644  Hit@1 0.568
 #   platform default       MRR 0.541  R@10 0.566  Hit@1 0.432
 #
+# RE-SWEPT under cross_fields on 2026-09-10 and UNCHANGED. These weights came from a tuner
+# run that scored best_fields, so they were re-swept once cross_fields won, on the same
+# principle applied to nf-tools. Unlike nf-tools they held: MRR 0.751 for these weights, vs
+# 0.749 compressing the spread, 0.747 expanding it, 0.740 at manifestation^14, 0.726 at
+# manifestation^6, 0.665 raising summary to ^5, and 0.689 flat. So the best_fields-derived
+# weights happened to already be right for cross_fields here — worth knowing, but it is a
+# result of the re-sweep, not a reason to skip one next time.
+#
 # SATURATION WARNING on `manifestation^10`. The 2026-07-30 tuner left this field at its
 # optimizer ceiling, roughly 10:1 over everything else, and the re-score above reproduces it:
 # halving to ^5 costs 0.034 MRR. Ranking depends only on ratios, so this is not a truncated

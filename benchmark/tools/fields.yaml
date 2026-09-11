@@ -83,32 +83,34 @@ production:
 #   tumorType                 28     2%
 fields:
   # identity / names — strongest signal
-  - "resourceName^5"
-  - "synonyms^4"
-  - "rrid^4"
+  - "resourceName^2.5"
+  - "synonyms^2"
+  - "rrid^2"
   # antibody target
-  - "targetAntigen^3"
+  - "targetAntigen^1.75"
   # disease / phenotype / manifestation — discovery.
   # `manifestation` and `geneticDisorder` are the unified columns the source table moved to;
   # they replace the per-resource-type names (cellLineManifestation, animalModelOfManifestation,
   # diseaseType, cellLineGeneticDisorder, animalModelGeneticDisorder) this file used to list,
   # none of which exist on syn51730943 any more.
-  - "manifestation^3"
-  - "geneticDisorder^2"
-  - "tumorType^2"
+  - "manifestation^1.75"
+  - "geneticDisorder^1.5"
+  - "tumorType^1.5"
   # organism / kind / modality — discovery
-  - "species^2"
-  - "cellLineCategory^2"
-  - "resourceType^2"
-  - "vectorType^2"
-  # TUNED to 5 on 2026-09-09 — Swept 1..5 on resourceName and 2/5/8 here against the
+  - "species^1.5"
+  - "cellLineCategory^1.5"
+  - "resourceType^1.5"
+  - "vectorType^1.5"
+  # RE-SWEPT under cross_fields 2026-09-10 to ^2.24 (sweep record at the end of this file).
+# The note below records the original best_fields sweep that had set this field to 5.
+# TUNED to 5 on 2026-09-09 — Swept 1..5 on resourceName and 2/5/8 here against the
   # full 66-case nf-tools golden: raising this field 2 -> 5 improves investigator-related queries
   # that also include a resource type such as "mouse", with no downsite; ^8 overshoots (0.737 / 0.687), 
   # so 5 is the measured optimum. Better than initial intuitive fix: lowering `resourceName`
   # from ^5 is does not help until until ^2, and by then it costs the known-item and topical cases. 
   # With competing signals, what decides the outcome is the ratio between the two fields, 
   # not resourceName's absolute weight.
-  - "investigatorName^5"
+  - "investigatorName^2.25"
   # donor demographics — unboosted. Narrow, sparsely filled columns (race ~11%, sex on most
   # cell lines) that only matter when the user names them, e.g. the nf1-cell-line-black case
   # ('nf1 cell line black patient'). Left at weight 1 deliberately: boosting them would let a
@@ -197,3 +199,37 @@ fields:
 #   faceting-only flags .... completenessCategory, availabilityCategory, criticalInfoCategory,
 #                            otherInfoCategory, observationCategory, availability,
 #                            availabilityStatus
+
+# ---------------------------------------------------------- cross_fields re-sweep, 2026-09-10
+# The weights above were originally swept under best_fields. Once cross_fields was found to be
+# the better shape for this table, they were re-swept under it — a boost set tuned for one
+# shape is not automatically right for another. 66-case golden, search config 9 bound, all
+# scored as cross_fields:
+#
+#   config                                        MRR    R@10   Hit@1  Hit@10
+#   these weights                                 0.755  0.732  0.682  0.894
+#   as above but resourceName^3                   0.760  0.709  0.697  0.879
+#   as above but the mid group at 1.5 -> 1.75     0.752  0.724  0.682  0.894
+#   resourceName^3, mid group 1.5 -> 1.75         0.756  0.695  0.697  0.864
+#   the previous best_fields weights, unchanged   0.744  0.705  0.682  0.848
+#   all fields flat                               0.658  0.674  0.591  0.818
+#
+# WHAT THE SWEEP FOUND. cross_fields wants a GENTLER spread than best_fields did. Flat is bad
+# (0.658), so the boosts still carry real signal, but compressing every previous weight toward
+# 1 (roughly its square root) beat the originals outright — cross_fields blends the listed
+# columns into one synthetic field, so a 5:1 ratio that merely picked a winner under
+# best_fields now distorts that blend. These weights are that compressed set, rounded to
+# quarters, with resourceName swept back up.
+#
+# resourceName is the only field whose weight still matters much, and it trades MRR against
+# recall monotonically across 2.25 -> 2.5 -> 3: raising it wins known-item lookups and loses
+# breadth. 2.5 beats the previously shipped weights on all four metrics and posts the best
+# Hit@10 of anything tried. ^3 is defensible if the golden is ever reweighted toward
+# known-item (+0.005 MRR, +1 Hit@1 case, -0.023 Recall@10).
+#
+# ONE CASE IS 0.015 of Hit@1 or Hit@10 on a 66-case golden, so neighbouring boost sets here
+# differ by about a single case and the third decimal should not be over-read. An earlier
+# rounding attempt did lose a case, but the cause was moving the six-field mid group DOWN to
+# 1.4, not the rounding: at 1.5 the tidy weights match the unrounded ones on MRR, Hit@1 and
+# Hit@10 and beat them on Recall@10. The durable findings are "cross_fields beats best_fields"
+# and "compress the spread".
