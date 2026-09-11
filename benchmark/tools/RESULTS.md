@@ -69,6 +69,31 @@ before reading two of them side by side.
   platform default retrieves them; strategies with a field list omit that column and return
   none. Expanding field coverage and changing field weights are separate interventions.
 
+- **Terms spread across columns favour cross-fields over best-fields.** With an identical
+  field list and identical boosts, `multi_match_cross` outranks `multi_match_boosted` on
+  every metric here. A best-fields query scores a document by its single strongest field, so
+  a query naming an investigator *and* a resource type has to find both in one column to be
+  rewarded; cross-fields treats the listed columns as one combined field and credits the
+  evidence wherever it falls. The same pattern decided `nf-studies`, whose queries name a
+  funder, a manifestation and a method at once. Cross-fields is stricter about terms that
+  appear nowhere in the list, which is why it pairs badly with a narrow field set.
+
+- **A boost set tuned for one query shape is not automatically right for another.** After
+  cross-fields won, the weights were re-swept under it rather than carried over, and they
+  moved: cross-fields blends the listed columns into one synthetic field, so it wants a
+  gentler spread than best-fields, and compressing the previous weights toward equal beat
+  them on every metric. Equal weights are still clearly worse, so the ratios carry real
+  signal — it is their size, not their existence, that the shape changes. `nf-studies` was
+  re-swept the same way and its weights did not move, so this is a check to run rather than
+  a correction to assume.
+
+  > [!NOTE]
+  > Neighbouring boost sets differ by about a single case: on a 66-case golden one case is
+  > 0.015 of Hit@1, so a gap in the third decimal should not be over-read. Rounding the
+  > ratios to quarters was checked rather than assumed either way — it turned out to cost
+  > nothing and to gain a little recall. The shape choice and the direction of the spread are
+  > the durable findings; the exact weights are not.
+
 - **The bound search configuration did not improve this case mix.** On 2026-09-09, it
   improved abbreviation and discovery cases such as `pnf` and `cnf`, but reduced MRR for
   distinctive-name lookups. This conclusion is specific to a golden set weighted toward

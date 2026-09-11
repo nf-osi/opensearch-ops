@@ -1,0 +1,123 @@
+# Per-table field config for the nf-studies benchmark (syn75081633, source syn52694652).
+#
+# This file sets WHICH fields are matched and how much each is worth. It does NOT set the
+# query shape: that comes from the strategy name (benchmark/strategies.py), and run.py hands
+# these fields to whichever strategy it is scoring. run.py reads only `fields:`,
+# `production:`, and `control:`; any other top-level key is ignored.
+#
+# WINNING SHAPE: `multi_match_cross` — cross_fields over the list below, no fuzziness. This
+# is the one NF table where cross_fields wins, and it wins by a lot: the same boosts under
+# best_fields score MRR 0.659 / Recall@10 0.653, and under best_fields + fuzziness AUTO only
+# 0.602 / 0.613, against 0.751 / 0.722 for cross_fields. That fits the data — a studies query
+# like "dod cdmrp mpnst precision medicine" spreads its terms across fundingAgency,
+# manifestation and summary, which is exactly what cross_fields scores and best_fields does
+# not. Portal equivalent is queryStrategy MULTI_MATCH_CROSS_FIELDS. Score this table with
+# `--strategy multi_match_cross`.
+#
+# No `production:` block: the nf-studies portal page sets no SearchQueryConfig, so what it
+# sends today IS the platform default and `frontend_default` (the implicit control) already
+# represents it. Add a `production:` block only once a config ships for this table.
+#
+# Column names audited 2026-09-10 against the source table's column model
+# (`/entity/syn52694652/column`, 26 columns), which is authoritative: the index is
+# `SELECT * FROM syn52694652` and carries all 354 rows, so a name absent there is a silent
+# no-op in every query.
+
+# EVERY text-mappable column is listed. Unlike nf-tools (70 columns, curated subset), this
+# table is small and every column is a plausible match target, and a field absent from the
+# list is invisible to the query however it is weighted. The only exclusions are structural:
+# grantStartDate / grantEndDate / embargoEndDate (DATE) are omitted because naming a numeric
+# or date column in a `fields` list makes the whole query fail with a 500, not just that
+# field — measured 2026-09-10 against this index. The six ENTITYID columns are covered by
+# the `*` entry at the end of the list rather than named individually; see the note there.
+
+# Fill of each column (non-null rows of 354, source table, 2026-09-10):
+#   studyId / name / studyName / studyLeads / studyStatus / fundingAgency / id   354  100%
+#   dataStatus                 353  100%
+#   diseaseFocus               348   98%
+#   institutions               347   98%
+#   summary                    345   97%
+#   initiative                 344   97%
+#   studyFileviewId            332   94%
+#   acknowledgementStatements  231   65%
+#   manifestation              224   63%
+#   relatedStudies             218   62%
+#   accessRequirements         218   62%
+#   grantDOI                   211   60%
+#   dataType                   163   46%
+#   alternateDataRepository     39   11%
+#   clinicalTrialID             15    4%
+#   nextPhaseProject            11    3%
+#   previousPhaseProject        11    3%
+fields:
+  # disease / phenotype — the dominant discovery axis. See the SATURATION warning below
+  # before touching this weight.
+  - "manifestation^10"
+  # identity / names. `name` and `studyName` hold the same string on every row; both are
+  # listed because both are indexed and either can carry the match.
+  - "name^5"
+  - "studyName^5"
+  # people, programme and institution — "whose study was this" queries
+  - "studyLeads^3"
+  - "institutions^3"
+  - "initiative^3"
+  # free text — the only long-form description on the table
+  - "summary^3"
+  # what kind of data the study produced
+  - "dataType^3"
+  # remaining categoricals and grant metadata — discovery, weight 2
+  - "diseaseFocus^2"
+  - "fundingAgency^2"
+  - "grantDOI^2"
+  - "studyStatus^2"
+  - "dataStatus^2"
+  - "clinicalTrialID^2"
+  - "alternateDataRepository^2"
+  # boilerplate free text — real content, but every study's reads alike, so weight 1 keeps a
+  # shared acknowledgement phrase from outranking a name or manifestation match
+  - "accessRequirements"
+  - "acknowledgementStatements"
+  # The six ENTITYID / ENTITYID_LIST columns (studyId, id, studyFileviewId, relatedStudies,
+  # nextPhaseProject, previousPhaseProject) are reached through `*` below rather than named
+  # here. They ARE worth carrying — dropping them outright costs MRR 0.751 -> 0.724 and
+  # Recall@10 0.722 -> 0.695 — but naming a keyword-mapped field explicitly makes
+  # `phrase_prefix` fail with "Can only use phrase prefix queries on text fields", which
+  # fails the whole query and stopped `run.py studies` from completing at all. `*` gives them
+  # back at neutral weight AND is tolerated by phrase_prefix (OpenSearch switches to lenient
+  # wildcard resolution once a wildcard is present), scoring 0.751 / 0.722 / 0.649 / 0.946 —
+  # identical to naming all 23. Measured 2026-09-10.
+  #
+  # `*` also matches what the portal sends by default: `includeUnlistedFields` defaults to
+  # true, which appends exactly this entry. So a shipped config for this table is the 17
+  # boosts above with the DEFAULT includeUnlistedFields, and the benchmark reproduces it.
+  # (nf-datasets is the opposite case — there `*` erases the gain and the config must set
+  # includeUnlistedFields: false. Do not generalise either way without measuring.)
+  - "*"
+
+# TUNED 2026-09-10 over the 37-case golden. Boosts seeded from the 2026-07-30 tuner run
+# (tuner-runs/studies/, `multi_match_boosted+opt`), then re-scored on the current golden and
+# the full column set. All cross_fields unless noted:
+#   these weights          MRR 0.751  R@10 0.722  Hit@1 0.649
+#   grantDOI^4.5           MRR 0.747  R@10 0.731  Hit@1 0.649  — the tuner's value; a tie, so
+#                          the rounder 2 is kept
+#   manifestation^5        MRR 0.717  R@10 0.672  Hit@1 0.622  — see saturation note
+#   hand-curated, no ^10   MRR 0.720  R@10 0.682  Hit@1 0.622
+#   all fields flat        MRR 0.689  R@10 0.671  Hit@1 0.568
+#   these weights, best_fields
+#                          MRR 0.659  R@10 0.644  Hit@1 0.568
+#   platform default       MRR 0.541  R@10 0.566  Hit@1 0.432
+#
+# RE-SWEPT under cross_fields on 2026-09-10 and UNCHANGED. These weights came from a tuner
+# run that scored best_fields, so they were re-swept once cross_fields won, on the same
+# principle applied to nf-tools. Unlike nf-tools they held: MRR 0.751 for these weights, vs
+# 0.749 compressing the spread, 0.747 expanding it, 0.740 at manifestation^14, 0.726 at
+# manifestation^6, 0.665 raising summary to ^5, and 0.689 flat. So the best_fields-derived
+# weights happened to already be right for cross_fields here — worth knowing, but it is a
+# result of the re-sweep, not a reason to skip one next time.
+#
+# SATURATION WARNING on `manifestation^10`. The 2026-07-30 tuner left this field at its
+# optimizer ceiling, roughly 10:1 over everything else, and the re-score above reproduces it:
+# halving to ^5 costs 0.034 MRR. Ranking depends only on ratios, so this is not a truncated
+# search — the same ratio is reachable by lowering every other field — but a single field
+# dominating 10:1 on a few dozen cases is an overfitting smell. Widen the golden before
+# treating this weight as settled.
