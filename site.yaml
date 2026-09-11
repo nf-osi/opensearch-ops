@@ -1,0 +1,131 @@
+# What the published dashboard includes.
+#
+# build_site.py reads this file instead of globbing benchmark/<table>/results/*.json, so
+# dropping a scratch run into results/ can never quietly change the published site — a
+# run appears on the dashboard only if it is named here AND committed to git (CI builds
+# from a fresh checkout, so an untracked results file does not exist as far as the
+# published site is concerned; `python3 build_site.py` warns about both cases).
+
+# ---------------------------------------------------------------- the run of record
+# run.py's default label, and the run every index opens on. Published for every table
+# that has it; a table without it renders the "no scored run committed yet" state.
+#
+#   python3 benchmark/run.py <table>                 # writes results/latest.json
+#   python3 benchmark/run.py <table> --label latest  # the same thing, explicitly
+headline: latest
+
+# ---------------------------------------------------------------- extra runs
+# Additional labels to publish per table, in the order they should appear in the
+# dashboard's run switcher (after the headline). Use this for a run that earns a place
+# next to the run of record — a tuning winner, a before/after pair for a config change —
+# not for every experiment that happens to be on disk.
+#
+# None currently.
+extra_runs:
+
+# ---------------------------------------------------------------- held-constant rows
+# A run measures every strategy against ONE index state, because that state is a property
+# of the index, not of a query. That is usually what you want — but not for the platform
+# default, which is defined as "no customization at all". Measured against a customized
+# index, `frontend_default` is the default query on a customized index, which is a
+# different thing and reads worse than the real default.
+#
+# `constant:` pins one strategy's row to a fixed index state by taking it from another run
+# of the same table, so re-scoring the headline against today's configuration cannot move
+# it. The runs in results/ stay untouched — the substitution happens at build time, so
+# re-running run.py cannot silently revert it — and the published payload records where the
+# row came from so the dashboard can mark it rather than passing it off as same-run.
+#
+#   <table>:
+#     <strategy>: <label to take that strategy's row from>
+#
+# (Not to be confused with `control:` in a table's fields.yaml, which names the strategy
+# the rest of a run is READ against. This one is about which run a row is measured in.)
+constant:
+  tools:
+    # `latest` is scored against nf-tools as it is customized, so its `frontend_default` row
+    # is the default query on a customized index rather than the real platform default, and
+    # reads worse than it should. The `unbound` run is the same golden and the same boosts
+    # scored against an uncustomized index (see its search_config_id), so take the row from
+    # there and the control means what it says. No numbers quoted here on purpose: both runs
+    # move whenever either is re-scored.
+    frontend_default: unbound
+
+# ---------------------------------------------------------------- promoted to production
+# Which arm of a run measures what is actually DEPLOYED, when a tuning result has been
+# promoted. This cannot be derived from the repo — a config being version-controlled says
+# nothing about whether it is live — so it is recorded here by hand.
+#
+# Recording it lets the dashboard say "this is what users get" about the right row, and
+# mark the case where the best arm tested is the one already running — the useful negative
+# result, which otherwise reads as "no gain available" with no explanation.
+#
+# What is promoted here is the portal's query configuration: query shape, field list,
+# boosts, fuzziness. Note what `frontend_default` measures once a table has one — the
+# platform default query, which that portal no longer sends. It stays useful as a
+# reference for what an untuned portal would get, but it stops being the production row.
+#
+#   <table>:
+#     as:    <strategy key>    the run row that measures the deployed state
+#     at:    <YYYY-MM-DD>      when it went live (optional)
+#     note:  <sentence>        anything the two above cannot say (optional)
+#
+# `as:` is usually `production_current`, once `production:` in the table's fields.yaml has
+# been re-transcribed and the table re-scored. It can also name the experiment arm that
+# measures the shape just deployed — that lets a promotion be recorded the moment it goes
+# live, without waiting for a re-run. The run's own `production_current` row then measures
+# the configuration that was replaced, and the dashboard marks it as pre-promotion rather
+# than letting it keep the label.
+#
+# The build drops an entry whose `as` is not a strategy in the headline run, and says so.
+# It also compares `at:` with the run's date and warns when the two have drifted apart:
+# a run scored before the promotion cannot measure it, and once a run postdates the
+# promotion, `as:` should be back to `production_current`.
+#
+# All four entries below are in that interim state: the runs predate the promotion, so each
+# `as:` names the arm measuring the newly deployed shape. Once the deploy lands,
+# re-transcribe each `production:` from the portal config, re-score, and set every `as:`
+# back to `production_current`.
+promoted:
+  datasets:
+    as: boosted_fuzzy
+    at: 2026-09-11
+    note: >-
+      Fuzzy matching across every text column at equal weight. Weighting the title fields
+      was tested and rejected: it ranks datasets that merely mention a technique above the
+      ones that actually record it.
+
+  publications:
+    as: boosted_fuzzy
+    at: 2026-09-11
+    note: >-
+      Fuzzy matching with the title and author fields weighted above the rest. Fuzziness
+      is what carries this table: the same weights without it score no better than the
+      platform default.
+
+  studies:
+    as: multi_match_cross
+    at: 2026-09-11
+    note: >-
+      Cross-fields matching, which credits a query whose terms are spread across funder,
+      manifestation and summary instead of requiring a single field to carry all of them.
+
+  tools:
+    as: multi_match_cross
+    at: 2026-09-11
+    note: >-
+      Cross-fields matching over the benchmark's curated field boosts, replacing the
+      portal's best-fields configuration.
+
+# ---------------------------------------------------------------- deliberately excluded
+# Runs that exist in results/ and are NOT published, with the reason. Build
+# prints excluded runs as expected, and warns only about runs it finds in results/ that
+# appear in neither `extra_runs` nor here.
+excluded:
+  tools:
+    # Not a run of the portal's search: it measures nf-tools uncustomized, which is a state
+    # the portal is never in. It exists so `frontend_default` has an honest platform-default
+    # number, and it reaches the dashboard only through `constant:` above — as one row,
+    # marked, rather than as a run someone could mistake for production.
+    unbound: measures the index with its config unbound; spliced in via `constant:` instead
+

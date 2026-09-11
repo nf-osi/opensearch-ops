@@ -6,10 +6,25 @@
 // `tag` is the short chip shown in compact UI.
 export const STRATEGY_LABELS = {
   frontend_default: {
-    name: "Default site search",
+    name: "Platform default",
+    tag: "default",
+    blurb: "The Synapse front-end's built-in query on an index with nothing customized: every field, equal weight, typo tolerance, no boosts, no custom analyzers or synonyms.",
+    bestFor: "The control every recipe is measured against.",
+  },
+  production_current: {
+    name: "In production",
     tag: "live",
-    blurb: "The front-end's built-in default query: searches every field, equal weight, with typo tolerance. No boosts.",
-    bestFor: "The baseline — what users get right now.",
+    // Tense-neutral on purpose: once a promotion is recorded, this row can be the
+    // configuration production replaced rather than the one it serves, and the glossary
+    // is shared by every index and every run.
+    blurb: "The query transcribed from this portal's custom search config, including its rule that routes quoted phrases and Synapse ids to an exact-match path.",
+    bestFor: "The control for a portal that has customized its search: a gain here is a gain over what that portal already ships.",
+  },
+  simple_query_string_boosted: {
+    name: "Google-style (boosted)",
+    tag: "simple+",
+    blurb: "The forgiving operator-aware query with our field boosts. The shape production falls back to for a quoted phrase or a Synapse id.",
+    bestFor: "Exact-phrase and identifier lookups, where typo tolerance hurts.",
   },
   simple_query_string: {
     name: "Google-style",
@@ -26,14 +41,14 @@ export const STRATEGY_LABELS = {
   multi_match_boosted: {
     name: "Boosted by name",
     tag: "boosted",
-    blurb: "Best-field matching plus our boosts (name, synonyms, RRID count more than description) so the obvious canonical match rises.",
+    blurb: "Best-field matching plus our boosts — name, synonyms and RRID count for more than description.",
     bestFor: "Pushing the obvious canonical match to the top.",
   },
   multi_match_cross: {
     name: "Cross fields (boosted)",
     tag: "cross",
-    blurb: "Treats the searched fields as one combined field, so a query whose words are spread across several fields still matches well. Uses the same boosts.",
-    bestFor: "Queries where terms are scattered across fields. (Strongest overall in the benchmark.)",
+    blurb: "Treats the searched fields as one combined field, so a query whose words are spread across several still matches well. Same boosts.",
+    bestFor: "Queries whose terms are scattered across fields.",
   },
   boosted_fuzzy: {
     name: "Typo-tolerant",
@@ -49,14 +64,56 @@ export const STRATEGY_LABELS = {
   },
 };
 
+// The three reference points every figure on the results page is read against, named as
+// arms of an experiment rather than in search-engine terms. `tone` is the ROLE
+// (charts.js) whose colour the arm's mark wears in every chart; `gist` is the one clause
+// the collapsed card shows; `aka` is the wording the figures use, so a card can be found
+// from a legend. Order is control -> deployed ->
+// best, which is also the order the charts plot them.
+export const REFERENCE_POINTS = [
+  {
+    tone: "baseline",
+    gist: "no custom config",
+    role: "Control arm",
+    name: "Platform default",
+    aka: "“Platform default”; “today” in two-point figures",
+    what: "The portal default for any portal with no custom config — no query tuning, and no index-side settings such as custom analyzers or synonyms. All fields, equal weight, typo tolerance, no boosts.",
+    why: "The fixed control. Gains on this page are measured against it unless a figure says otherwise.",
+    caveat: "Present on every index. A platform fallback, not a choice NF made.",
+  },
+  {
+    tone: "production",
+    gist: "what users get now",
+    role: "Deployed arm",
+    name: "In production",
+    aka: "“In production”; “portal today” in glossaries",
+    what: "The query this portal issues today, transcribed from this index’s custom search config. Quoted phrases and Synapse ids take a separate exact-match path.",
+    why: "What users get now. A recipe above it would change production results; one below it would be a regression if promoted.",
+    caveat: "Only on indexes with a custom search config. Elsewhere it is the same query as the platform default.",
+  },
+  {
+    tone: "best",
+    gist: "highest MRR this run",
+    role: "Best arm tested",
+    name: "Best experiment",
+    aka: "“Best recipe tested”; “Best on MRR” in single-metric figures",
+    what: "The highest-MRR arm in this run. Arms vary in query shape, in field boosts, and in the index’s own search configuration.",
+    why: "The measured upper bound so far, and the promotion candidate. Not deployed.",
+    caveat: "Best on the pooled average, which can hide losses on a search type. A reference arm can itself be the best arm.",
+  },
+];
+
 // Plain-language metric definitions (from RESULTS.md). `dir` = which direction is better.
+// `help` states what the number is; `dir` states which way is good, so no sentence has to
+// end in "Higher is better" — the glossary shows it as a chip and the figure notes append
+// it (metricHelp in bench.js). `{k}` is filled with the index's own k, as in RANK_BANDS.
 export const METRIC_LABELS = {
-  mrr: { name: "MRR", dir: "up", help: "Mean Reciprocal Rank — how high up is the first correct result? #1 = 1.0, #2 = 0.5, #3 = 0.33… averaged over all searches. Higher is better." },
-  recall_at_k: { name: "Recall@k", dir: "up", help: "Of all the tools that should match, what fraction showed up in the top k? Higher is better." },
-  hit_at_1: { name: "Hit@1", dir: "up", help: "How often is the very first result correct? Higher is better." },
-  hit_at_k: { name: "Hit@k", dir: "up", help: "How often does at least one correct result appear in the top k? Higher is better." },
-  rt_ms_median: { name: "Speed (med)", dir: "down", help: "Median round-trip time in milliseconds (includes network + poll wait). Lower is better. Compare strategies on the median." },
-  rt_ms_p95: { name: "Speed (p95)", dir: "down", help: "95th-percentile round-trip time in milliseconds — the slow tail. Lower is better." },
+  mrr: { name: "MRR", dir: "up", help: "Mean Reciprocal Rank — how near the top the first correct result appears. Position 1 scores 1.0, position 2 scores 0.5, position 3 scores 0.33, averaged over every search." },
+  recall_at_k: { name: "Recall@k", dir: "up", help: "The fraction of everything that should match which appeared in the top {k}." },
+  hit_at_1: { name: "Hit@1", dir: "up", help: "The share of searches whose first result is correct." },
+  hit_at_k: { name: "Hit@k", dir: "up", help: "The share of searches with at least one correct result in the top {k}." },
+  rt_ms_median: { name: "Speed (med)", dir: "down", help: "Median wait from query to results, including network and poll time. The measure to compare recipes on." },
+  rt_ms_p95: { name: "Speed (p95)", dir: "down", help: "The same wait at the 95th percentile — the slow tail." },
 };
 
 // Case-type labels for the golden set.

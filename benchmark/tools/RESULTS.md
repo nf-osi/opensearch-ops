@@ -30,8 +30,8 @@ The canonical fields and boosts are in [fields.yaml](fields.yaml); `field^N` ass
 
 | Strategy | Description | Primary use | Limitation |
 | --- | --- | --- | --- |
-| **production_current** | Current nf-tools query: best-fields over six production-weighted columns, without fuzziness. Quoted phrases and Synapse IDs use `simple_query_string`. | **Table control;** represents the deployed experience. | Searches explicitly configured fields. |
-| **frontend_default** | Synapse platform default: fuzzy, all-fields `multi_match`, with phrase and Synapse-ID routing. | Reference for an unconfigured portal. | Not the nf-tools control; all-fields fuzzy matching can introduce noise. |
+| **production_current** | The nf-tools portal query as transcribed from its search config: best-fields over six production-weighted columns, without fuzziness. Quoted phrases and Synapse IDs use `simple_query_string`. | **Table control;** the portal's own configuration. | Searches explicitly configured fields. |
+| **frontend_default** | Portal default with nothing customized: fuzzy, all-fields `multi_match` with phrase and Synapse-ID routing, on an index with no bound search configuration — no custom analyzers or synonym sets. | Reference for an unconfigured portal. | Not the nf-tools control; all-fields fuzzy matching can introduce noise. |
 | **simple_query_string** | Equal-weight curated-field query supporting operators and quotes. | General-purpose search. | Does not prioritize names or identifiers. |
 | **simple_query_string_boosted** | `simple_query_string` with benchmark boosts. | Phrase and identifier queries. | Query operators affect interpretation. |
 | **multi_match_best** | Equal-weight best-fields matching. | Queries with one dominant field signal. | Does not reward evidence across fields. |
@@ -50,8 +50,8 @@ The dashboard is the authoritative source for scores, ranks, latency, and failur
 **<https://nf-osi.github.io/opensearch-ops/>**
 
 Build it locally with `python3 build_site.py && python3 -m http.server -d site`. Runs are JSON
-files in [results/](results/); the dashboard embeds `latest.json`, and the other runs there are
-kept for comparison. Each file records the golden set and index state it measured, so check those
+files in [results/](results/), and [site.yaml](../../site.yaml) decides which of them the
+dashboard publishes. Each file records the golden set and index state it measured, so check those
 before reading two of them side by side.
 
 ### Findings
