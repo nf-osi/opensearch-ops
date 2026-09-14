@@ -194,7 +194,10 @@ use `frontend_default`.
 > SearchConfiguration. To measure it, unbind with [`config/config.py unbind`](config/config.py),
 > score it under its own label, then re-bind. Keep that run as its own result file: it measured a
 > different index state, so it is not interchangeable with a run scored while the configuration
-> was bound. `run.py` warns when it scores `frontend_default` against an index that still has one.
+> was bound. `run.py` warns when it scores `frontend_default` against an index that still has
+> one, and [`site.yaml`](site.yaml)'s `constant:` key pins the dashboard's `frontend_default` row
+> to that unbound run, so re-scoring the headline against today's configuration cannot silently
+> move it.
 
 ```bash
 pip install pyyaml
@@ -209,56 +212,104 @@ files in the same `results/` directory and warns when they were not scored again
 golden. See [benchmark/tools/RESULTS.md](benchmark/tools/RESULTS.md) for the `nf-tools` strategy
 summary and interpretation guidance.
 
-## Interactive site
+## Interactive site (benchmark results + search lab)
 
-[web/](web/) is the Synapse Portal Search Lab: a static browser application with no build
-dependencies and no backend, querying the public repo-prod API from the page. Two tabs:
+[`web/`](web/) is a static, dependency-free browser app (no build tooling, no backend) that
+publishes the benchmark to a general audience. Two tabs:
 
-- **Search playground:** runs a query through two recipes side by side and compares the ranked
-  results, with badges for how far each hit moved between them.
-- **Benchmark scoreboard:** scores the selected recipes over the table's golden set live in the
-  browser, or shows the scoreboard embedded at build time.
+- **Benchmark results** (the landing tab) — the reporting face. Reads the runs **committed**
+  in `benchmark/<table>/results/`. Opens on a portfolio view of every
+  `nf-` SearchIndex (which have a golden set, which have a config, the platform default vs the
+  best recipe tested), then drills into one index: recipe leaderboard, where correct answers
+  land, quality against latency, lookup vs discovery split, a per-case rank heatmap with
+  filters, **the searches that fail today**, how the golden set was built, and the field
+  boosts in play. Charts are custom SVG in [`web/charts.js`](web/charts.js). 
+  Every figure carries a table view. 
+- **Search lab** — the hands-on face. Type a query and compare two ranking *recipes* side by
+  side with per-field boost editors, then score a recipe set against the golden set **live in
+  the browser**. Live scoring reports the same metrics as
+  `run.py`.
 
-A sidebar edits per-field boosts, which apply to the boosted recipes in both tabs; only free-text
-columns (`STRING`, `STRING_LIST`, `LARGETEXT`, `MEDIUMTEXT`) are eligible match targets. The site
-can adjust query-time recipes only — analyzer and synonym changes need a configuration change and
-a Sage-admin rebuild.
+**Works against any SearchIndex, any portal.** while nf-tools is the default, the index
+picker is **populated by listing every SearchIndex in the collection project**
+(`syn74909065`) via `entity/children` — any portal's index is one click away. When a
+non-curated index is chosen, the app discovers its columns live (`SELECT_COLUMNS`) and
+**auto-generates a field-boost config** from column type + name heuristics
+([`web/boostgen.js`](web/boostgen.js)).
+Curated tables (those with a `golden.yaml`) ship hand-tuned boosts and enable scoring; any
+other index runs in playground-only mode (no golden set → nothing to score against).
+The query recipes are identical for every index.
 
-The index picker lists every SearchIndex in `syn74909065` and also takes a pasted synId. A
-curated table loads its golden set and versioned boosts from `site/data/<table>.json` and can be
-scored; any other index has its columns discovered live through `SELECT_COLUMNS` and its boosts
-generated from column names and types, so it is playground-only.
+Search lab is a visual **complement** to `benchmark/run.py`, not a replacement: `run.py` is the
+engineer/CI path, the site is for generally accessible investigation. The recipes and scoring are JS ports
+of [`strategies.py`](benchmark/strategies.py) and [`run.py`](benchmark/run.py); the golden
+cases, field boosts and committed results are **generated** from the same YAML/JSON at build
+time to prevent drift. The standing drift guard for the ported *logic* is a parity
+check: live scoring's per-strategy MRR/Recall/Hit must match `python3 benchmark/run.py tools`
+within rounding.
+
+Every section is **linkable**: the URL carries `#/<tab>/<index>/<section>`, so
+`#/results/tools/failures` opens the results tab on nf-tools scrolled to the failing
+searches. Hovering a section heading reveals a control that copies that link
+([`web/route.js`](web/route.js)).
 
 > [!NOTE]
-> The browser recipes in [web/strategies.js](web/strategies.js) mirror only a subset of
-> [benchmark/strategies.py](benchmark/strategies.py) — they currently omit `production_current`,
-> `simple_query_string_boosted`, and the quoted-phrase / Synapse-ID routing. An in-browser score
-> is therefore not a substitute for a `run.py` run.
+> The site optimizes **query-time** levers only (recipe, field boosts, fuzziness) and
+> reflects the index's *current* production config. Index-time config (analyzers,
+> synonyms in [`config/`](config/)) needs a Sage-admin index rebuild and isn't adjustable
+> client-side.
 
-### Build and publication
+### Usage
 
-[build_site.py](build_site.py) creates the ignored `site/` directory, copying [web/](web/) and
-writing:
+[`build_site.py`](build_site.py) assembles the site into `site/` (gitignored) — it copies
+`web/` and emits:
 
-- `site/data/<table>.json`: the table's golden cases, its `fields.yaml` boosts, and a slim
-  scoreboard read from `benchmark/<table>/results/latest.json` when that file exists.
-- `site/data/manifest.json`: the table-to-SearchIndex inventory the index picker reads.
+- `site/data/<table>.json` — the golden set with its per-case provenance, the field/boost
+  config, and **every** committed run in `results/` including per-case detail (what the rank
+  heatmap, rank bands and failure list are built from);
+- `site/data/manifest.json` — the portfolio: the `nf-` index inventory (parsed from the table
+  in this README), which indexes have a golden set or a committed config, and each table's
+  headline run metrics.
 
-Both are generated from the same YAML the harness reads, so the golden set and boosts stay
-single-sourced. `latest.json` is the only result file embedded — other runs in `results/` are
-kept for comparison but not published, and a table without a `latest.json` simply ships with no
-precomputed scoreboard.
+### Publishing config — [`site.yaml`](site.yaml)
 
-[.github/workflows/benchmark.yml](.github/workflows/benchmark.yml) is a manually triggered
-workflow that runs the benchmark, builds the site, and deploys it to GitHub Pages. Note that it
-scores under its own label rather than `latest`, so it publishes the committed scoreboard rather
-than the run it just made.
+Publishing is declared by `build_site.py` reading `site.yaml`.
+
+| Key | Meaning |
+| --- | --- |
+| `headline` | The run of record (`latest` — `run.py`'s default label). Published for every table that has it, and the run each index opens on, so an extra run with a newer timestamp can't headline an index with a partial strategy set. |
+| `extra_runs` | Additional labels per table, in run-switcher order. Empty at present — the two other runs on disk are both excluded, for the reasons recorded there. |
+| `constant` | Pins one strategy's row to a fixed index state by taking it from another run of the same table. Used for `tools: frontend_default`, which is taken from the `unbound` run so the platform-default control is not measured on a configured index. The build refuses the splice if the two runs scored different goldens. |
+| `excluded` | Runs in `results/` deliberately not published, **with the reason**. Listing one turns a skipped file from an oversight into a decision. |
+
+A run reaches the published site only if `site.yaml` names it **and** it is committed.
+The build reports every case:
+
+```
+held constant: tools/latest: frontend_default taken from unbound
+excluded by site.yaml: tools/unbound, studies/tuned
+WARNING: unpublished run not accounted for: … — add it to extra_runs or excluded in site.yaml
+WARNING: <table>: no dataset fingerprint on latest — re-score under the same label(s) to make
+         comparability checkable
+```
+
+The fingerprint warning is expected for `datasets`, `publications`, `studies` and
+`usage-publications`: their committed runs predate the provenance fields and clear once each is
+re-scored.
+
+The resolved selection is recorded in `site/data/manifest.json` (`runs_published`,
+`headline_label`), so a published payload states the policy it was built under.
+[`benchmark.yml`](.github/workflows/benchmark.yml) runs the benchmark, while
+[`publish.yml`](.github/workflows/publish.yml) builds and publishes the dashboard from committed
+results. The benchmark workflow lets the operator select a table with a golden set and opens or
+updates a pull request for review of that table's generated `results/latest.json` before it can
+be published.
 
 ```bash
 pip install pyyaml
-python3 benchmark/run.py tools --label latest
-python3 build_site.py
-python3 -m http.server -d site
+python3 benchmark/run.py tools --label latest   # refresh the run of record, then commit it
+python3 build_site.py                           # -> site/ (prints what it published & skipped)
+python3 -m http.server -d site                  # open http://localhost:8000
 ```
 
 ## Index health monitoring

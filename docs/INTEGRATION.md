@@ -1,8 +1,10 @@
 # Frontend integration reference
 
 This describes how the Synapse web frontend (`synapse-web-monorepo`) currently integrates with and
-queries the SearchIndex (OpenSearch) API. We want to maintain awareness of what the live default query is, 
-where it's built in code, and how it compares to the strategies we evaluate here.
+queries the SearchIndex (OpenSearch) API. We want to maintain awareness of what the **platform default**
+query is — the one a portal gets when it has not customized its search — where it's built in code, and how
+it compares to the strategies we evaluate here. It is the control for our benchmarks, not what the NF
+portal serves: NF ships its own recipe.
 
 **Source:** `synapse-web-monorepo`, branch `origin/main` @ commit `a9f221ddb30`
 (2026-06-18). SearchIndex integration in **PORTALS-4300** (`e0e94fa4a96`).
@@ -84,9 +86,9 @@ but aren't referenced by any `TextAnalyzer`/`SearchConfiguration`, and nothing i
 
 ## Comparison to evaluated strategies
 
-The live default ≈ **`multi_match_best` over all fields + `fuzziness: AUTO`, with no field
+The platform default ≈ **`multi_match_best` over all fields + `fuzziness: AUTO`, with no field
 boosts** — i.e. closest to our `boosted_fuzzy` strategy but *without* the boosts. Two
-observations from [RESULTS.md](../benchmark/tools/RESULTS.md) (baseline, nf-tools):
+observations from [RESULTS.md](../benchmark/tools/RESULTS.md) (control, nf-tools):
 
 1. **`fuzziness: AUTO` was the single biggest drag** in our test set: `boosted_fuzzy` was
    the worst strategy (MRR 0.833, Recall@10 0.778) because NF tool data is identifier-heavy
@@ -96,9 +98,9 @@ observations from [RESULTS.md](../benchmark/tools/RESULTS.md) (baseline, nf-tool
    hand-tuned boosts didn't help on this small set (they slightly *demoted* a synonym
    match), so this isn't a clear win either way yet — it needs the larger golden set.
 
-**Tentative takeaway (needs a bigger golden set before acting):** the frontend's
-`fuzziness: AUTO` default looks suboptimal for this identifier-heavy index and is the first
-thing worth A/B-ing. This is a frontend-side query parameter (`SearchQueryUseQueryOptions.ts`
+**Tentative takeaway (needs a bigger golden set before acting):** the platform default's
+`fuzziness: AUTO` looks suboptimal for this identifier-heavy index and is the first
+thing worth A/B-ing for a portal still on the default. This is a frontend-side query parameter (`SearchQueryUseQueryOptions.ts`
 line 51 / 222 / 227), so changing it is a frontend change, independent of the index-side
 analyzer/synonym config.
 

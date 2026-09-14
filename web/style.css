@@ -1,14 +1,28 @@
 /* Synapse Portal Search Lab — refined scientific-editorial.
-   Warm paper, deep ink, teal as the dominant accent, terracotta as the sharp accent.
-   Display: Fraunces · Body: Public Sans · Mono (scores/ids): IBM Plex Mono. */
+   Cool near-white surfaces, deep ink, teal as the dominant accent, terracotta as the
+   sharp accent. The surfaces are neutral on purpose: this is an instrument reporting
+   measurements, and a warm paper tint read as an archive of them.
+   Display: Archivo (a grotesque — streamlined, impactful at heavy weights and tight
+   tracking) · Body: Public Sans · Mono (scores/ids): IBM Plex Mono. */
 
 :root {
-  --paper:      #faf8f3;
-  --paper-2:    #f3efe6;
-  --card:       #fffdf8;
-  --ink:        #16201e;
-  --muted:      #5f6b67;
-  --faint:      #8a938f;
+  /* This design commits to one look: a single light palette. Declaring the scheme keeps
+     form controls, scrollbars and the canvas light under a dark OS setting rather than
+     half-flipping into a theme the marks were never validated against. */
+  color-scheme: light;
+
+  --display:    "Archivo", "Public Sans", system-ui, sans-serif;
+
+  --paper:      #f7f9fa;
+  --paper-2:    #edf1f4;
+  --card:       #ffffff;
+  --wash-cool:  #e8eef2;   /* the second background bloom; was a terracotta tint */
+  --ink:        #151d21;
+  --muted:      #56626a;
+  /* AA (4.5:1) on every surface faint text actually sits on: card, paper, paper-2
+     (.delta.same), and --teal-wash — the selected index card's gradient and a hovered
+     scoreboard row both put .ic-id / .score on it. */
+  --faint:      #636c72;
   --teal:       #0e8c7f;
   --teal-deep:  #0a655b;
   --teal-wash:  #e4f0ee;
@@ -16,12 +30,39 @@
   --green:      #4c9a2a;   /* distinct from teal — upward delta only, so it doesn't blend in */
   --green-deep: #2e6b19;
   --green-wash: #e9f3e0;
-  --clay:       #c4622d;   /* sharp accent: highlights, "best", downward delta */
+  --clay:       #a55226;   /* sharp accent: downward delta, errors — AA on clay-wash too */
   --clay-wash:  #f7e7dc;
-  --rule:       #e2dccf;
-  --rule-soft:  #ece7db;
-  --shadow:     14px 18px 40px -28px rgba(16,32,30,.45);
+  --rule:       #e2e8ec;
+  --rule-soft:  #eef2f5;
+  --shadow:     14px 18px 40px -28px rgba(17,34,45,.38);
   --radius:     14px;
+
+  /* ---- data-mark roles -------------------------------------------------
+     Chrome is teal/clay (above); DATA is never teal, so a mark is never
+     mistaken for a control. Values are the validated reference palette,
+     re-checked against this page's chart surface (--card, #fffdf8) with the
+     data-viz validator: the categorical pair and the 3-step ordinal ramp
+     both pass. A recipe's colour follows its ROLE, never its rank in a
+     sorted list, so re-sorting never repaints a recipe. */
+  --series-1:   #2a78d6;   /* best recipe tested */
+  --series-2:   #eb6834;   /* the platform default — the absolute control */
+  --series-3:   #4a3aa7;   /* production_current — the contextual control */
+  /* Text-safe steps of the same two hues, for axis labels that mirror a bar's role.
+     The fills themselves fail as text on --card: --series-2 is 3.2:1, under the 4.5:1
+     AA floor. These are the nearest darker steps that clear it (5.9:1 and 8.6:1) while
+     staying recognisably the same hue as the mark they label. */
+  --series-2-ink: #a8461d;
+  --series-3-ink: #4a3aa7;
+  --muted-mark: #a3a199;   /* every other recipe — context, not emphasis */
+  /* rank bands: one hue, light->dark (ordinal). "Missed" is neutral, never a
+     status colour — a search missing is a measurement, not an alarm. */
+  --rank-top:    #104281;
+  --rank-near:   #256abf;
+  --rank-deep:   #86b6ef;
+  --rank-miss:   #c9c3b4;
+  --rank-absent: #eae6da;
+  --grid:       #e7ecef;
+  --axis:       #ccd4d9;
 }
 
 * { box-sizing: border-box; }
@@ -32,12 +73,14 @@
 [hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; }
+/* deep-linked sections shouldn't butt against the top of the viewport */
+.block, .sub { scroll-margin-top: 18px; }
 
 body {
   margin: 0;
   background:
     radial-gradient(1200px 600px at 78% -8%, var(--teal-wash) 0%, transparent 55%),
-    radial-gradient(900px 500px at -5% 110%, var(--clay-wash) 0%, transparent 50%),
+    radial-gradient(900px 500px at -5% 110%, var(--wash-cool) 0%, transparent 50%),
     var(--paper);
   color: var(--ink);
   font-family: "Public Sans", ui-sans-serif, system-ui, sans-serif;
@@ -47,13 +90,14 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* faint paper grain for atmosphere */
+/* A trace of grain, only enough to keep the large washes from banding — at .035 it read
+   as paper stock. Delete the element in index.html for a perfectly flat surface. */
 .grain {
-  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .035;
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .012;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+.wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
 
 a { color: var(--teal-deep); text-underline-offset: 2px; }
 
@@ -69,9 +113,9 @@ a { color: var(--teal-deep); text-underline-offset: 2px; }
   vertical-align: middle; margin-right: 4px;
 }
 h1 {
-  font-family: "Fraunces", serif; font-weight: 900; font-optical-sizing: auto;
-  font-size: clamp(28px, 4vw, 40px); line-height: 1; letter-spacing: -.02em;
-  margin: 0 0 6px; color: var(--ink); display: flex; align-items: baseline; gap: 10px;
+  font-family: var(--display); font-weight: 800;
+  font-size: clamp(30px, 4.4vw, 44px); line-height: 1.02; letter-spacing: -.035em;
+  margin: 0 0 8px; color: var(--ink);
 }
 .lede { margin: 0; max-width: 70ch; font-size: 15px; color: var(--muted); }
 .lede strong { color: var(--ink); font-weight: 600; }
@@ -82,16 +126,32 @@ h1, .lede { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 
-/* ---------- tabs ---------- */
-.tabs { display: flex; align-items: center; gap: 6px; margin: 22px auto 8px; }
+/* ---------- tabs: top-level page switch ----------
+   These change the whole page, so they read as tabs rather than filter chips: a
+   full-width rail, the active one lifted as a card sitting on it with a 3px teal
+   edge, and label type a step up from body copy. */
+.tabs {
+  display: flex; align-items: stretch; gap: 4px;
+  margin: 26px auto 0; border-bottom: 2px solid var(--rule);
+}
 .tab {
-  appearance: none; border: 1px solid transparent; background: none; cursor: pointer;
-  font-family: "Public Sans", sans-serif; font-size: 15px; font-weight: 600; color: var(--muted);
-  padding: 9px 16px; border-radius: 999px; transition: .18s ease;
+  appearance: none; cursor: pointer;
+  font-family: var(--display); font-weight: 700; font-size: 16.5px; letter-spacing: -.025em;
+  background: none; border: 1px solid transparent; border-bottom: 3px solid transparent;
+  border-radius: 12px 12px 0 0; margin-bottom: -2px; padding: 11px 22px 12px;
+  color: var(--muted); transition: .18s ease;
 }
 .tab:hover { color: var(--ink); background: var(--paper-2); }
-.tab.is-active { color: var(--teal-deep); background: var(--teal-wash); border-color: var(--teal-line); }
-.tab-spring { flex: 1; }
+.tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.tab.is-active {
+  color: var(--teal-deep); background: var(--card);
+  border-color: var(--rule); border-bottom-color: var(--teal);
+  box-shadow: 0 -6px 18px -14px rgba(16,32,30,.5);
+}
+@media (max-width: 560px) {
+  .tabs { gap: 0; }
+  .tab { padding: 10px 14px 11px; flex: 1; font-size: 15px; }
+}
 
 /* ---------- instrument bar (index selector) ---------- */
 .instrument {
@@ -127,14 +187,6 @@ h1, .lede { animation: rise .6s cubic-bezier(.2,.7,.2,1) both; }
 .inst-status.err { color: var(--clay); }
 .inst-status .ok { color: var(--teal-deep); }
 
-.bench-notice {
-  display: flex; align-items: flex-start; gap: 12px;
-  margin: 16px 0; padding: 14px 18px; border-radius: var(--radius);
-  background: var(--clay-wash); border: 1px solid #e8c5a8; color: #7a3d18; font-size: 14px;
-}
-.bench-notice strong { color: #5c2d10; }
-.bench-notice .notice-icon { flex: none; width: 19px; height: 19px; margin-top: 2px; color: var(--clay); }
-
 main { padding: 16px 0 48px; }
 .panel-tab { display: none; animation: fade .35s ease both; }
 .panel-tab.is-active { display: block; }
@@ -165,7 +217,7 @@ main { padding: 16px 0 48px; }
 .boost-card.is-linked { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-wash), var(--shadow); }
 .boost-rail.is-linked { background: var(--teal); color: #fff; border-color: var(--teal); }
 .boost-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.boost-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 19px; letter-spacing: -.01em; color: var(--ink); }
+.boost-title { font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: -.02em; color: var(--ink); }
 .boost-toggle {
   appearance: none; border: 1px solid var(--rule); background: var(--paper); color: var(--teal-deep);
   width: 26px; height: 26px; border-radius: 8px; cursor: pointer; font: 600 15px "Public Sans", sans-serif;
@@ -265,7 +317,7 @@ main { padding: 16px 0 48px; }
 .info-trigger {
   width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid var(--rule);
   color: var(--teal-deep); background: var(--card); cursor: help; display: grid; place-items: center;
-  font: italic 600 14px "Fraunces", serif; transition: .15s;
+  font: 700 13px var(--display); transition: .15s;
 }
 .info-trigger:hover, .info:focus-within .info-trigger { border-color: var(--teal); background: var(--teal-wash); }
 .col-tip {
@@ -290,7 +342,7 @@ main { padding: 16px 0 48px; }
 .hit:hover { border-color: var(--teal-line); box-shadow: var(--shadow); transform: translateY(-1px); }
 .hit .rank {
   position: absolute; left: 0; top: 0; bottom: 0; width: 34px; display: flex; align-items: center; justify-content: center;
-  font-family: "Fraunces", serif; font-weight: 600; font-size: 16px; color: var(--teal-deep);
+  font-family: var(--display); font-weight: 700; font-size: 15px; color: var(--teal-deep);
   background: var(--teal-wash); border-radius: 12px 0 0 12px; border-right: 1px solid var(--teal-line);
 }
 .hit .name { font-weight: 600; font-size: 15.5px; line-height: 1.3; }
@@ -336,9 +388,7 @@ main { padding: 16px 0 48px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ---------- benchmark ---------- */
-.bench-intro h2, .bench-result h2 { font-family: "Fraunces", serif; font-weight: 600; font-size: 26px; letter-spacing: -.01em; margin: 22px 0 8px; }
-.bench-intro p { max-width: 72ch; color: var(--muted); }
+/* ---------- live scoring (lab tab) ---------- */
 .bench-controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: flex-end; justify-content: space-between; margin: 18px 0; padding: 16px 18px; background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); }
 .strat-picker { border: none; margin: 0; padding: 0; min-width: 0; }
 .strat-picker legend { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); font-weight: 700; padding: 0; margin-bottom: 8px; }
@@ -376,19 +426,625 @@ main { padding: 16px 0 48px; }
 .score-note { font-size: 12.5px; color: var(--faint); margin: 2px 0 24px; }
 .score-note .note-star { display: inline-block; width: 11px; height: 11px; vertical-align: -1px; color: var(--clay); }
 
-.cases-toggle { margin: 10px 0; }
-.case-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 6px; }
-.case-table th, .case-table td { padding: 8px 10px; border-bottom: 1px solid var(--rule-soft); text-align: center; }
-.case-table th:first-child, .case-table td:first-child { text-align: left; }
-.case-table thead th { background: var(--paper-2); font-weight: 600; color: var(--muted); position: sticky; top: 0; }
-.case-table td.q { color: var(--ink); }
-.case-table td.q small { color: var(--faint); }
-.rankcell { font-family: "IBM Plex Mono", monospace; font-weight: 600; }
-.rankcell.r1 { color: #fff; background: var(--teal); border-radius: 6px; }
-.rankcell.good { color: var(--teal-deep); }
-.rankcell.mid { color: var(--clay); }
-.rankcell.miss { color: var(--faint); }
-
 /* ---------- footer ---------- */
 .foot { margin-top: 30px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--faint); font-size: 12.5px; }
 .foot code { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--muted); }
+
+/* ==========================================================================
+   BENCHMARK RESULTS DASHBOARD
+   The reporting face of the site. Chrome keeps the lab's paper-and-teal
+   identity; inside a figure, ink is the only colour text ever wears and the
+   data-mark roles above are the only colour the marks wear.
+   ========================================================================== */
+
+#results { padding: 8px 0 52px; }
+
+/* ---------- hero: the finding, stated ---------- */
+.hero { padding: 14px 0 26px; }
+.hero-eyebrow {
+  font: 700 11px "IBM Plex Mono", monospace; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--teal-deep); margin: 0 0 10px;
+}
+.hero-thesis {
+  font-family: var(--display); font-weight: 700;
+  font-size: clamp(23px, 3.2vw, 34px); line-height: 1.16; letter-spacing: -.028em;
+  color: var(--ink); margin: 0; max-width: 52ch;
+}
+/* the one hero figure on the page — sans, not the display face, and set with
+   proportional figures because it stands alone rather than in a column */
+.hero-fig {
+  font-family: "Public Sans", sans-serif; font-weight: 700;
+  font-size: clamp(42px, 6.2vw, 60px); line-height: .85; letter-spacing: -.03em;
+  color: var(--teal-deep); display: inline-block; padding: 0 2px;
+}
+.hero-sub { margin: 14px 0 0; max-width: 72ch; font-size: 14.5px; color: var(--muted); }
+/* freshness, stated where the reader starts rather than only in the footer */
+.hero-stamp {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0 0 14px;
+  font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.hero-stamp-key {
+  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  font-size: 10px;
+}
+.hero-stamp-key:not(:first-child) { margin-left: 8px; padding-left: 12px; border-left: 1px solid var(--rule); }
+
+/* The hero rail: the three pooled facts as one strip with hairline dividers, not three
+   bordered tiles. Context for the headline, so it carries no card fill and no shadow —
+   the boxes on this page are reserved for things you can open. */
+.hero-rail {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--rule);
+}
+.rail-item { padding: 0 20px; border-left: 1px solid var(--rule-soft); }
+.rail-item:first-child { padding-left: 0; border-left: 0; }
+.rail-label {
+  font: 700 10.5px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); margin: 0 0 6px; display: flex; align-items: center; gap: 6px;
+}
+/* the same role dot the reading-guide nodes use, so an item states which arm it is about */
+.rail-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--muted-mark); }
+.rail-item.is-best .rail-dot { background: var(--series-1); }
+.rail-item.is-baseline .rail-dot { background: var(--series-2); }
+.rail-value {
+  font: 600 27px "Public Sans", sans-serif; letter-spacing: -.02em; line-height: 1;
+  color: var(--ink); margin: 0;
+}
+.rail-note { font: 600 12.5px "Public Sans", sans-serif; color: var(--green-deep); margin: 5px 0 0; }
+.rail-note.is-worse { color: var(--clay); }
+.rail-note.is-quiet { color: var(--faint); font-weight: 500; }
+.hero-rail-note { font-size: 12.5px; color: var(--faint); margin: 14px 0 0; max-width: 84ch; line-height: 1.5; }
+
+/* still used by the single-recipe leaderboard, where six metrics have no comparison */
+.hero-figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); gap: 12px; margin-top: 24px; }
+.stat {
+  background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 14px 16px 15px; position: relative; overflow: hidden;
+}
+.stat::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--muted-mark); }
+.stat-best::before { background: var(--series-1); }
+.stat-baseline::before { background: var(--series-2); }
+.stat-label {
+  font: 700 10.5px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); margin: 0 0 6px;
+}
+.stat-value {
+  font: 600 30px "Public Sans", sans-serif; letter-spacing: -.02em; line-height: 1;
+  color: var(--ink); margin: 0;
+}
+.stat-delta { font: 600 12.5px "Public Sans", sans-serif; color: var(--green-deep); margin: 6px 0 0; }
+/* the delta line reads as good news by default; a regression takes the downward
+   accent, and a plain restatement of the figure (a share, a denominator) stays quiet */
+.stat-delta.is-worse { color: var(--clay); }
+.stat-delta.is-quiet { color: var(--faint); font-weight: 500; }
+.stat-sub { font-size: 12.5px; color: var(--faint); margin: 6px 0 0; line-height: 1.45; }
+
+/* ---------- section anchors ----------
+   Every section is addressable as #/<tab>/<index>/<section>. The control appears on
+   hover/focus of its heading so the copy is quiet, but it is always in the tab order. */
+.anchor-link {
+  appearance: none; background: none; border: none; cursor: pointer; padding: 2px;
+  margin-left: 8px; color: var(--faint); vertical-align: middle;
+  opacity: 0; transition: opacity .15s ease, color .15s ease;
+  display: inline-flex; align-items: center;
+}
+.anchor-link svg { width: 15px; height: 15px; }
+h2:hover > .anchor-link, h3:hover > .anchor-link,
+.anchor-link:focus-visible { opacity: 1; }
+.anchor-link:hover { color: var(--teal-deep); }
+.anchor-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; border-radius: 5px; }
+.anchor-link.is-copied { opacity: 1; color: var(--green-deep); }
+.anchor-link.is-copied::after {
+  content: "Link copied"; margin-left: 6px;
+  font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .04em; white-space: nowrap;
+}
+@media (hover: none) { .anchor-link { opacity: 1; } }
+
+/* ---------- section blocks ---------- */
+.block { padding: 30px 0 6px; border-top: 1px solid var(--rule); margin-top: 26px; }
+.block-head { max-width: 78ch; }
+.block-eyebrow {
+  font: 700 10.5px "IBM Plex Mono", monospace; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--faint); margin: 0 0 6px;
+}
+.block-head h2 {
+  font-family: var(--display); font-weight: 700; font-size: clamp(21px, 2.4vw, 27px);
+  letter-spacing: -.025em; line-height: 1.16; margin: 0; color: var(--ink);
+}
+.block-lede { font-size: 14.5px; color: var(--muted); margin: 8px 0 0; }
+/* the instruction at the end of a lede — an action, so it is set apart from the prose */
+.block-cta { color: var(--ink); font-weight: 700; }
+/* the eyebrow of the detail block: names its tie to the picker above, so it carries the
+   same teal as the selected card rather than the recessive grey of a plain section label */
+.block-eyebrow.is-current { color: var(--teal-deep); }
+.block-body { margin-top: 16px; }
+.sub { margin: 26px 0 0; }
+.sub-head {
+  font-family: var(--display); font-weight: 700; font-size: 18.5px; letter-spacing: -.022em;
+  margin: 0 0 6px; color: var(--ink);
+}
+.sub-lede { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; max-width: 76ch; }
+.fine { font-size: 12.5px; color: var(--faint); margin: 12px 0 0; max-width: 80ch; }
+.empty-line {
+  font-size: 13.5px; color: var(--faint); margin: 12px 0 0; padding: 16px 18px;
+  border: 1px dashed var(--rule); border-radius: 12px;
+}
+
+/* ---------- reference points (the reading guide above the portfolio) ----------
+   One card per arm of the experiment. The card wears the arm's data colour as a top rail
+   and a dot, which is the only place chrome borrows a data colour — the point of the
+   section is exactly to teach that mapping. Cards are equal-weight (no emphasis on the
+   winner) because they are definitions, not findings. */
+/* The lifecycle track: three stage cards in fixed columns with a connector between each
+   pair. Fixed columns rather than auto-fit, because a 3-stage sequence that reflows to
+   2-up would put the connectors in the wrong places — below the breakpoint it stacks to
+   one column and the arrows turn to point down/up instead. */
+.flow-track {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: start; gap: 0;
+}
+/* Connector: the arrow is decorative, the label carries the meaning. A settled transition
+   is grey and solid; the prospective one is teal (the site's action colour) and dashed. */
+/* Top-aligned rather than centred: a node can expand, and the arrow has to stay beside
+   the names it connects instead of drifting to the middle of a tall row. */
+.flow-arrow {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  gap: 5px; padding: 40px 12px 0; color: var(--faint);
+}
+.flow-arrow svg {
+  width: 40px; height: 16px; flex: none;
+  fill: none; stroke: currentColor; stroke-width: 1.6;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.flow-arrow-label {
+  font: 700 9.5px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase;
+  text-align: center; max-width: 84px; line-height: 1.35;
+}
+.flow-arrow.is-back { color: var(--teal-deep); }
+.flow-arrow.is-back svg { transform: rotate(180deg); }
+.flow-arrow.is-back .flow-shaft { stroke-dasharray: 4 3; }
+
+.flow-note { font-size: 13px; color: var(--muted); margin: 14px 0 0; max-width: 82ch; }
+.flow-node {
+  position: relative; overflow: hidden;
+  background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 15px 16px 14px;
+}
+.flow-node::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--muted-mark);
+}
+/* Collapsed, the summary is the whole node: dot, role, name, one clause. */
+.flow-node > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: flex-start; gap: 10px;
+}
+.flow-node > summary::-webkit-details-marker { display: none; }
+.flow-node > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
+.flow-node-text { flex: 1; min-width: 0; }
+.flow-node .disclosure-icon {
+  flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--faint);
+  fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  transition: transform .15s ease;
+}
+.flow-node[open] .disclosure-icon { transform: rotate(90deg); }
+.flow-node > summary:hover .disclosure-icon { color: var(--teal-deep); }
+.flow-node-gist { font-size: 13px; color: var(--muted); margin: 0; }
+.flow-node-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule-soft); }
+.flow-node.is-baseline::before,   .flow-node.is-baseline   .ref-dot { background: var(--series-2); }
+.flow-node.is-production::before, .flow-node.is-production .ref-dot { background: var(--series-3); }
+.flow-node.is-best::before,       .flow-node.is-best       .ref-dot { background: var(--series-1); }
+
+.ref-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+.ref-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--card); }
+.ref-role {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); margin: 0;
+}
+.ref-name {
+  font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -.022em;
+  line-height: 1.15; margin: 0 0 3px; color: var(--ink);
+}
+.ref-aka { font-size: 12px; color: var(--faint); margin: 0 0 9px; }
+.ref-aka-label {
+  font: 700 9.5px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--faint); margin-right: 6px;
+}
+.ref-what { font-size: 13.5px; color: var(--muted); margin: 0; }
+.ref-why { font-size: 13.5px; color: var(--ink); margin: 10px 0 0; }
+.ref-why-label {
+  display: block;
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--teal-deep); margin-bottom: 2px;
+}
+.ref-caveat {
+  font-size: 12.5px; color: var(--faint); line-height: 1.45;
+  margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--rule-soft);
+}
+
+/* ---------- index cards (also the picker for the detail below) ---------- */
+.index-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 12px; }
+.index-card {
+  appearance: none; text-align: left; font-family: inherit; cursor: pointer;
+  background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 13px 14px 14px; position: relative; overflow: hidden;
+  transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease, background .15s ease;
+}
+.index-card:hover { border-color: var(--teal-line); box-shadow: var(--shadow); transform: translateY(-1px); }
+/* Selection has to survive a grid of 13 near-identical cards, so it is carried three ways
+   at once — ring, wash, and a teal top rail — rather than by a 1px border colour that
+   reads as a hover state (which is what it was). Geometry is unchanged
+   (an inset ring, not a thicker border) so selecting a card never nudges the grid; the
+   tie to the section it drives is made by that section's teal "Selected index" eyebrow,
+   not by a pointer, since the cards wrap onto three rows. */
+.index-card.is-on {
+  border-color: var(--teal);
+  background: linear-gradient(180deg, var(--teal-wash) 0%, var(--card) 62%);
+  box-shadow: 0 0 0 1px var(--teal) inset, 0 0 0 4px var(--teal-wash), var(--shadow);
+}
+.index-card.is-on::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: var(--teal); border-radius: var(--radius) var(--radius) 0 0;
+}
+.index-card.is-on .ic-name { color: var(--teal-deep); }
+.index-card.is-on .ic-id { color: var(--teal-deep); }
+/* Indexes with no golden set: nothing to open, so a chip rather than a card. */
+.index-chips {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 14px 0 0; font-size: 12.5px;
+}
+.chips-label {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); margin-right: 3px;
+}
+.chip {
+  font: 500 12px "IBM Plex Mono", monospace; color: var(--muted);
+  background: var(--paper-2); border: 1px solid var(--rule-soft);
+  border-radius: 999px; padding: 3px 10px; cursor: default;
+}
+.chip.has-config { border-color: var(--teal-line); color: var(--teal-deep); }
+.ic-name { font-weight: 600; font-size: 14.5px; margin: 0; color: var(--ink); }
+.ic-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin: 4px 0 10px; }
+.ic-id { font: 400 11px "IBM Plex Mono", monospace; color: var(--faint); }
+.ic-flag {
+  font: 600 9.5px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--teal-deep); background: var(--teal-wash); border: 1px solid var(--teal-line);
+  border-radius: 999px; padding: 1px 6px;
+}
+/* second chip on a card: distinct from "config" (a file exists) because this one is a
+   recorded fact about production */
+.ic-flag.is-promoted {
+  color: var(--green-deep); background: var(--green-wash); border-color: #c4ddb0;
+}
+.ic-stat { font: 600 13.5px "Public Sans", sans-serif; color: var(--ink); margin: 0 0 8px; }
+.ic-stat.is-quiet { color: var(--faint); font-weight: 500; }
+.ic-sub { font-size: 11.5px; color: var(--faint); margin: 8px 0 0; }
+
+/* The recurring motif: where this index's answers land, as one strip. */
+.rank-strip { display: flex; gap: 2px; height: 7px; }
+.rank-strip-seg { border-radius: 2px; min-width: 3px; }
+
+/* ---------- identity row ---------- */
+.ident {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 26px;
+  padding: 13px 16px; background: var(--card); border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.ident-fact { display: flex; flex-direction: column; gap: 2px; }
+.ident-label {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint);
+}
+.ident-value, .ident-link { font: 500 13px "IBM Plex Mono", monospace; color: var(--ink); }
+.ident-link { color: var(--teal-deep); }
+
+/* ---------- figures ---------- */
+.fig {
+  background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+  padding: 15px 18px 16px; margin: 14px 0 0;
+}
+.fig-cap { margin: 0 0 12px; }
+.fig-cap h3 { font: 600 14.5px "Public Sans", sans-serif; margin: 0; color: var(--ink); }
+.fig-note { font-size: 12.5px; color: var(--muted); margin: 5px 0 0; max-width: 78ch; }
+/* A note about a row measured elsewhere — set apart so it reads as a caveat on the figure
+   rather than more description of it. */
+.fig-note.is-constant {
+  margin-top: 10px; padding-left: 10px; border-left: 2px solid var(--rule);
+  color: var(--faint);
+}
+.fig-plot { width: 100%; overflow-x: auto; }
+
+svg.viz { display: block; overflow: visible; }
+.viz-grid { stroke: var(--grid); stroke-width: 1; }
+.viz-axis { stroke: var(--axis); stroke-width: 1; }
+.viz-connect { stroke: var(--axis); stroke-width: 2; stroke-linecap: round; }
+/* the range plot's whisker: the row's own role colour (set inline), held back so the two
+   dots stay the marks the eye lands on */
+.viz-range { stroke-width: 3; stroke-linecap: round; opacity: .38; }
+.viz-dot { stroke: var(--card); stroke-width: 2; }
+.viz-cat { font: 500 12.5px "Public Sans", sans-serif; fill: var(--ink); }
+.viz-val { font: 600 12px "IBM Plex Mono", monospace; fill: var(--ink); font-variant-numeric: tabular-nums; }
+.viz-tick { font: 400 10.5px "IBM Plex Mono", monospace; fill: var(--faint); }
+.viz-inseg { font: 600 10.5px "IBM Plex Mono", monospace; }
+.viz-colhead { font: 500 11px "Public Sans", sans-serif; fill: var(--muted); }
+/* An axis label for a reference recipe carries that recipe's colour, so the label and
+   its bar agree without the reader tracing across the plot. Only the two controls are
+   tinted — tinting every row would make colour meaningless. */
+.viz-cat.is-baseline, .viz-colhead.is-baseline { fill: var(--series-2-ink); font-weight: 600; }
+.viz-cat.is-production, .viz-colhead.is-production { fill: var(--series-3-ink); font-weight: 600; }
+.viz-point-label { font: 500 11.5px "Public Sans", sans-serif; fill: var(--ink); }
+.viz-axis-label {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase;
+  fill: var(--faint);
+}
+.viz-mark { cursor: default; transition: opacity .12s ease; }
+.viz-mark:hover { opacity: .82; }
+.viz-mark:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.viz-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 0; }
+.viz-legend-item { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+.viz-swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+.viz-legend-note { font-size: 12px; color: var(--faint); }
+
+/* ---------- tooltips ---------- */
+.viz-tip {
+  position: fixed; z-index: 40; pointer-events: none; opacity: 0; visibility: hidden;
+  background: var(--ink); color: #f7f4ec; border-radius: 10px; padding: 9px 12px;
+  box-shadow: 0 12px 28px -18px rgba(16,32,30,.8); max-width: 280px;
+  transition: opacity .12s ease;
+}
+.viz-tip.is-on { opacity: 1; visibility: visible; }
+.viz-tip-title { font: 600 12.5px "Public Sans", sans-serif; margin: 0 0 5px; color: #fff; }
+.viz-tip-row { display: flex; align-items: center; gap: 7px; margin: 2px 0 0; font-size: 12px; color: #cfd8d5; }
+.viz-tip-row b { font: 600 13px "IBM Plex Mono", monospace; color: #fff; font-variant-numeric: tabular-nums; }
+.viz-tip-key { width: 12px; height: 3px; border-radius: 2px; flex: none; }
+
+/* ---------- table twins ---------- */
+.viz-twin { margin: 12px 0 0; border-top: 1px solid var(--rule-soft); padding-top: 10px; }
+.viz-twin > summary {
+  cursor: pointer; list-style: none; font: 600 12.5px "Public Sans", sans-serif;
+  color: var(--teal-deep); display: inline-flex; align-items: center; gap: 6px;
+}
+.viz-twin > summary::-webkit-details-marker { display: none; }
+.viz-twin > summary::before { content: "▸"; color: var(--faint); }
+.viz-twin[open] > summary::before { content: "▾"; }
+.viz-twin-scroll { max-height: 420px; overflow: auto; margin-top: 10px; }
+.viz-twin table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.viz-twin th, .viz-twin td { padding: 7px 10px; border-bottom: 1px solid var(--rule-soft); text-align: left; }
+.viz-twin th {
+  position: sticky; top: 0; background: var(--paper-2); color: var(--muted);
+  font-weight: 600; white-space: nowrap;
+}
+.viz-twin td.num, .viz-twin th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- definition twins ---------- */
+/* Same disclosure affordance as the table twin, for the short-hand recipe names the
+   figures are labelled with. Two columns on wide viewports, stacked on narrow. */
+.defs-list { margin: 0; }
+.defs-list dt {
+  font: 600 12.5px "Public Sans", sans-serif; color: var(--ink);
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+  padding-top: 10px; border-top: 1px solid var(--rule-soft);
+}
+.defs-list > dt:first-child { padding-top: 0; border-top: 0; }
+.defs-list dd {
+  margin: 3px 0 10px; font-size: 12.5px; line-height: 1.5; color: var(--muted);
+  max-width: 74ch;
+}
+/* The term wears its mark's role colour, the same two the plot tints a category label
+   with (and the same text-safe steps — the raw fills fail contrast as text). Only the
+   controls are tinted: colouring every entry would make the colour mean nothing. */
+.defs-term.is-baseline { color: var(--series-2-ink); }
+.defs-term.is-production { color: var(--series-3-ink); }
+.defs-tag {
+  font: 600 10.5px "IBM Plex Mono", monospace; letter-spacing: .02em;
+  color: var(--teal-deep); background: var(--paper-2);
+  border: 1px solid var(--rule-soft); border-radius: 3px; padding: 1px 5px;
+}
+/* Colour-coded to match the legend, but the role is carried by a swatch-style border
+   rather than a filled background: --paper on --series-2 is only ~3:1, short of the 4.5:1
+   this 10px text needs. Dark ink on the pale surface is ~14.5:1. */
+.defs-role {
+  font: 600 10px "Public Sans", sans-serif; text-transform: uppercase;
+  letter-spacing: .06em; border-radius: 3px; padding: 1px 6px;
+  color: var(--ink); background: var(--paper-2);
+  border-left: 3px solid var(--muted-mark);
+}
+.defs-role-best { border-left-color: var(--series-1); }
+.defs-note { display: block; margin-top: 2px; color: var(--faint); }
+
+/* ---------- contribute ----------
+   The golden set is the one part of this dashboard an outsider can improve, so the ask
+   sits at the end of the section that explains it. Primary is the issue (no git needed);
+   the YAML edit is offered quietly beside it. */
+.contrib { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 18px 0 0; }
+.contrib-btn {
+  display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+  font: 600 14px "Public Sans", sans-serif; border-radius: var(--radius);
+  padding: 10px 18px; transition: .18s ease;
+  background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+}
+.contrib-btn:hover { background: #000; transform: translateY(-1px); }
+.contrib-btn:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+.contrib-btn.is-quiet {
+  background: var(--card); color: var(--ink); border-color: var(--rule);
+}
+.contrib-btn.is-quiet:hover { background: var(--paper-2); border-color: var(--faint); }
+.gh-mark { width: 16px; height: 16px; flex: none; }
+
+/* ---------- glossary drawer ----------
+   A reference panel, not a dialog: on a wide viewport it overlays the right margin and
+   leaves the page fully usable, so a name can be looked up without losing the figure it
+   was read from. The tab is a child of the panel and sits 34px to its left, so at rest
+   the panel is off-screen and only the tab shows — one control that slides out. */
+.drawer {
+  position: fixed; top: 0; right: 0; z-index: 40;
+  width: min(390px, 92vw); height: 100vh;
+  transform: translateX(100%); transition: transform .24s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: none;                       /* only the tab and the panel take clicks */
+}
+.drawer.is-open { transform: none; }
+.drawer-tab {
+  position: absolute; top: 32vh; left: -34px; pointer-events: auto;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 34px; min-height: 168px; padding: 14px 0; cursor: pointer; appearance: none;
+  border: 1px solid var(--teal-line); border-right: 0; background: var(--teal-wash);
+  color: var(--teal-deep); border-radius: var(--radius) 0 0 var(--radius);
+  font: 700 13px "Public Sans", sans-serif; letter-spacing: .04em;
+  writing-mode: vertical-rl; transition: .15s; box-shadow: var(--shadow);
+}
+.drawer-tab::before { content: "«"; writing-mode: horizontal-tb; font-size: 15px; }
+.drawer.is-open .drawer-tab::before { content: "»"; }
+.drawer-tab:hover { background: var(--teal); color: #fff; border-color: var(--teal); }
+.drawer-tab:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+.drawer-panel {
+  pointer-events: auto; height: 100%; display: flex; flex-direction: column;
+  background: var(--card); border-left: 1px solid var(--rule);
+  box-shadow: -20px 0 50px -34px rgba(16, 32, 30, .55);
+}
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--rule-soft);
+}
+.drawer-title {
+  font-family: var(--display); font-weight: 700; font-size: 17px; letter-spacing: -.02em;
+  color: var(--ink); margin: 0;
+}
+.drawer-close {
+  appearance: none; border: 1px solid var(--rule); background: var(--paper);
+  color: var(--teal-deep); width: 28px; height: 28px; border-radius: 8px; cursor: pointer;
+  font: 400 18px "Public Sans", sans-serif; line-height: 1; display: grid; place-items: center;
+  transition: .15s; flex: none;
+}
+.drawer-close:hover { border-color: var(--teal); background: var(--teal-wash); }
+.drawer-sub { font-size: 12.5px; color: var(--faint); margin: 0; padding: 10px 18px 0; line-height: 1.45; }
+.drawer-body { flex: 1; overflow: auto; padding: 4px 18px 22px; }
+/* group headings inside the drawer: the same mono eyebrow the page uses for section
+   labels, so a scroll through the panel reads as sections rather than one long list */
+.drawer-group-title {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint); margin: 18px 0 2px; padding-top: 12px; border-top: 1px solid var(--rule);
+}
+.drawer-body > .drawer-group-title:first-child { margin-top: 10px; padding-top: 0; border-top: 0; }
+
+/* On a narrow viewport the panel covers the content, so it behaves like a sheet: a scrim
+   appears and takes the dismiss click. Wide viewports never see it. */
+.drawer-scrim {
+  position: fixed; inset: 0; z-index: 39; background: rgba(22, 32, 30, .3);
+  opacity: 0; transition: opacity .2s ease;
+}
+.drawer-scrim.is-on { opacity: 1; }
+@media (min-width: 901px) { .drawer-scrim { display: none !important; } }
+
+/* ---------- filters & segmented controls ---------- */
+.filters {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px;
+  padding: 12px 16px; background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
+}
+.seg { display: inline-flex; align-items: center; gap: 9px; }
+.seg-label {
+  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--faint);
+}
+.seg-group { display: inline-flex; gap: 3px; padding: 3px; background: var(--paper-2); border-radius: 999px; }
+.seg-btn {
+  appearance: none; border: none; background: none; cursor: pointer; border-radius: 999px;
+  font: 600 12.5px "Public Sans", sans-serif; color: var(--muted); padding: 5px 12px; transition: .15s ease;
+}
+.seg-btn:hover { color: var(--ink); }
+.seg-btn.is-on { background: var(--card); color: var(--teal-deep); box-shadow: 0 1px 3px rgba(16,32,30,.12); }
+.filter-select { display: inline-flex; align-items: center; gap: 9px; }
+.filter-select select {
+  font: 500 13px "Public Sans", sans-serif; color: var(--ink); padding: 6px 10px;
+  border: 1px solid var(--rule); border-radius: 9px; background: var(--paper);
+}
+.filter-check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.filter-check input { accent-color: var(--teal); }
+
+/* ---------- notices ---------- */
+.notice {
+  margin: 16px 0 0; padding: 14px 18px; border-radius: var(--radius);
+  background: var(--clay-wash); border: 1px solid #e8c5a8; color: #7a3d18;
+}
+.notice-title { font: 600 14px "Public Sans", sans-serif; margin: 0 0 4px; color: #5c2d10; }
+.notice-body { font-size: 13.5px; margin: 0; }
+.notice code { font-family: "IBM Plex Mono", monospace; font-size: 12px; background: #fff4ea; padding: 1px 5px; border-radius: 5px; }
+/* "What is deployed is already the best arm" is a finding, not a problem — the default
+   notice is clay because it flags something missing. This one gets the affirmative side
+   of the palette, and a mark so it reads as a state rather than a caveat. */
+.notice.is-promoted { background: var(--green-wash); border-color: #c4ddb0; color: #33501f; }
+.notice.is-promoted .notice-title { color: var(--green-deep); display: flex; align-items: center; gap: 8px; }
+.notice-mark {
+  flex: none; width: 17px; height: 17px; fill: none; stroke: currentColor;
+  stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+}
+
+
+/* ---------- failure cards ---------- */
+/* Legacy-gap groups: a closed gap and an open one are different news, so each grid gets
+   a heading that says which. The heading carries the colour; cards stay on the neutral
+   card surface with a single accent edge, so a grid of eight wins doesn't shout. */
+.gap-group-head {
+  font: 600 12.5px "Public Sans", sans-serif; margin: 18px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.gap-group-head::before { content: ""; width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.gap-group-head.is-win { color: var(--green-deep); }
+.gap-group-head.is-win::before { background: var(--rank-top); }
+.gap-group-head.is-open { color: var(--muted); }
+.gap-group-head.is-open::before { background: var(--rank-miss); }
+.fail-card.is-win { border-left: 3px solid var(--rank-top); }
+
+.fail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(282px, 1fr)); gap: 12px; }
+.fail-card {
+  background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--rank-miss);
+  border-radius: var(--radius); padding: 13px 15px 14px;
+}
+.fail-q { font: 600 14.5px "Public Sans", sans-serif; margin: 0; color: var(--ink); }
+.fail-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.tag {
+  font: 600 10.5px "IBM Plex Mono", monospace; letter-spacing: .06em; padding: 2px 7px;
+  border-radius: 999px; background: var(--teal-wash); color: var(--teal-deep); border: 1px solid var(--teal-line);
+}
+.tag.is-quiet { background: var(--paper-2); color: var(--muted); border-color: var(--rule); }
+.fail-verdict { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); margin: 10px 0 0; }
+.verdict-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.fail-notes {
+  font-size: 12.5px; color: var(--muted); margin: 9px 0 0; line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.fail-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 10px 0 0; font: 400 11px "IBM Plex Mono", monospace; color: var(--faint); }
+.fail-foot a { color: var(--teal-deep); }
+.fail-review { margin-left: auto; }
+
+/* ---------- code card ---------- */
+.code-card { margin: 14px 0 0; background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius); padding: 13px 16px; }
+.code-head { font: 700 10.5px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); margin: 0 0 8px; }
+.code-card pre { margin: 0; overflow-x: auto; }
+.code-card code { font: 400 12px "IBM Plex Mono", monospace; color: var(--ink); }
+
+/* ---------- live scoring panel (lab tab) ---------- */
+.score-live { margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--rule); }
+.score-live h2 {
+  font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -.025em;
+  margin: 0 0 6px; color: var(--ink);
+}
+.score-live .link-btn { font-size: 13.5px; }
+
+/* Stacked: one stage per row, so the connectors point down (settled) and up (promotion,
+   from the best card below to the production card above) instead of right and left.
+   Height, not layout, makes room for the rotated arrow — transforms don't reflow. */
+@media (max-width: 900px) {
+  .flow-track { grid-template-columns: 1fr; row-gap: 0; }
+  .flow-arrow { height: 46px; padding: 0; flex-direction: row; gap: 10px; justify-content: center; }
+  .flow-arrow svg { transform: rotate(90deg); }
+  .flow-arrow.is-back svg { transform: rotate(-90deg); }
+  .flow-arrow-label { max-width: none; }
+}
+
+@media (max-width: 620px) {
+  .hero-figs { grid-template-columns: 1fr; }
+  .hero-rail { grid-template-columns: 1fr; }
+  .rail-item { padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--rule-soft); }
+  .rail-item:first-child { padding-top: 0; border-top: 0; }
+  .ident { gap: 10px 18px; }
+}
