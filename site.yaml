@@ -69,13 +69,15 @@ constant:
 #     as:    <strategy key>    the run row that measures the deployed state
 #     at:    <YYYY-MM-DD>      when it went live (optional)
 #     note:  <sentence>        anything the two above cannot say (optional)
+#     show_pre_promotion: true  show the replaced configuration (optional; defaults false)
 #
 # `as:` is usually `production_current`, once `production:` in the table's fields.yaml has
 # been re-transcribed and the table re-scored. It can also name the experiment arm that
 # measures the shape just deployed — that lets a promotion be recorded the moment it goes
 # live, without waiting for a re-run. The run's own `production_current` row then measures
-# the configuration that was replaced, and the dashboard marks it as pre-promotion rather
-# than letting it keep the label.
+# the configuration that was replaced. The dashboard hides that row unless this table's
+# entry explicitly sets `show_pre_promotion: true`, in which case it is labelled
+# "Pre-promotion".
 #
 # The build drops an entry whose `as` is not a strategy in the headline run, and says so.
 # It also compares `at:` with the run's date and warns when the two have drifted apart:
@@ -89,33 +91,37 @@ constant:
 promoted:
   datasets:
     as: boosted_fuzzy
-    at: 2026-09-11
+    at: 2026-09-24
     note: >-
       Fuzzy matching across every text column at equal weight. Weighting the title fields
       was tested and rejected: it ranks datasets that merely mention a technique above the
       ones that actually record it.
+    show_pre_promotion: false
 
   publications:
     as: boosted_fuzzy
-    at: 2026-09-11
+    at: 2026-09-24
     note: >-
       Fuzzy matching with the title and author fields weighted above the rest. Fuzziness
       is what carries this table: the same weights without it score no better than the
       platform default.
+    show_pre_promotion: false
 
   studies:
     as: multi_match_cross
-    at: 2026-09-11
+    at: 2026-09-24
     note: >-
       Cross-fields matching, which credits a query whose terms are spread across funder,
       manifestation and summary instead of requiring a single field to carry all of them.
+    show_pre_promotion: false
 
   tools:
     as: multi_match_cross
-    at: 2026-09-11
+    at: 2026-09-24
     note: >-
       Cross-fields matching over the benchmark's curated field boosts, replacing the
       portal's best-fields configuration.
+    show_pre_promotion: false
 
 # ---------------------------------------------------------------- deliberately excluded
 # Runs that exist in results/ and are NOT published, with the reason. Build
@@ -128,4 +134,3 @@ excluded:
     # number, and it reaches the dashboard only through `constant:` above — as one row,
     # marked, rather than as a run someone could mistake for production.
     unbound: measures the index with its config unbound; spliced in via `constant:` instead
-

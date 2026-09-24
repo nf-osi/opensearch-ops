@@ -172,16 +172,22 @@ const rowLabel = (key, run) => (key === run.promo?.key
  *  that fall back to the manifest's default. */
 function readRun(data, run) {
   const strategies = run.strategies || {};
-  const keys = Object.keys(strategies);
+  const allKeys = Object.keys(strategies);
+  const promotion = promotionState(data, allKeys, null);
+  // Superseded production is opt-in per table in site.yaml. Filter centrally so charts,
+  // table twins, the glossary and per-type comparisons all use the same visible rows.
+  const hidden = data.promoted?.show_pre_promotion === true ? null : promotion?.stale;
+  const keys = allKeys.filter((key) => key !== hidden);
   const ranked = [...keys].sort((a, b) => (strategies[b].mrr || 0) - (strategies[a].mrr || 0));
   const control = run.control || MANIFEST.default_baseline_key;
   const best = ranked[0] || null;
   return {
     label: run.label, run_at: run.run_at, k: run.k || data.k,
-    strategies, keys, per_case: run.per_case || {},
+    strategies, keys,
+    per_case: Object.fromEntries(Object.entries(run.per_case || {}).filter(([key]) => key !== hidden)),
     // rows pinned to another run (site.yaml `constant:`) — {strategy: {from, run_at}}
     constants: run.constants || {},
-    baseline_key: keys.includes(control) ? control : null,
+    baseline_key: keys.includes(control) ? control : control === hidden ? promotion.key : null,
     best_key: best,
     // what is deployed (site.yaml `promoted:`), resolved here so roleOf() and every view
     // read the same answer
