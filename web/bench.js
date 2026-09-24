@@ -879,17 +879,16 @@ function leaderboardSection(host, data, run) {
   }
   if (promo?.stale) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
-      `${figureName(promo.stale, run)} is the configuration in place before ${promo.at || "the promotion"} — what the portal sent until then, not what it sends now.`));
+      `${figureName(promo.stale, run)} is the configuration in place before ${promo.at || "the promotion"}.`));
   }
   // The row is labelled and coloured as the platform default, and on an index whose own
   // configuration is live it is not a platform-default measurement.
   if (promo && promo.key === PLATFORM_DEFAULT_KEY) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
-      `${strategyLabel(promo.key).name} is the default query, but this index runs a custom configuration, so the row includes it — not a platform-default measurement.`));
+      `${strategyLabel(promo.key).name} is the default query, but this index runs a custom configuration.`));
   }
   if (promo?.note) plot.parentElement.appendChild(el("p", "fig-note is-constant", promo.note));
   // A held-constant row was measured in a different run, under a different index state.
-  // Saying so is the whole point of pinning it rather than leaving the wrong number in.
   for (const [key, g] of Object.entries(run.constants)) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
       `${strategyLabel(key).name} is measured on an index with no custom search configuration bound.`));
