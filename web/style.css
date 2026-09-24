@@ -570,74 +570,34 @@ h2:hover > .anchor-link, h3:hover > .anchor-link,
   border: 1px dashed var(--rule); border-radius: 12px;
 }
 
-/* ---------- reference points (the reading guide above the portfolio) ----------
-   One card per arm of the experiment. The card wears the arm's data colour as a top rail
-   and a dot, which is the only place chrome borrows a data colour — the point of the
-   section is exactly to teach that mapping. Cards are equal-weight (no emphasis on the
-   winner) because they are definitions, not findings. */
-/* The lifecycle track: three stage cards in fixed columns with a connector between each
-   pair. Fixed columns rather than auto-fit, because a 3-stage sequence that reflows to
-   2-up would put the connectors in the wrong places — below the breakpoint it stacks to
-   one column and the arrows turn to point down/up instead. */
-.flow-track {
-  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
-  align-items: start; gap: 0;
-}
-/* Connector: the arrow is decorative, the label carries the meaning. A settled transition
-   is grey and solid; the prospective one is teal (the site's action colour) and dashed. */
-/* Top-aligned rather than centred: a node can expand, and the arrow has to stay beside
-   the names it connects instead of drifting to the middle of a tall row. */
-.flow-arrow {
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-  gap: 5px; padding: 40px 12px 0; color: var(--faint);
-}
-.flow-arrow svg {
-  width: 40px; height: 16px; flex: none;
-  fill: none; stroke: currentColor; stroke-width: 1.6;
+/* ---------- reference points: fixed baseline + test / promote loop ---------- */
+.reference-figure { margin: 0; }
+.reference-diagram { display: block; width: 100%; height: auto; }
+.reference-diagram.is-compact { display: none; }
+.reference-edge, .reference-head {
+  fill: none; stroke: var(--muted); stroke-width: 1.8;
   stroke-linecap: round; stroke-linejoin: round;
 }
-.flow-arrow-label {
-  font: 700 9.5px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase;
-  text-align: center; max-width: 84px; line-height: 1.35;
-}
-.flow-arrow.is-back { color: var(--teal-deep); }
-.flow-arrow.is-back svg { transform: rotate(180deg); }
-.flow-arrow.is-back .flow-shaft { stroke-dasharray: 4 3; }
-
-.flow-note { font-size: 13px; color: var(--muted); margin: 14px 0 0; max-width: 82ch; }
-.flow-node {
-  position: relative; overflow: hidden;
-  background: var(--card); border: 1px solid var(--rule); border-radius: var(--radius);
-  padding: 15px 16px 14px;
-}
-.flow-node::before {
-  content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--muted-mark);
-}
-/* Collapsed, the summary is the whole node: dot, role, name, one clause. */
-.flow-node > summary {
-  cursor: pointer; list-style: none; display: flex; align-items: flex-start; gap: 10px;
-}
-.flow-node > summary::-webkit-details-marker { display: none; }
-.flow-node > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
-.flow-node-text { flex: 1; min-width: 0; }
-.flow-node .disclosure-icon {
-  flex: none; width: 13px; height: 13px; margin-top: 3px; color: var(--faint);
-  fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
-  transition: transform .15s ease;
-}
-.flow-node[open] .disclosure-icon { transform: rotate(90deg); }
-.flow-node > summary:hover .disclosure-icon { color: var(--teal-deep); }
-.flow-node-gist { font-size: 13px; color: var(--muted); margin: 0; }
-.flow-node-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule-soft); }
-.flow-node.is-baseline::before,   .flow-node.is-baseline   .ref-dot { background: var(--series-2); }
-.flow-node.is-production::before, .flow-node.is-production .ref-dot { background: var(--series-3); }
-.flow-node.is-best::before,       .flow-node.is-best       .ref-dot { background: var(--series-1); }
-
-.ref-head { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
-.ref-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; box-shadow: 0 0 0 2px var(--card); }
-.ref-role {
-  font: 700 10px "IBM Plex Mono", monospace; letter-spacing: .16em; text-transform: uppercase;
-  color: var(--faint); margin: 0;
+.reference-edge.is-promote, .reference-head.is-promote { stroke: var(--teal-deep); }
+.reference-edge.is-promote { stroke-dasharray: 6 5; }
+.reference-edge-label { font: 500 14px "Public Sans", sans-serif; fill: var(--muted); }
+.reference-edge-label.is-promote { fill: var(--teal-deep); }
+.reference-node rect { fill: var(--card); stroke: var(--rule); }
+.reference-node.is-baseline circle { fill: var(--series-2); }
+.reference-node.is-best circle { fill: var(--series-1); }
+.reference-node.is-production circle { fill: var(--series-3); }
+.reference-node-role { font: 600 11px "IBM Plex Mono", monospace; fill: var(--faint); }
+.reference-node-name { font: 700 23px var(--display); fill: var(--ink); letter-spacing: -.5px; }
+.reference-node-gist { font: 400 14px "Public Sans", sans-serif; fill: var(--muted); }
+.flow-note { font-size: 13px; color: var(--muted); margin: 14px 0 0; max-width: 90ch; }
+.reference-definitions { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.reference-definitions > summary { cursor: pointer; color: var(--teal-deep); font-size: 13px; font-weight: 600; }
+.reference-definitions > summary:focus-visible { outline: 2px solid var(--teal); outline-offset: 4px; }
+.reference-definition-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 20px; }
+@media (max-width: 800px) {
+  .reference-diagram.is-wide { display: none; }
+  .reference-diagram.is-compact { display: block; max-width: 400px; margin: 0 auto; }
+  .reference-definition-grid { grid-template-columns: 1fr; gap: 20px; }
 }
 .ref-name {
   font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -.022em;
@@ -1034,11 +994,6 @@ svg.viz { display: block; overflow: visible; }
    from the best card below to the production card above) instead of right and left.
    Height, not layout, makes room for the rotated arrow — transforms don't reflow. */
 @media (max-width: 900px) {
-  .flow-track { grid-template-columns: 1fr; row-gap: 0; }
-  .flow-arrow { height: 46px; padding: 0; flex-direction: row; gap: 10px; justify-content: center; }
-  .flow-arrow svg { transform: rotate(90deg); }
-  .flow-arrow.is-back svg { transform: rotate(-90deg); }
-  .flow-arrow-label { max-width: none; }
 }
 
 @media (max-width: 620px) {

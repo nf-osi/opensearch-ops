@@ -67,9 +67,8 @@ export const STRATEGY_LABELS = {
 // The three reference points every figure on the results page is read against, named as
 // arms of an experiment rather than in search-engine terms. `tone` is the ROLE
 // (charts.js) whose colour the arm's mark wears in every chart; `gist` is the one clause
-// the collapsed card shows; `aka` is the wording the figures use, so a card can be found
-// from a legend. Order is control -> deployed ->
-// best, which is also the order the charts plot them.
+// the diagram shows; `aka` is the wording the figures use, so the definitions can be
+// found from a legend. The diagram arranges these by role: baseline, best, production.
 export const REFERENCE_POINTS = [
   {
     tone: "baseline",
@@ -95,10 +94,10 @@ export const REFERENCE_POINTS = [
     tone: "best",
     gist: "highest MRR this run",
     role: "Best arm tested",
-    name: "Best experiment",
+    name: "Best tested",
     aka: "“Best recipe tested”; “Best on MRR” in single-metric figures",
     what: "The highest-MRR arm in this run. Arms vary in query shape, in field boosts, and in the index’s own search configuration.",
-    why: "The measured upper bound so far, and the promotion candidate. Not deployed.",
+    why: "The highest score measured in this run. A candidate for promotion if it improves on production; it may already be deployed.",
     caveat: "Best on the pooled average, which can hide losses on a search type. A reference arm can itself be the best arm.",
   },
 ];
