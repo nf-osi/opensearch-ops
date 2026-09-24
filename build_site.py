@@ -260,7 +260,8 @@ def read_promotion(table, cfg, runs, report):
             f"{cfg['headline']!r} run — dropped")
         return None
     out = {"as": key, "at": str(spec["at"]) if spec.get("at") else None,
-           "note": spec.get("note")}
+           "note": spec.get("note"),
+           "show_pre_promotion": spec.get("show_pre_promotion") is True}
     ranked = sorted(run["strategies"].items(), key=lambda kv: kv[1].get("mrr") or 0, reverse=True)
     # whether the deployed row is also the best row is what the dashboard leads with, so
     # state it here rather than leaving every view to re-derive it

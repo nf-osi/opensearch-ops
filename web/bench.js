@@ -17,6 +17,9 @@ import { anchorLink, setRoute, scrollToSection } from "./route.js";
 const $ = (sel, root = document) => root.querySelector(sel);
 const METRIC_KEYS = ["mrr", "recall_at_k", "hit_at_1", "hit_at_k", "rt_ms_median", "rt_ms_p95"];
 const RANK_BY = ["mrr", "recall_at_k", "hit_at_1", "rt_ms_median"];
+// Below this, a latency gap is reported as a wash rather than a number: round-trip is timed
+// in the browser, so network variance swamps differences this small.
+const RT_NOISE_PCT = 5;
 
 let MANIFEST = null;
 const CACHE = new Map();                 // table -> data/<table>.json
@@ -172,16 +175,22 @@ const rowLabel = (key, run) => (key === run.promo?.key
  *  that fall back to the manifest's default. */
 function readRun(data, run) {
   const strategies = run.strategies || {};
-  const keys = Object.keys(strategies);
+  const allKeys = Object.keys(strategies);
+  const promotion = promotionState(data, allKeys, null);
+  // Superseded production is opt-in per table in site.yaml. Filter centrally so charts,
+  // table twins, the glossary and per-type comparisons all use the same visible rows.
+  const hidden = data.promoted?.show_pre_promotion === true ? null : promotion?.stale;
+  const keys = allKeys.filter((key) => key !== hidden);
   const ranked = [...keys].sort((a, b) => (strategies[b].mrr || 0) - (strategies[a].mrr || 0));
   const control = run.control || MANIFEST.default_baseline_key;
   const best = ranked[0] || null;
   return {
     label: run.label, run_at: run.run_at, k: run.k || data.k,
-    strategies, keys, per_case: run.per_case || {},
+    strategies, keys,
+    per_case: Object.fromEntries(Object.entries(run.per_case || {}).filter(([key]) => key !== hidden)),
     // rows pinned to another run (site.yaml `constant:`) — {strategy: {from, run_at}}
     constants: run.constants || {},
-    baseline_key: keys.includes(control) ? control : null,
+    baseline_key: keys.includes(control) ? control : control === hidden ? promotion.key : null,
     best_key: best,
     // what is deployed (site.yaml `promoted:`), resolved here so roleOf() and every view
     // read the same answer
@@ -449,10 +458,18 @@ function renderHero() {
     const faster = rtToday - rtBest;
     // as a share of the default, to read the same way as the points gained above
     const shift = Math.round((Math.abs(faster) / rtToday) * 100);
+    // Round-trip is measured client-side over the network, and the p95 runs well above the
+    // median on every index — a few percent apart is the measurement, not the recipe. Under
+    // the band say so plainly rather than printing a number that invites reading a trend.
+    const note = shift < RT_NOISE_PCT
+      ? { text: "about the same as the platform default", tone: "quiet" }
+      : { text: `${shift}% ${faster > 0 ? "faster" : "slower"} than the platform default`,
+          tone: faster > 0 ? null : "worse" };
     rail.appendChild(railItem({
       tone: "best", label: "Best recipe latency", value: fmtMs(rtBest),
-      notes: [shift < 1 ? null : { text: `${faster > 0 ? "−" : "+"}${shift}% vs the platform default`, tone: faster > 0 ? null : "worse" }],
-      help: `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default measures ${fmtMs(rtToday)}.`,
+      notes: [note],
+      help: `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default `
+        + `measures ${fmtMs(rtToday)}. Gaps under ${RT_NOISE_PCT}% are within run-to-run noise.`,
     }));
   }
   host.appendChild(rail);
@@ -462,31 +479,60 @@ function renderHero() {
 }
 
 // ------------------------------------------------------- reference points (reading guide)
-/* Three arms recur in every figure below, and their names are only obvious to someone who
-   already knows the codebase. Stated once, up front, in experiment terms — control /
-   deployed / best tested — so a reader meets them before the first chart uses them, and
-   in the same colours the marks wear. Copy lives in labels.js beside the strategy blurbs.
-
-   Laid out as the lifecycle rather than as three loose definitions, because the arms are
-   one sequence: NF moved off the platform default by deploying a configuration, and a
-   best arm is what a future deployment would promote. Card order still matches the order
-   the charts plot them, so the two connectors run in opposite directions — settled
-   transitions grey and solid, the prospective one teal and dashed. */
-const FLOW_STEPS = [
-  { label: "deployed as", back: false },      // platform default -> in production
-  { label: "promotion candidate", back: true },  // best experiment -> in production
-];
-
-/** A connector between two stage cards. Decorative arrow, meaningful label: the label
- *  alone has to read sensibly in DOM order, since the direction is carried visually. */
-function flowConnector({ label, back }) {
-  const c = el("div", `flow-arrow${back ? " is-back" : ""}`);
+/** The baseline stays fixed while testing and promotion form an ongoing loop.
+ *  Two layouts keep the labels readable on small screens without shrinking the text. */
+function referenceDiagram(compact = false) {
+  const id = compact ? "reference-compact" : "reference-wide";
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 40 16");
-  svg.setAttribute("aria-hidden", "true");
-  svg.innerHTML = '<path class="flow-shaft" d="M2 8h30"/><path d="M27.5 3.5 32 8l-4.5 4.5"/>';
-  c.append(svg, el("span", "flow-arrow-label", label));
-  return c;
+  svg.setAttribute("viewBox", compact ? "0 0 360 560" : "0 0 1100 315");
+  svg.setAttribute("class", `reference-diagram ${compact ? "is-compact" : "is-wide"}`);
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-labelledby", `${id}-title ${id}-desc`);
+  svg.innerHTML = `
+    <title id="${id}-title">Three reference points: a fixed baseline and an ongoing experiment loop</title>
+    <desc id="${id}-desc">Compare the best tested recipe with the platform default, the fixed baseline.
+      Promote a selected recipe into production, then continue testing for improvement against production.
+      The best tested recipe may already be in production.</desc>
+    <defs>
+      <marker id="${id}-compare" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M1 1L9 5L1 9" class="reference-head" />
+      </marker>
+      <marker id="${id}-promote" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M1 1L9 5L1 9" class="reference-head is-promote" />
+      </marker>
+    </defs>
+    <path class="reference-edge" marker-end="url(#${id}-compare)"
+      d="${compact ? "M180 125V206" : "M250 155H416"}" />
+    <path class="reference-edge is-promote" marker-end="url(#${id}-promote)"
+      d="${compact ? "M180 320V426" : "M535 100V76Q535 52 559 52H926Q950 52 950 76V96"}" />
+    <path class="reference-edge" marker-end="url(#${id}-compare)"
+      d="${compact ? "M65 485H40Q20 485 20 465V294Q20 270 44 270H61" : "M950 210V240Q950 264 926 264H559Q535 264 535 240V214"}" />
+    ${compact ? `
+      <text class="reference-edge-label" x="198" y="165">Compare to<tspan x="198" dy="19">fixed baseline</tspan></text>
+      <text class="reference-edge-label is-promote" x="198" y="366">Promote if<tspan x="198" dy="19">selected</tspan></text>
+      <text class="reference-edge-label" text-anchor="middle" transform="translate(16 378) rotate(-90)">Test for further improvement</text>
+    ` : `
+      <text class="reference-edge-label" text-anchor="middle" x="335" y="115">Compare to<tspan x="335" dy="19">fixed baseline</tspan></text>
+      <text class="reference-edge-label is-promote" text-anchor="middle" x="742" y="32">Promote if selected</text>
+      <text class="reference-edge-label" text-anchor="middle" x="742" y="295">Test for further improvement</text>
+    `}`;
+  const positions = compact ? [[65, 15], [65, 210], [65, 430]] : [[20, 100], [420, 100], [835, 100]];
+  ["baseline", "best", "production"].forEach((tone, i) => {
+    const rp = REFERENCE_POINTS.find((point) => point.tone === tone);
+    const node = document.createElementNS(svg.namespaceURI, "g");
+    node.setAttribute("class", `reference-node is-${tone}`);
+    node.setAttribute("transform", `translate(${positions[i].join(" ")})`);
+    node.innerHTML = `<rect width="230" height="110" rx="14" />
+      <circle cx="20" cy="26" r="5" />
+      <text class="reference-node-role" x="34" y="30"></text>
+      <text class="reference-node-name" x="20" y="61"></text>
+      <text class="reference-node-gist" x="20" y="86"></text>`;
+    node.querySelector(".reference-node-role").textContent = rp.role;
+    node.querySelector(".reference-node-name").textContent = rp.name;
+    node.querySelector(".reference-node-gist").textContent = rp.gist;
+    svg.appendChild(node);
+  });
+  return svg;
 }
 
 function renderReferencePoints() {
@@ -496,34 +542,22 @@ function renderReferencePoints() {
     slug: "reference",
     eyebrow: "How to read this",
     title: "Three reference points",
-    lede: `Every recipe is an arm of one experiment, scored over the same searches with known answers. Three arms are named, and carry these colours in every figure.`,
+    lede: "Keep the platform default as a fixed baseline. Test for improvement against production, promote a selected recipe, and repeat.",
   });
 
-  const track = el("div", "flow-track");
-  track.setAttribute("role", "group");
-  track.setAttribute("aria-label", "Search configuration lifecycle: platform default, in production, best experiment");
-  REFERENCE_POINTS.forEach((rp, i) => {
-    if (i > 0) track.appendChild(flowConnector(FLOW_STEPS[i - 1]));
-    // Collapsed, a node is a legend entry: colour, role, name, one clause. The prose a
-    // first-time reader needs is one click away rather than three paragraphs down the
-    // page — the flow and the colour mapping are what have to be always visible.
-    // rp.tone is the chart ROLE, so the node's rail and dot are coloured by the same
-    // stylesheet rules that colour the marks — no second copy of the mapping here.
-    const node = el("details", `flow-node is-${rp.tone}`);
-    const sum = document.createElement("summary");
-    const head = el("div", "ref-head");
-    const dot = el("span", "ref-dot");
-    dot.setAttribute("aria-hidden", "true");
-    head.append(dot, el("span", "ref-role", rp.role));
-    const text = el("div", "flow-node-text");
-    text.append(head, el("h3", "ref-name", rp.name), el("p", "flow-node-gist", rp.gist));
-    const chev = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    chev.setAttribute("class", "disclosure-icon");
-    chev.setAttribute("viewBox", "0 0 24 24");
-    chev.setAttribute("aria-hidden", "true");
-    chev.innerHTML = '<path d="M9 6l6 6-6 6"/>';
-    sum.append(text, chev);
-    const bodyEl = el("div", "flow-node-body");
+  const fig = el("figure", "reference-figure");
+  fig.append(referenceDiagram(), referenceDiagram(true));
+  fig.appendChild(el("figcaption", "flow-note",
+    "Three roles, not necessarily three different recipes: the best tested recipe may already be in production. Colours match the figures below."));
+  body.appendChild(fig);
+
+  const definitions = el("details", "reference-definitions");
+  definitions.appendChild(el("summary", null, "About these reference points"));
+  const definitionGrid = el("div", "reference-definition-grid");
+  ["baseline", "best", "production"].forEach((tone) => {
+    const rp = REFERENCE_POINTS.find((point) => point.tone === tone);
+    const bodyEl = el("div");
+    bodyEl.appendChild(el("h3", "ref-name", rp.name));
     // the exact words the figures use, so a node is findable from a legend and back
     const aka = el("p", "ref-aka");
     aka.appendChild(el("span", "ref-aka-label", "In figures"));
@@ -532,15 +566,10 @@ function renderReferencePoints() {
     why.appendChild(el("span", "ref-why-label", "Interpretation"));
     why.append(document.createTextNode(rp.why));
     bodyEl.append(aka, el("p", "ref-what", rp.what), why, el("p", "ref-caveat", rp.caveat));
-    node.append(sum, bodyEl);
-    track.appendChild(node);
+    definitionGrid.appendChild(bodyEl);
   });
-  body.appendChild(track);
-
-  // The arrows state the direction; this states it in words, for anyone reading the cards
-  // as a list. Both connectors point at production because that is the deployed state.
-  body.appendChild(el("p", "flow-note",
-    "Both arrows point at production: the platform default is what a configuration replaced, and a best arm is what the next promotion would deploy. Nothing on this page changes what users see."));
+  definitions.appendChild(definitionGrid);
+  body.appendChild(definitions);
 
   const nConfigured = MANIFEST.coverage?.n_configured;
   const promotedTables = MANIFEST.tables.filter((t) => t.promoted?.is_best);
@@ -879,17 +908,16 @@ function leaderboardSection(host, data, run) {
   }
   if (promo?.stale) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
-      `${figureName(promo.stale, run)} is the configuration in place before ${promo.at || "the promotion"} — what the portal sent until then, not what it sends now.`));
+      `${figureName(promo.stale, run)} is the configuration in place before ${promo.at || "the promotion"}.`));
   }
   // The row is labelled and coloured as the platform default, and on an index whose own
   // configuration is live it is not a platform-default measurement.
   if (promo && promo.key === PLATFORM_DEFAULT_KEY) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
-      `${strategyLabel(promo.key).name} is the default query, but this index runs a custom configuration, so the row includes it — not a platform-default measurement.`));
+      `${strategyLabel(promo.key).name} is the default query, but this index runs a custom configuration.`));
   }
   if (promo?.note) plot.parentElement.appendChild(el("p", "fig-note is-constant", promo.note));
   // A held-constant row was measured in a different run, under a different index state.
-  // Saying so is the whole point of pinning it rather than leaving the wrong number in.
   for (const [key, g] of Object.entries(run.constants)) {
     plot.parentElement.appendChild(el("p", "fig-note is-constant",
       `${strategyLabel(key).name} is measured on an index with no custom search configuration bound.`));
