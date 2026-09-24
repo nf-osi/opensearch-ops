@@ -17,6 +17,9 @@ import { anchorLink, setRoute, scrollToSection } from "./route.js";
 const $ = (sel, root = document) => root.querySelector(sel);
 const METRIC_KEYS = ["mrr", "recall_at_k", "hit_at_1", "hit_at_k", "rt_ms_median", "rt_ms_p95"];
 const RANK_BY = ["mrr", "recall_at_k", "hit_at_1", "rt_ms_median"];
+// Below this, a latency gap is reported as a wash rather than a number: round-trip is timed
+// in the browser, so network variance swamps differences this small.
+const RT_NOISE_PCT = 5;
 
 let MANIFEST = null;
 const CACHE = new Map();                 // table -> data/<table>.json
@@ -455,10 +458,18 @@ function renderHero() {
     const faster = rtToday - rtBest;
     // as a share of the default, to read the same way as the points gained above
     const shift = Math.round((Math.abs(faster) / rtToday) * 100);
+    // Round-trip is measured client-side over the network, and the p95 runs well above the
+    // median on every index — a few percent apart is the measurement, not the recipe. Under
+    // the band say so plainly rather than printing a number that invites reading a trend.
+    const note = shift < RT_NOISE_PCT
+      ? { text: "about the same as the platform default", tone: "quiet" }
+      : { text: `${shift}% ${faster > 0 ? "faster" : "slower"} than the platform default`,
+          tone: faster > 0 ? null : "worse" };
     rail.appendChild(railItem({
       tone: "best", label: "Best recipe latency", value: fmtMs(rtBest),
-      notes: [shift < 1 ? null : { text: `${faster > 0 ? "−" : "+"}${shift}% vs the platform default`, tone: faster > 0 ? null : "worse" }],
-      help: `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default measures ${fmtMs(rtToday)}.`,
+      notes: [note],
+      help: `Median search-to-results wait, pooled across ${scored.length} indexes; the platform default `
+        + `measures ${fmtMs(rtToday)}. Gaps under ${RT_NOISE_PCT}% are within run-to-run noise.`,
     }));
   }
   host.appendChild(rail);
